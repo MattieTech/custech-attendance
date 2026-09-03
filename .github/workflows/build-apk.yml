@@ -22,14 +22,17 @@ jobs:
       - name: Install Dependencies
         run: npm install
 
-      - name: Set up Java JDK
+      - name: Build Next.js Web App
+        run: npm run build
+
+      - name: Set up Java JDK 21
         uses: actions/setup-java@v4
         with:
           distribution: 'zulu'
-          java-version: '17'
+          java-version: '21'
 
-      - name: Setup Android SDK
-        uses: android-actions/setup-android@v3
+      - name: Setup Gradle
+        uses: gradle/actions/setup-gradle@v4
 
       - name: Sync Capacitor Android
         run: npx cap sync android
