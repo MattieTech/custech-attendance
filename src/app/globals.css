@@ -1,26 +1,45 @@
 @import "tailwindcss";
 
 :root {
-  --background: #ffffff;
-  --foreground: #171717;
+  --background: #f8fafc;
+  --foreground: #0f172a;
+  --custech-50: #fbf7f2;
+  --custech-100: #f4eae0;
+  --custech-200: #e8d5c4;
+  --custech-300: #d8bcaa;
+  --custech-400: #c29c85;
+  --custech-500: #a77c61;
+  --custech-600: #935d40;
+  --custech-700: #8d4a27;
+  --custech-800: #743c22;
+  --custech-900: #5c2e17;
+  --custech-950: #33170b;
 }
 
-@theme inline {
-  --color-background: var(--background);
-  --color-foreground: var(--foreground);
-  --font-sans: var(--font-geist-sans);
-  --font-mono: var(--font-geist-mono);
+@theme {
+  --color-custech-50: var(--custech-50);
+  --color-custech-100: var(--custech-100);
+  --color-custech-200: var(--custech-200);
+  --color-custech-300: var(--custech-300);
+  --color-custech-400: var(--custech-400);
+  --color-custech-500: var(--custech-500);
+  --color-custech-600: var(--custech-600);
+  --color-custech-700: var(--custech-700);
+  --color-custech-800: var(--custech-800);
+  --color-custech-900: var(--custech-900);
+  --color-custech-950: var(--custech-950);
 }
 
-@media (prefers-color-scheme: dark) {
-  :root {
-    --background: #0a0a0a;
-    --foreground: #ededed;
-  }
+html, body {
+  max-width: 100vw;
+  overflow-x: hidden;
+  -webkit-text-size-adjust: 100%;
 }
 
 body {
-  background: var(--background);
+  background-color: var(--background);
   color: var(--foreground);
-  font-family: Arial, Helvetica, sans-serif;
+  font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+  -webkit-font-smoothing: antialiased;
+  -webkit-overflow-scrolling: touch;
 }

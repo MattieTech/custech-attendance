@@ -3,15 +3,29 @@
   "version": "0.1.0",
   "private": true,
   "scripts": {
-    "dev": "next dev",
+    "dev": "next dev -p 4000",
     "build": "next build",
-    "start": "next start",
-    "lint": "eslint"
+    "start": "next start -p 4000",
+    "lint": "eslint",
+    "cap:sync": "cap sync android",
+    "android": "cap open android"
   },
   "dependencies": {
+    "@capacitor/android": "^8.5.1",
+    "@capacitor/cli": "^8.5.1",
+    "@capacitor/core": "^8.5.1",
+    "@types/bcryptjs": "^2.4.6",
+    "@types/qrcode": "^1.5.6",
+    "bcryptjs": "^3.0.3",
+    "clsx": "^2.1.1",
+    "dexie": "^4.4.5",
+    "html5-qrcode": "^2.3.8",
+    "lucide-react": "^1.40.0",
     "next": "16.3.4",
+    "qrcode": "^1.5.4",
     "react": "19.2.8",
-    "react-dom": "19.2.8"
+    "react-dom": "19.2.8",
+    "tailwind-merge": "^3.6.0"
   },
   "devDependencies": {
     "@tailwindcss/postcss": "^4",
