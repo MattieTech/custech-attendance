@@ -16,6 +16,7 @@ import {
   Classroom,
   Department,
   Faculty,
+  Enrollment,
   AttendanceStatus,
   AttendanceMethod,
   AssistedReason,
@@ -207,30 +208,6 @@ class CustechDatabase {
       console.warn('Could not save to filesystem:', err);
     }
   }
-  private faculties = [...initialFaculties];
-  private departments = [...initialDepartments];
-  private programs = [...initialPrograms];
-  private academicSessions = [...initialAcademicSessions];
-  private semesters = [...initialSemesters];
-  private students = [...initialStudents];
-  private staff = [...initialStaff];
-  private classrooms = [...initialClassrooms];
-  private courses = [...initialCourses];
-  private courseOfferings = [...initialCourseOfferings];
-  private timetables = [...initialTimetable];
-  private enrollments = [...initialEnrollments];
-  private courseReps = [...initialCourseReps];
-  private sessions = [...initialSessions];
-  private attendanceRecords = [...initialAttendanceRecords];
-  private corrections = [...initialCorrections];
-  private syllabusTopics = [...initialSyllabusTopics];
-  private materials = [...initialMaterials];
-  private staffAttendance = [...initialStaffAttendance];
-  private systemSettings: SystemSettings = { ...initialSystemSettings };
-  private auditLogs = [...initialAuditLogs];
-  private medicalWaivers = [...initialMedicalWaivers];
-  private deviceCollisionAlerts = [...initialDeviceCollisionAlerts];
-  private notifications = [...initialNotifications];
 
   // ==========================================
   // PROFILES & ROLES
