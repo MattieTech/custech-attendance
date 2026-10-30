@@ -1,0 +1,195 @@
+{
+  "customProfiles": [
+    {
+      "id": "user-stu-1793368357128",
+      "email": "matthewaliu01@gmail.com",
+      "firstName": "Matthew",
+      "lastName": "Aliu",
+      "matricNumber": "25L1SE0000",
+      "primaryRole": "STUDENT",
+      "assignedRoles": [
+        "STUDENT"
+      ],
+      "departmentId": "dept-sen",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-10-30T13:52:37.321Z"
+    },
+    {
+      "id": "user-stu-1793368278372",
+      "email": "matthewaliu001@gmail.com",
+      "firstName": "Matthew",
+      "lastName": "Aliu",
+      "matricNumber": "25L1CS3653",
+      "primaryRole": "STUDENT",
+      "assignedRoles": [
+        "STUDENT"
+      ],
+      "departmentId": "dept-sen",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-10-30T13:51:18.566Z"
+    }
+  ],
+  "customStudents": [
+    {
+      "id": "stu-1793368357128",
+      "profileId": "user-stu-1793368357128",
+      "matricNumber": "25L1SE0000",
+      "programId": "prog-csc",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$HqTIVLHKJLY7g0EK0JBWCOuQTvJnu7LMJZaeIZAdvBtNEEopsXSAG",
+      "profile": {
+        "id": "user-stu-1793368357128",
+        "email": "matthewaliu01@gmail.com",
+        "firstName": "Matthew",
+        "lastName": "Aliu",
+        "matricNumber": "25L1SE0000",
+        "primaryRole": "STUDENT",
+        "assignedRoles": [
+          "STUDENT"
+        ],
+        "departmentId": "dept-sen",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-10-30T13:52:37.321Z"
+      }
+    },
+    {
+      "id": "stu-1793368278372",
+      "profileId": "user-stu-1793368278372",
+      "matricNumber": "25L1CS3653",
+      "programId": "prog-csc",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$.JEnvosQzGMYKKkkq9qseuK19E4IZ/xppFdHOyBUmZkv6Pnonmncq",
+      "profile": {
+        "id": "user-stu-1793368278372",
+        "email": "matthewaliu001@gmail.com",
+        "firstName": "Matthew",
+        "lastName": "Aliu",
+        "matricNumber": "25L1CS3653",
+        "primaryRole": "STUDENT",
+        "assignedRoles": [
+          "STUDENT"
+        ],
+        "departmentId": "dept-sen",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-10-30T13:51:18.566Z"
+      }
+    }
+  ],
+  "customEnrollments": [
+    {
+      "id": "enr_1793368278372_offering-csc201",
+      "studentId": "stu-1793368278372",
+      "courseOfferingId": "offering-csc201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1793368278372_offering-sen201",
+      "studentId": "stu-1793368278372",
+      "courseOfferingId": "offering-sen201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1793368278372_offering-mth201",
+      "studentId": "stu-1793368278372",
+      "courseOfferingId": "offering-mth201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1793368357128_offering-csc201",
+      "studentId": "stu-1793368357128",
+      "courseOfferingId": "offering-csc201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1793368357128_offering-sen201",
+      "studentId": "stu-1793368357128",
+      "courseOfferingId": "offering-sen201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1793368357128_offering-mth201",
+      "studentId": "stu-1793368357128",
+      "courseOfferingId": "offering-mth201",
+      "isActive": true
+    }
+  ],
+  "customDepartments": [],
+  "systemSettings": {
+    "qrRotationSeconds": 20,
+    "attendanceDurationMinutes": 60,
+    "lateThresholdMinutes": 15,
+    "gracePeriodMinutes": 5,
+    "minimumAttendanceWarningThreshold": 70,
+    "examEligibilityThreshold": 75,
+    "correctionWindowHours": 48,
+    "staffWorkStartTime": "08:00",
+    "staffWorkEndTime": "16:00",
+    "staffLateGraceMinutes": 15
+  },
+  "auditLogs": [
+    {
+      "id": "audit_1793368357321_870",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1793368357128",
+      "details": {
+        "matricNumber": "25L1SE0000",
+        "fullName": "Matthew Aliu",
+        "departmentId": "dept-sen",
+        "level": 200
+      },
+      "createdAt": "2026-10-30T13:52:37.321Z"
+    },
+    {
+      "id": "audit_1793368278567_905",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1793368278372",
+      "details": {
+        "matricNumber": "25L1CS3653",
+        "fullName": "Matthew Aliu",
+        "departmentId": "dept-sen",
+        "level": 200
+      },
+      "createdAt": "2026-10-30T13:51:18.567Z"
+    },
+    {
+      "id": "audit-1",
+      "actorId": "user-admin",
+      "actorName": "Engr. Faruq Bello (Admin)",
+      "actorRole": "SUPER_ADMIN",
+      "action": "SYSTEM_INITIALIZED",
+      "entityType": "SYSTEM",
+      "details": {
+        "version": "1.0.0",
+        "institution": "CUSTECH Osara"
+      },
+      "createdAt": "2026-08-01T08:00:00Z"
+    },
+    {
+      "id": "audit-2",
+      "actorId": "user-lecturer-1",
+      "actorName": "Dr. John Doe",
+      "actorRole": "LECTURER",
+      "action": "ATTENDANCE_SESSION_STARTED",
+      "entityType": "attendance_sessions",
+      "entityId": "sess-today-csc",
+      "details": {
+        "course": "CSC 201",
+        "classroom": "LH 101"
+      },
+      "createdAt": "2026-09-03T10:05:00Z"
+    }
+  ],
+  "updatedAt": "2026-10-30T13:52:37.322Z"
+}

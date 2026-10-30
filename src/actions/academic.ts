@@ -23,7 +23,8 @@ export async function registerStudentAction(
     firstName: string;
     lastName: string;
     matricNumber: string;
-    email: string;
+    email?: string;
+    departmentName?: string;
     departmentId?: string;
     currentLevel?: 100 | 200 | 300 | 400 | 500;
     pin?: string;

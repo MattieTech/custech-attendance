@@ -123,6 +123,11 @@ class CustechDatabase {
               if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
             });
           }
+          if (Array.isArray(parsed.customDepartments)) {
+            parsed.customDepartments.forEach((d: Department) => {
+              if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
+            });
+          }
           if (parsed.systemSettings) {
             this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
           }
@@ -156,6 +161,11 @@ class CustechDatabase {
             if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
           });
         }
+        if (Array.isArray(parsed.customDepartments)) {
+          parsed.customDepartments.forEach((d: Department) => {
+            if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
+          });
+        }
         if (parsed.systemSettings) {
           this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
         }
@@ -174,15 +184,18 @@ class CustechDatabase {
     const initialProfileIds = new Set(initialProfiles.map((p) => p.id));
     const initialStudentIds = new Set(initialStudents.map((s) => s.id));
     const initialEnrollmentIds = new Set(initialEnrollments.map((e) => e.id));
+    const initialDeptIds = new Set(initialDepartments.map((d) => d.id));
 
     const customProfiles = this.profiles.filter((p) => !initialProfileIds.has(p.id));
     const customStudents = this.students.filter((s) => !initialStudentIds.has(s.id));
     const customEnrollments = this.enrollments.filter((e) => !initialEnrollmentIds.has(e.id));
+    const customDepartments = this.departments.filter((d) => !initialDeptIds.has(d.id));
 
     const payload = {
       customProfiles,
       customStudents,
       customEnrollments,
+      customDepartments,
       systemSettings: this.systemSettings,
       auditLogs: this.auditLogs.slice(0, 100),
       updatedAt: new Date().toISOString(),
@@ -265,7 +278,8 @@ class CustechDatabase {
     firstName: string;
     lastName: string;
     matricNumber: string;
-    email: string;
+    email?: string;
+    departmentName?: string;
     departmentId?: string;
     programId?: string;
     currentLevel?: 100 | 200 | 300 | 400 | 500;
@@ -274,15 +288,17 @@ class CustechDatabase {
     actorId?: string;
   }): { student: Student; profile: UserProfile } {
     const cleanMatric = params.matricNumber.trim().toUpperCase();
-    const cleanEmail = params.email.trim().toLowerCase();
+    const cleanEmail = params.email?.trim()
+      ? params.email.trim().toLowerCase()
+      : `${cleanMatric.toLowerCase()}@student.custech.edu.ng`;
 
     // Prevent duplicate matriculation number
     if (this.students.some((s) => s.matricNumber.toUpperCase() === cleanMatric)) {
       throw new Error(`Matriculation number "${cleanMatric}" is already registered in the CUSTECH academic database.`);
     }
 
-    // Prevent duplicate email
-    if (this.profiles.some((p) => p.email.toLowerCase() === cleanEmail)) {
+    // Prevent duplicate email only if explicitly provided
+    if (params.email?.trim() && this.profiles.some((p) => p.email.toLowerCase() === cleanEmail)) {
       throw new Error(`Email "${cleanEmail}" is already registered.`);
     }
 
@@ -292,9 +308,33 @@ class CustechDatabase {
     const pin = params.pin || '1234';
     const pinHash = bcrypt.hashSync(pin, 10);
 
-    const deptId = params.departmentId || 'dept-csc';
-    const dept = this.departments.find((d) => d.id === deptId);
-    const facultyId = dept?.facultyId || 'fac-comp';
+    // Dynamic typed department handling (supports any department in CUSTECH!)
+    const typedDept = (params.departmentName || params.departmentId || 'Computer Science').trim();
+    let dept = this.departments.find(
+      (d) =>
+        d.id.toLowerCase() === typedDept.toLowerCase() ||
+        d.name.toLowerCase() === typedDept.toLowerCase() ||
+        d.code.toLowerCase() === typedDept.toLowerCase()
+    );
+
+    if (!dept) {
+      const code = typedDept
+        .split(' ')
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 4) || 'DEPT';
+      dept = {
+        id: `dept-${typedDept.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+        facultyId: 'fac-comp',
+        code,
+        name: typedDept,
+      };
+      this.departments.push(dept);
+    }
+
+    const deptId = dept.id;
+    const facultyId = dept.facultyId || 'fac-comp';
     const level = params.currentLevel || 200;
 
     const newProfile: UserProfile = {

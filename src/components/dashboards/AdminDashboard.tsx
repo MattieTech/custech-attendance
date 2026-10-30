@@ -57,7 +57,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   const [lastName, setLastName] = React.useState('');
   const [matricNumber, setMatricNumber] = React.useState('');
   const [email, setEmail] = React.useState('');
-  const [departmentId, setDepartmentId] = React.useState('dept-csc');
+  const [departmentName, setDepartmentName] = React.useState('Computer Science');
   const [currentLevel, setCurrentLevel] = React.useState<100 | 200 | 300 | 400 | 500>(200);
   const [pin, setPin] = React.useState('1234');
   const [autoEnroll, setAutoEnroll] = React.useState(true);
@@ -71,9 +71,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
   // Bulk Import State
   const [csvContent, setCsvContent] = React.useState(
-    `Tunde, Bello, 25L1CS1050, t.bello@student.custech.edu.ng, 200, dept-csc\n` +
-    `Fatima, Musa, 25L1CS1051, f.musa@student.custech.edu.ng, 200, dept-csc\n` +
-    `David, Audu, DE 25L2CS1052, d.audu@student.custech.edu.ng, 200, dept-csc`
+    `Tunde, Bello, 25L1CS1050, , 200, Computer Science\n` +
+    `Fatima, Musa, 25L1CV1051, f.musa@gmail.com, 100, Civil Engineering\n` +
+    `David, Audu, DE 25L2ME1052, , 200, Mechanical Engineering\n` +
+    `Zainab, Ibrahim, 25L1BC1022, , 100, Biochemistry`
   );
   const [bulkStatus, setBulkStatus] = React.useState<string | null>(null);
 
@@ -84,6 +85,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   const auditLogs = custechDb.getAuditLogs();
   const faculties = custechDb.getFaculties();
   const departments = custechDb.getDepartments();
+
+  // Dynamic list of all available departments (from DB + registered students)
+  const availableDepartments = React.useMemo(() => {
+    const set = new Set<string>();
+    departments.forEach((d) => set.add(d.name));
+    students.forEach((s) => {
+      if (s.departmentName) set.add(s.departmentName);
+    });
+    return Array.from(set).sort();
+  }, [departments, students]);
 
   // Refresh student records from repository
   const refreshStudentsList = React.useCallback(() => {
@@ -131,8 +142,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       return;
     }
 
-    if (!email.trim()) {
-      setFormError('Please enter a valid student email address.');
+    if (!departmentName.trim()) {
+      setFormError('Please type or select a Department.');
       return;
     }
 
@@ -148,8 +159,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
           firstName: firstName.trim(),
           lastName: lastName.trim(),
           matricNumber: cleanMatric,
-          email: email.trim().toLowerCase(),
-          departmentId,
+          email: email.trim() || undefined,
+          departmentName: departmentName.trim(),
           currentLevel,
           pin,
           enrollInCourses: autoEnroll,
@@ -180,6 +191,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     setLastName('');
     setMatricNumber('');
     setEmail('');
+    setDepartmentName('Computer Science');
     setPin('1234');
     setFormError(null);
     setRegisteredStudentSuccess(null);
@@ -226,7 +238,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     setIsSubmitting(true);
     for (const line of lines) {
       const parts = line.split(',').map((p) => p.trim());
-      if (parts.length < 4) continue;
+      if (parts.length < 3) continue;
       const [fName, lName, mat, em, lvl, dept] = parts;
       try {
         const res = await registerStudentAction(
@@ -234,9 +246,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
             firstName: fName,
             lastName: lName,
             matricNumber: mat.toUpperCase(),
-            email: em.toLowerCase(),
+            email: em && em.includes('@') ? em.toLowerCase() : undefined,
             currentLevel: (Number(lvl) as 100 | 200 | 300 | 400 | 500) || 200,
-            departmentId: dept || 'dept-csc',
+            departmentName: dept || 'Computer Science',
             pin: '1234',
             enrollInCourses: true,
           },
@@ -272,7 +284,10 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       (p?.email && p.email.toLowerCase().includes(searchQuery.toLowerCase()));
 
     const matchesLevel = selectedLevel === 'ALL' || String(s.currentLevel) === selectedLevel;
-    const matchesDept = selectedDept === 'ALL' || p?.departmentId === selectedDept;
+    const matchesDept =
+      selectedDept === 'ALL' ||
+      s.departmentName?.toLowerCase() === selectedDept.toLowerCase() ||
+      p?.departmentId === selectedDept;
 
     return matchesSearch && matchesLevel && matchesDept;
   });
@@ -440,10 +455,12 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   onChange={(e) => setSelectedDept(e.target.value)}
                   className="px-3 py-2 rounded-lg border border-slate-300 text-xs text-slate-700 bg-white"
                 >
-                  <option value="ALL">All Departments</option>
-                  <option value="dept-csc">Computer Science</option>
-                  <option value="dept-sen">Software Engineering</option>
-                  <option value="dept-cys">Cybersecurity</option>
+                  <option value="ALL">All Departments ({availableDepartments.length})</option>
+                  {availableDepartments.map((deptName) => (
+                    <option key={deptName} value={deptName}>
+                      {deptName}
+                    </option>
+                  ))}
                 </select>
 
                 <button
@@ -938,37 +955,70 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     </div>
                   </div>
 
-                  {/* Email */}
+                  {/* Email (Optional) */}
                   <div>
-                    <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                      University Email *
-                    </label>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        University Email (Optional)
+                      </label>
+                      <span className="text-[11px] text-slate-400 font-medium">Leave blank to auto-generate from matric</span>
+                    </div>
                     <input
                       type="email"
-                      required
-                      placeholder="e.g. tunde.bello@student.custech.edu.ng"
+                      placeholder="e.g. tunde.bello@student.custech.edu.ng (Optional)"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
                     />
                   </div>
 
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-                    {/* Department */}
-                    <div>
-                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
-                        Department
+                  {/* Department (Typed Input with Datalist of all CUSTECH Departments) */}
+                  <div>
+                    <div className="flex items-center justify-between mb-1">
+                      <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider">
+                        Department * (Type Any CUSTECH Dept)
                       </label>
-                      <select
-                        value={departmentId}
-                        onChange={(e) => setDepartmentId(e.target.value)}
-                        className="w-full px-3 py-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 bg-white"
-                      >
-                        <option value="dept-csc">Computer Science (CSC)</option>
-                        <option value="dept-sen">Software Engineering (SEN)</option>
-                        <option value="dept-cys">Cybersecurity (CYS)</option>
-                      </select>
+                      <span className="text-[11px] text-slate-400">Type freely or choose suggestion</span>
                     </div>
+                    <input
+                      type="text"
+                      required
+                      list="custech-all-departments-list"
+                      placeholder="Type department (e.g. Mechanical Engineering, Civil, Geology, Biochemistry...)"
+                      value={departmentName}
+                      onChange={(e) => setDepartmentName(e.target.value)}
+                      className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
+                    />
+                    <datalist id="custech-all-departments-list">
+                      <option value="Computer Science" />
+                      <option value="Software Engineering" />
+                      <option value="Cybersecurity" />
+                      <option value="Information Technology" />
+                      <option value="Artificial Intelligence and Robotics" />
+                      <option value="Civil Engineering" />
+                      <option value="Mechanical Engineering" />
+                      <option value="Electrical and Electronics Engineering" />
+                      <option value="Mining Engineering" />
+                      <option value="Chemical Engineering" />
+                      <option value="Materials and Metallurgical Engineering" />
+                      <option value="Agricultural and Bioresources Engineering" />
+                      <option value="Mathematics" />
+                      <option value="Physics with Electronics" />
+                      <option value="Chemistry" />
+                      <option value="Biology" />
+                      <option value="Biochemistry" />
+                      <option value="Microbiology" />
+                      <option value="Geology" />
+                      <option value="Applied Geophysics" />
+                      <option value="Statistics" />
+                      <option value="Accounting" />
+                      <option value="Business Administration" />
+                      <option value="Economics" />
+                      <option value="Mass Communication" />
+                    </datalist>
+                  </div>
+
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
 
                     {/* Level */}
                     <div>
