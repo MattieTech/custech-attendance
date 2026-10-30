@@ -47,7 +47,7 @@ export const PercentageRing: React.FC<PercentageRingProps> = ({
             cx={dimension / 2}
             cy={dimension / 2}
             r={radius}
-            className="stroke-slate-200/90"
+            className="stroke-slate-200"
             strokeWidth={strokeWidth}
             fill="transparent"
           />
@@ -78,7 +78,7 @@ export const PercentageRing: React.FC<PercentageRingProps> = ({
       </div>
 
       {/* Threshold Status Label */}
-      <div className="mt-2 flex items-center gap-1 text-[11px] font-semibold">
+      <div className="mt-2 flex items-center gap-1 text-xs font-semibold">
         {isEligible ? (
           <span className="text-[#8d4a27] flex items-center gap-1">
             <CheckCircle2 className="w-3.5 h-3.5" />

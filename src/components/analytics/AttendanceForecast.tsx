@@ -34,7 +34,7 @@ export const AttendanceForecast: React.FC<AttendanceForecastProps> = ({
   const maxCanMiss = Math.max(0, remainingLectures - minRequiredFor75);
 
   return (
-    <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+    <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
       <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
         <div className="flex items-center gap-2">
           <Sparkles className="w-4 h-4 text-[#8d4a27]" />
@@ -140,7 +140,7 @@ export const AttendanceForecast: React.FC<AttendanceForecastProps> = ({
           >
             {projectedPercentage}%
           </span>
-          <p className="text-[11px] text-slate-500 mt-0.5">
+          <p className="text-xs text-slate-500 mt-0.5">
             {isEligible ? (
               <span>Can miss up to <strong>{maxCanMiss}</strong> more</span>
             ) : (

@@ -67,7 +67,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Staff Profile Header */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[#8d4a27]">
@@ -86,14 +86,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
       </div>
 
       {feedback && (
-        <div className="p-3 bg-[#8d4a27] text-white text-xs font-bold rounded-xl flex items-center gap-2 animate-fadeIn shadow-xs">
+        <div className="p-3 bg-[#8d4a27] text-white text-xs font-bold rounded-xl flex items-center gap-2 animate-fadeIn shadow-sm">
           <CheckCircle2 className="w-4 h-4" />
           <span>{feedback}</span>
         </div>
       )}
 
       {/* TODAY'S PRESENCE CHECK-IN / CHECK-OUT CARD */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#8d4a27]" />
@@ -126,7 +126,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
             </div>
           </div>
 
-          <div className="flex flex-col items-center justify-center p-6 rounded-2xl bg-slate-50 border border-slate-200 text-center">
+          <div className="flex flex-col items-center justify-center p-6 rounded-xl bg-slate-50 border border-slate-200 text-center">
             {!record?.checkIn ? (
               <>
                 <p className="text-xs text-slate-500 mb-3">
@@ -135,7 +135,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
                 <button
                   onClick={handleCheckIn}
                   disabled={isLoading}
-                  className="px-6 py-3 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-xs shadow-xs transition"
+                  className="px-6 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-xs shadow-sm transition"
                 >
                   {isLoading ? 'Verifying...' : 'CHECK IN NOW (08:00 AM)'}
                 </button>
@@ -148,7 +148,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
                 <button
                   onClick={handleCheckOut}
                   disabled={isLoading}
-                  className="px-6 py-3 rounded-xl bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs shadow-xs transition"
+                  className="px-6 py-2.5 rounded-lg bg-slate-900 text-white hover:bg-slate-800 font-bold text-xs shadow-sm transition"
                 >
                   {isLoading ? 'Logging...' : 'CHECK OUT'}
                 </button>
@@ -169,14 +169,14 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
       </div>
 
       {/* STAFF ATTENDANCE HISTORY */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <h3 className="text-sm font-bold text-slate-900 mb-3">
           Monthly Attendance Register
         </h3>
 
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-xs min-w-[500px]">
-            <thead className="border-b border-slate-200 text-slate-400 uppercase text-[10px]">
+            <thead className="border-b border-slate-200 text-slate-400 uppercase text-xs">
               <tr>
                 <th className="pb-2">Date</th>
                 <th className="pb-2">Check In</th>
@@ -187,21 +187,21 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
             </thead>
             <tbody className="divide-y divide-slate-100">
               {staffRecords.map((r) => (
-                <tr key={r.id}>
-                  <td className="py-2.5 font-medium text-slate-800">{formatDate(r.date)}</td>
-                  <td className="py-2.5 font-mono text-slate-500">
+                <tr key={r.id} className="hover:bg-slate-50/50 transition-colors">
+                  <td className="py-3 font-medium text-slate-800">{formatDate(r.date)}</td>
+                  <td className="py-3 font-mono text-slate-500">
                     {r.checkIn ? formatTime(r.checkIn) : '—'}
                   </td>
-                  <td className="py-2.5 font-mono text-slate-500">
+                  <td className="py-3 font-mono text-slate-500">
                     {r.checkOut ? formatTime(r.checkOut) : '—'}
                   </td>
-                  <td className="py-2.5 font-mono font-semibold text-slate-700">
+                  <td className="py-3 font-mono font-semibold text-slate-700">
                     {r.workingMinutes
                       ? `${Math.floor(r.workingMinutes / 60)}h ${r.workingMinutes % 60}m`
                       : '—'}
                   </td>
-                  <td className="py-2.5">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+                  <td className="py-3">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
                       {r.status}
                     </span>
                   </td>

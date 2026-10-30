@@ -56,16 +56,21 @@ export default function Home() {
   // Initial loading state while reading local session
   if (isLoading) {
     return (
-      <div className="min-h-screen bg-[#f8fafc] flex items-center justify-center">
-        <div className="flex flex-col items-center gap-3">
+      <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
+        <div className="flex flex-col items-center gap-4 bg-white p-8 rounded-2xl border border-slate-200 shadow-sm max-w-sm w-full text-center">
           <img
             src="/custech-logo-full.png"
             alt="CUSTECH"
             className="h-14 w-auto object-contain animate-pulse"
           />
-          <p className="text-xs text-slate-500 font-medium">
-            Loading CUSTECH Academic Presence Portal...
-          </p>
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-slate-800">
+              Confluence University of Science &amp; Technology
+            </p>
+            <p className="text-xs text-slate-500 font-medium">
+              Loading Academic Presence Portal...
+            </p>
+          </div>
         </div>
       </div>
     );
@@ -79,7 +84,7 @@ export default function Home() {
   const { user, activeRole } = session;
 
   return (
-    <div className="min-h-screen bg-[#f8fafc] text-slate-900 flex flex-col font-sans selection:bg-[#8d4a27] selection:text-white">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
       {/* Institutional Top Navbar with Dynamic Multi-Role Context Switcher & Sign Out */}
       <Navbar
         user={user}
@@ -112,20 +117,25 @@ export default function Home() {
       </main>
 
       {/* Institutional Footer */}
-      <footer className="border-t border-slate-200/80 py-8 text-center text-xs bg-white">
-        <div className="flex flex-col items-center justify-center gap-2 mb-2">
+      <footer className="border-t border-slate-200 py-8 text-center bg-white mt-auto">
+        <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 flex flex-col items-center justify-center gap-3">
           <img
             src="/custech-logo-full.png"
             alt="Confluence University of Science and Technology, Osara"
             className="h-10 sm:h-12 w-auto object-contain"
           />
+          <div className="space-y-1">
+            <p className="text-sm font-semibold text-slate-700">
+              Digital Attendance &amp; Academic Presence Management System
+            </p>
+            <p className="text-xs text-slate-500">
+              Confluence University of Science &amp; Technology, Osara, Kogi State, Nigeria
+            </p>
+            <p className="text-xs text-slate-400 pt-1">
+              Authenticated Session &bull; Active Context: <span className="font-semibold text-slate-600">{activeRole}</span>
+            </p>
+          </div>
         </div>
-        <p className="text-[11px] font-medium text-slate-500 mt-1">
-          Digital Attendance & Academic Presence Management System • Confluence University of Science & Technology, Osara
-        </p>
-        <p className="text-[10px] text-slate-400 mt-0.5">
-          Authenticated Session • Active Context: {activeRole}
-        </p>
       </footer>
     </div>
   );

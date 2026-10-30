@@ -56,7 +56,7 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Department Header */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[#8d4a27]">
@@ -73,15 +73,15 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
           </p>
         </div>
 
-        <div className="flex items-center gap-2">
+        <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsFraudOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition shadow-sm"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>Anti-Proxy</span>
             {unreviewedCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-600 text-white">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
                 {unreviewedCount}
               </span>
             )}
@@ -89,7 +89,7 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
 
           <button
             onClick={() => setIsMedicalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shadow-sm"
           >
             <HeartPulse className="w-3.5 h-3.5" />
             <span>Clinic Waivers</span>
@@ -97,7 +97,7 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
 
           <button
             onClick={handleExportCSV}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs transition"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm transition"
           >
             <Download className="w-3.5 h-3.5" />
             <span>Export CSV</span>
@@ -107,53 +107,53 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
 
       {/* KPI Stats Grid */}
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>Average Dept Attendance</span>
             <GraduationCap className="w-4 h-4 text-[#8d4a27]" />
           </div>
           <p className="text-3xl font-black text-slate-900 mt-2">89.2%</p>
-          <p className="text-[11px] text-slate-400 mt-1">+3.4% higher than faculty average</p>
+          <p className="text-xs text-slate-400 mt-1">+3.4% higher than faculty average</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>Lecture Delivery Compliance</span>
             <CheckCircle2 className="w-4 h-4 text-sky-600" />
           </div>
           <p className="text-3xl font-black text-slate-900 mt-2">96.0%</p>
-          <p className="text-[11px] text-slate-400 mt-1">24 of 25 scheduled classes delivered</p>
+          <p className="text-xs text-slate-400 mt-1">24 of 25 scheduled classes delivered</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>Students Below 75%</span>
             <AlertTriangle className="w-4 h-4 text-amber-500" />
           </div>
           <p className="text-3xl font-black text-amber-600 mt-2">1</p>
-          <p className="text-[11px] text-slate-400 mt-1">Emeka Okonkwo (66.7% in CSC 201)</p>
+          <p className="text-xs text-slate-400 mt-1">Emeka Okonkwo (66.7% in CSC 201)</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="flex items-center justify-between text-xs text-slate-500 font-semibold">
             <span>Average Syllabus Coverage</span>
             <BookOpen className="w-4 h-4 text-purple-600" />
           </div>
           <p className="text-3xl font-black text-slate-900 mt-2">50.0%</p>
-          <p className="text-[11px] text-slate-400 mt-1">Week 3 of 6 semester schedule</p>
+          <p className="text-xs text-slate-400 mt-1">Week 3 of 6 semester schedule</p>
         </div>
       </div>
 
       {/* AT-RISK STUDENTS WARNING LIST */}
-      <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl p-5 shadow-xs">
-        <div className="flex items-center justify-between pb-3 mb-3 border-b border-zinc-100 dark:border-zinc-800">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
+        <div className="flex items-center justify-between pb-3 mb-3 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <AlertTriangle className="w-4 h-4 text-amber-500" />
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100">
+            <h3 className="text-sm font-bold text-slate-900">
               Exam Ineligibility Risk Roster (&lt; 75% Attendance)
             </h3>
           </div>
-          <span className="text-[11px] text-zinc-400">Statutory requirement threshold</span>
+          <span className="text-xs text-slate-400">Statutory requirement threshold</span>
         </div>
         <div className="p-4 rounded-xl bg-amber-50/50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
@@ -161,20 +161,20 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
               <span className="text-xs font-bold text-slate-900">
                 Emeka Okonkwo
               </span>
-              <span className="text-xs font-mono font-bold text-amber-800 bg-amber-100 px-1.5 py-0.2 rounded">
+              <span className="text-xs font-mono font-bold text-amber-800 bg-amber-100 px-2 py-0.5 rounded">
                 25L1CS1029
               </span>
-              <span className="px-2 py-0.5 rounded text-[10px] font-bold bg-amber-200 text-amber-900">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-200 text-amber-900">
                 66.7% Attendance
               </span>
             </div>
-            <p className="text-[11px] text-slate-500 mt-1">
+            <p className="text-xs text-slate-500 mt-1">
               Missed Week 2 Lecture in CSC 201. Correction request currently pending with Dr. John Doe.
             </p>
           </div>
 
           <div className="flex items-center gap-2 shrink-0">
-            <span className="text-xs font-bold text-amber-700 bg-white px-2.5 py-1 rounded-lg border border-amber-200">
+            <span className="text-xs font-bold text-amber-700 bg-white px-3 py-1.5 rounded-lg border border-amber-200">
               Exam Clearance Barred
             </span>
           </div>
@@ -182,7 +182,7 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
       </div>
 
       {/* DEPARTMENT COURSE COMPLIANCE TABLE */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-bold text-slate-900">
@@ -197,47 +197,47 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
 
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-xs divide-y divide-slate-100 min-w-[640px]">
-            <thead className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-[10px]">
+            <thead className="border-b border-slate-200 text-slate-400 font-semibold uppercase text-xs">
               <tr>
-                <th className="pb-2.5">Course</th>
-                <th className="pb-2.5">Title</th>
-                <th className="pb-2.5">Primary Lecturer</th>
-                <th className="pb-2.5">Syllabus Progress</th>
-                <th className="pb-2.5">Avg Attendance</th>
-                <th className="pb-2.5">Status</th>
+                <th className="pb-3 pt-1">Course</th>
+                <th className="pb-3 pt-1">Title</th>
+                <th className="pb-3 pt-1">Primary Lecturer</th>
+                <th className="pb-3 pt-1">Syllabus Progress</th>
+                <th className="pb-3 pt-1">Avg Attendance</th>
+                <th className="pb-3 pt-1">Status</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              <tr>
+              <tr className="hover:bg-slate-50 transition">
                 <td className="py-3 font-bold text-slate-900">CSC 201</td>
                 <td className="py-3 font-medium text-slate-800">Data Structures and Algorithms</td>
                 <td className="py-3 text-slate-500">Dr. John Doe</td>
                 <td className="py-3">
-                  <span className="px-2 py-0.5 rounded-full bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb] font-bold text-[10px]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb] font-bold text-xs">
                     Week 2 / 4 Taught (50%)
                   </span>
                 </td>
                 <td className="py-3 font-bold text-slate-900">91.6%</td>
                 <td className="py-3 text-amber-800 font-semibold">Active Session</td>
               </tr>
-              <tr>
+              <tr className="hover:bg-slate-50 transition">
                 <td className="py-3 font-bold text-slate-900">MTH 201</td>
                 <td className="py-3 font-medium text-slate-800">Mathematical Methods I</td>
                 <td className="py-3 text-slate-500">Dr. John Doe</td>
                 <td className="py-3">
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
                     Week 2 / 4 Taught (50%)
                   </span>
                 </td>
                 <td className="py-3 font-bold text-slate-900">87.5%</td>
                 <td className="py-3 text-slate-400">Scheduled (Tue)</td>
               </tr>
-              <tr>
+              <tr className="hover:bg-slate-50 transition">
                 <td className="py-3 font-bold text-slate-900">PHY 201</td>
                 <td className="py-3 font-medium text-slate-800">General Physics for Engineers</td>
                 <td className="py-3 text-slate-500">Dr. S. A. Oladipo</td>
                 <td className="py-3">
-                  <span className="px-2 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-[10px]">
+                  <span className="px-2.5 py-0.5 rounded-full bg-slate-100 text-slate-700 font-bold text-xs">
                     Week 3 / 4 Taught (75%)
                   </span>
                 </td>

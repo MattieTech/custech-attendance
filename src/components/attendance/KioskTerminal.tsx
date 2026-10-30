@@ -154,7 +154,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   };
 
   return (
-    <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl shadow-xl overflow-hidden max-w-xl mx-auto">
+    <div className="bg-white border border-slate-200 rounded-2xl shadow-sm overflow-hidden max-w-xl mx-auto">
       {/* Header Banner */}
       <div className="bg-[#743c22] text-white p-5">
         <div className="flex items-center justify-between">
@@ -166,7 +166,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
               <h3 className="font-extrabold text-base tracking-tight">
                 Assisted Attendance Terminal
               </h3>
-              <p className="text-[11px] text-[#eed7c3]">
+              <p className="text-xs text-[#eed7c3]">
                 CUSTECH Accessibility Kiosk • {courseCode}
               </p>
             </div>
@@ -183,7 +183,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
 
         <div className="mt-3 pt-3 border-t border-[#5f321d] flex items-center justify-between text-xs text-[#eed7c3]">
           <span className="truncate max-w-[280px]">{courseTitle}</span>
-          <span className="font-medium text-[11px] bg-white/15 px-2.5 py-0.5 rounded-full text-white">
+          <span className="font-medium text-xs bg-white/15 px-2.5 py-0.5 rounded-full text-white">
             Operator: {operatorName} ({operatorRoleTitle})
           </span>
         </div>
@@ -240,30 +240,30 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
                   value={matricNumber}
                   onChange={(e) => setMatricNumber(e.target.value)}
                   disabled={isLoading}
-                  className="w-full px-4 py-3 rounded-xl border border-slate-300 bg-slate-50 text-slate-900 font-mono text-sm tracking-wide focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono text-sm tracking-wide focus:outline-none focus:ring-2 focus:ring-[#8d4a27]"
                   autoFocus
                 />
               </div>
               <div className="flex items-center gap-1.5 mt-1.5 flex-wrap">
-                <span className="text-[10px] text-zinc-400">Quick fill matric:</span>
+                <span className="text-xs text-slate-400">Quick fill matric:</span>
                 <button
                   type="button"
                   onClick={() => {
                     setMatricNumber('25L1CS1045');
                     setAttendancePin('1234');
                   }}
-                  className="text-[10px] text-[#8d4a27] hover:underline font-semibold"
+                  className="text-xs text-[#8d4a27] hover:underline font-semibold"
                 >
                   Maryam (25L1CS1045)
                 </button>
-                <span className="text-[10px] text-zinc-300">•</span>
+                <span className="text-xs text-slate-300">•</span>
                 <button
                   type="button"
                   onClick={() => {
                     setMatricNumber('25L1CS1014');
                     setAttendancePin('1234');
                   }}
-                  className="text-[10px] text-[#8d4a27] hover:underline font-semibold"
+                  className="text-xs text-[#8d4a27] hover:underline font-semibold"
                 >
                   Amina (25L1CS1014)
                 </button>
@@ -272,7 +272,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
 
             {/* Confidential 4-Digit PIN */}
             <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Confidential 4-Digit Attendance PIN
               </label>
               <div className="relative">
@@ -283,27 +283,27 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
                   value={attendancePin}
                   onChange={(e) => setAttendancePin(e.target.value.replace(/\D/g, ''))}
                   disabled={isLoading}
-                  className="w-full px-4 py-3 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 font-mono text-center text-xl tracking-widest focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
+                  className="w-full px-4 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono text-center text-xl tracking-widest focus:outline-none focus:ring-2 focus:ring-[#8d4a27]"
                 />
-                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-zinc-400">
+                <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400">
                   <Lock className="w-4 h-4" />
                 </div>
               </div>
-              <p className="text-[10px] text-zinc-400 mt-1">
+              <p className="text-xs text-slate-400 mt-1">
                 Protected against proxy attendance. Managed separately from portal login password.
               </p>
             </div>
 
             {/* Assisted Reason */}
             <div>
-              <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 uppercase tracking-wider mb-1">
+              <label className="block text-xs font-bold text-slate-700 uppercase tracking-wider mb-1">
                 Assisted Reason
               </label>
               <select
                 value={assistedReason}
                 onChange={(e) => setAssistedReason(e.target.value as AssistedReason)}
                 disabled={isLoading}
-                className="w-full px-3.5 py-2.5 rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 text-zinc-900 dark:text-zinc-100 text-xs focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
+                className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 bg-slate-50 text-slate-900 text-xs focus:outline-none focus:ring-2 focus:ring-[#8d4a27]"
               >
                 {ASSISTED_REASONS.map((r) => (
                   <option key={r} value={r}>
@@ -317,7 +317,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
             <button
               type="submit"
               disabled={isLoading}
-              className="w-full mt-4 flex items-center justify-center gap-2 py-3.5 px-4 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-sm tracking-wide shadow-md hover:shadow-lg transition disabled:opacity-50"
+              className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-sm tracking-wide shadow-sm transition disabled:opacity-50"
             >
               {isLoading ? (
                 <span>Validating PIN & Registry...</span>

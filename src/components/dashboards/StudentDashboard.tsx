@@ -64,9 +64,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Student Welcome & Profile Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">
-          <div className="w-14 h-14 rounded-2xl bg-[#8d4a27] text-white font-black text-xl flex items-center justify-center shadow-xs">
+          <div className="w-14 h-14 rounded-2xl bg-[#8d4a27] text-white font-black text-xl flex items-center justify-center shadow-sm">
             {user.firstName[0]}
             {user.lastName[0]}
           </div>
@@ -75,7 +75,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
               <h2 className="text-lg sm:text-xl font-black text-slate-900">
                 {user.firstName} {user.lastName}
               </h2>
-              <span className="px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+              <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
                 {student?.currentLevel}L
               </span>
             </div>
@@ -88,7 +88,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
             <div className="mt-2.5 flex items-center gap-2">
               <button
                 onClick={handleGenerateDocket}
-                className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs transition"
+                className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm transition"
               >
                 <Award className="w-3.5 h-3.5" />
                 <span>Exam Clearance Docket</span>
@@ -98,7 +98,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
         </div>
 
         {/* Aggregate Attendance Progress Ring */}
-        <div className="p-4 bg-slate-50/80 rounded-xl border border-slate-200/80 flex items-center gap-4">
+        <div className="p-4 bg-slate-50 rounded-xl border border-slate-200 flex items-center gap-4">
           <PercentageRing
             presentCount={presentCount}
             lateCount={lateCount}
@@ -107,8 +107,8 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
           />
           <div className="text-left">
             <p className="text-xs font-bold text-slate-900">Overall Semester Rate</p>
-            <p className="text-[11px] text-slate-500">Target: 75% Statutory Exam Req.</p>
-            <p className="text-[11px] text-[#8d4a27] font-bold mt-1">
+            <p className="text-xs text-slate-500">Target: 75% Statutory Exam Req.</p>
+            <p className="text-xs text-[#8d4a27] font-bold mt-1">
               {presentCount + lateCount} of {presentCount + lateCount + absentCount} classes attended
             </p>
           </div>
@@ -117,13 +117,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
       {/* Medical Waiver Notice Banner (If Student Has Active Clinic Exemptions) */}
       {studentWaivers.length > 0 && (
-        <div className="p-4 rounded-2xl bg-sky-50/80 border border-sky-200 flex items-start gap-3">
+        <div className="p-4 rounded-2xl bg-sky-50 border border-sky-200 flex items-start gap-3">
           <HeartPulse className="w-5 h-5 text-sky-700 shrink-0 mt-0.5" />
           <div className="text-xs">
             <h4 className="font-bold text-sky-950">
               Official University Health Centre Medical Waiver Active
             </h4>
-            <p className="text-[11px] text-sky-900 mt-0.5">
+            <p className="text-xs text-sky-900 mt-0.5">
               {studentWaivers[0].diagnosisSummary} ({studentWaivers[0].startDate} to {studentWaivers[0].endDate}) certified by {studentWaivers[0].doctorName}. All missed lecture sessions during this period are marked as <strong>EXCUSED</strong>.
             </p>
           </div>
@@ -136,7 +136,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
             <CheckCircle2 className="w-4 h-4" />
             <span>{successToast}</span>
           </div>
-          <button onClick={() => setSuccessToast(null)} className="underline text-[11px]">
+          <button onClick={() => setSuccessToast(null)} className="underline text-xs">
             Dismiss
           </button>
         </div>
@@ -155,7 +155,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
         </div>
 
         {activeSessions.length === 0 ? (
-          <div className="p-8 text-center bg-white border border-slate-200/80 rounded-2xl text-slate-400 text-xs shadow-xs">
+          <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-400 text-xs shadow-sm">
             No active attendance sessions right now. Please wait for your lecturer to start class attendance.
           </div>
         ) : (
@@ -168,7 +168,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
               return (
                 <div
                   key={sess.id}
-                  className="bg-white border border-slate-200/90 hover:border-slate-300 rounded-2xl p-5 shadow-xs hover:shadow-sm transition relative overflow-hidden"
+                  className="bg-white border border-slate-200 hover:border-slate-300 rounded-xl p-5 shadow-sm hover:shadow-md transition relative overflow-hidden"
                 >
                   <div className="flex items-start justify-between">
                     <div>
@@ -176,14 +176,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                         <span className="text-lg font-black text-slate-900">
                           {course?.code}
                         </span>
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb] animate-pulse">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb] animate-pulse">
                           ATTENDANCE OPEN
                         </span>
                       </div>
                       <h4 className="text-xs font-semibold text-slate-700 mt-1">
                         {course?.title}
                       </h4>
-                      <p className="text-[11px] text-slate-500 mt-1.5 flex items-center gap-1.5">
+                      <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
                         <span>10:00 AM – 12:00 PM • Room LH 101</span>
                       </p>
@@ -197,7 +197,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                     ) : (
                       <button
                         onClick={() => setSelectedSessionForScan(sess)}
-                        className="px-4 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs hover:shadow-sm transition flex items-center gap-1.5"
+                        className="px-4 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm hover:shadow-md transition flex items-center gap-1.5"
                       >
                         <span>Mark Present</span>
                         <ChevronRight className="w-3.5 h-3.5" />
@@ -222,7 +222,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
             return (
               <div
                 key={off.id}
-                className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition"
+                className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition"
               >
                 <div className="flex items-start justify-between mb-3">
                   <div>
@@ -232,7 +232,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                     <h5 className="text-xs font-medium text-slate-600 mt-0.5">
                       {course?.title}
                     </h5>
-                    <p className="text-[11px] text-slate-400 mt-1.5">
+                    <p className="text-xs text-slate-400 mt-1.5">
                       Lecturer: {off.primaryLecturer?.firstName} {off.primaryLecturer?.lastName}
                     </p>
                   </div>
@@ -257,7 +257,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
       />
 
       {/* ATTENDANCE HISTORY LOG & DISPUTE BUTTON */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-bold text-slate-900">
@@ -267,14 +267,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
           </div>
           <button
             onClick={() => setIsDisputeOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-2xs"
+            className="flex items-center gap-1.5 px-3 py-2 rounded-lg border border-slate-300 text-xs font-semibold text-slate-700 hover:bg-slate-50 transition shadow-sm"
           >
             <MessageSquare className="w-3.5 h-3.5 text-slate-500" />
             <span>Lodge Correction</span>
           </button>
         </div>
 
-        <div className="divide-y divide-zinc-100 dark:divide-zinc-800">
+        <div className="divide-y divide-slate-100">
           {attendanceRecords.map((r) => {
             const session = custechDb.getSessionById(r.sessionId);
             const statusBadge = getStatusBadgeVariant(r.status);
@@ -282,24 +282,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
               <div key={r.id} className="py-3 flex items-center justify-between text-xs">
                 <div>
                   <div className="flex items-center gap-2">
-                    <span className="font-bold text-zinc-900 dark:text-zinc-100">
+                    <span className="font-bold text-slate-900">
                       {session?.courseOffering?.course?.code || 'CSC 201'}
                     </span>
-                    <span className="text-zinc-400">•</span>
-                    <span className="text-zinc-500">{formatDate(r.recordedAt)}</span>
+                    <span className="text-slate-400">•</span>
+                    <span className="text-slate-500">{formatDate(r.recordedAt)}</span>
                   </div>
-                  <p className="text-[11px] text-zinc-400 mt-0.5">
+                  <p className="text-xs text-slate-400 mt-0.5">
                     Method: {r.method.replace('_', ' ')} {r.assistedReason ? `(${r.assistedReason})` : ''}
                   </p>
                 </div>
 
                 <div className="flex items-center gap-2">
                   <span
-                    className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
+                    className={`px-2.5 py-0.5 rounded-full text-xs font-bold border ${statusBadge.bg} ${statusBadge.text} ${statusBadge.border}`}
                   >
                     {statusBadge.label}
                   </span>
-                  <span className="text-[10px] text-zinc-400 font-mono">
+                  <span className="text-xs text-slate-400 font-mono">
                     {formatTime(r.recordedAt)}
                   </span>
                 </div>
@@ -325,12 +325,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
       {/* CORRECTION / DISPUTE MODAL */}
       {isDisputeOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs">
-          <div className="bg-white dark:bg-zinc-900 border border-zinc-200 dark:border-zinc-800 rounded-2xl w-full max-w-md p-6 shadow-2xl">
-            <h3 className="text-sm font-bold text-zinc-900 dark:text-zinc-100 mb-1">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md p-6 shadow-xl">
+            <h3 className="text-sm font-bold text-slate-900 mb-1">
               Submit Attendance Correction Request
             </h3>
-            <p className="text-xs text-zinc-500 mb-4">
+            <p className="text-xs text-slate-500 mb-4">
               If you attended a lecture but could not mark attendance due to device or network issues.
             </p>
 
@@ -375,13 +375,13 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                 <button
                   type="button"
                   onClick={() => setIsDisputeOpen(false)}
-                  className="px-3 py-2 rounded-xl text-xs font-medium text-slate-500 hover:bg-slate-100"
+                  className="px-3 py-2 rounded-lg text-xs font-medium text-slate-500 hover:bg-slate-100"
                 >
                   Cancel
                 </button>
                 <button
                   type="submit"
-                  className="px-4 py-2 rounded-xl text-xs font-bold bg-[#8d4a27] hover:bg-[#743c22] text-white shadow-xs transition"
+                  className="px-4 py-2.5 rounded-lg text-xs font-bold bg-[#8d4a27] hover:bg-[#743c22] text-white shadow-sm transition"
                 >
                   Submit for Lecturer Review
                 </button>

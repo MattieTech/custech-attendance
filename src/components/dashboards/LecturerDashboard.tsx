@@ -92,7 +92,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
   return (
     <div className="space-y-6">
       {/* Lecturer Greeting Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[#8d4a27]">
@@ -112,12 +112,12 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
         <div className="flex items-center gap-2 flex-wrap">
           <button
             onClick={() => setIsFraudOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold border border-rose-200 bg-rose-50 text-rose-700 hover:bg-rose-100 transition shadow-sm"
           >
             <ShieldAlert className="w-3.5 h-3.5" />
             <span>Anti-Proxy Alerts</span>
             {unreviewedAlertsCount > 0 && (
-              <span className="px-1.5 py-0.2 rounded-full text-[9px] font-black bg-rose-600 text-white">
+              <span className="px-1.5 py-0.5 rounded-full text-[10px] font-black bg-rose-600 text-white">
                 {unreviewedAlertsCount}
               </span>
             )}
@@ -125,7 +125,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
           <button
             onClick={() => setIsMedicalOpen(true)}
-            className="flex items-center gap-1.5 px-3 py-2 rounded-xl text-xs font-bold border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shadow-2xs"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold border border-sky-200 bg-sky-50 text-sky-700 hover:bg-sky-100 transition shadow-sm"
           >
             <HeartPulse className="w-3.5 h-3.5" />
             <span>Clinic Waivers</span>
@@ -133,7 +133,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
           <button
             onClick={() => setIsKioskOpen(true)}
-            className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl text-xs font-bold bg-[#8d4a27] hover:bg-[#743c22] text-white shadow-xs transition"
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg text-xs font-bold bg-[#8d4a27] hover:bg-[#743c22] text-white shadow-sm transition"
           >
             <span>Launch Kiosk</span>
           </button>
@@ -141,7 +141,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
       </div>
 
       {actionSuccessMsg && (
-        <div className="p-3 bg-[#8d4a27] text-white text-xs font-bold rounded-xl flex items-center gap-2 animate-fadeIn shadow-xs">
+        <div className="p-3.5 bg-[#8d4a27] text-white text-xs font-bold rounded-xl flex items-center gap-2 animate-fadeIn shadow-sm">
           <ShieldCheck className="w-4 h-4" />
           <span>{actionSuccessMsg}</span>
         </div>
@@ -168,10 +168,10 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
             return (
               <div
                 key={tt.id}
-                className={`bg-white border rounded-2xl p-5 shadow-xs hover:shadow-sm transition ${
+                className={`bg-white border rounded-xl p-5 shadow-sm hover:shadow-md transition ${
                   isSessionActive
-                    ? 'border-amber-400/90 ring-2 ring-amber-400/20'
-                    : 'border-slate-200/80 hover:border-slate-300'
+                    ? 'border-amber-400 ring-2 ring-amber-400/20'
+                    : 'border-slate-200 hover:border-slate-300'
                 }`}
               >
                 <div className="flex flex-col sm:flex-row sm:items-start justify-between gap-3">
@@ -181,7 +181,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                         {course?.code}
                       </span>
                       {isSessionActive && (
-                        <span className="px-2.5 py-0.5 rounded-full text-[10px] font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-50 text-amber-800 border border-amber-200 animate-pulse">
                           LIVE NOW
                         </span>
                       )}
@@ -203,13 +203,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
                   <div>
                     {isSessionActive ? (
-                      <span className="px-3 py-1.5 rounded-xl bg-[#fbf5ef] text-[#8d4a27] text-xs font-bold border border-[#ecdacb]">
+                      <span className="px-3 py-1.5 rounded-lg bg-[#fbf5ef] text-[#8d4a27] text-xs font-bold border border-[#ecdacb]">
                         Session Active
                       </span>
                     ) : (
                       <button
                         onClick={() => offering && handleStartSession(offering.id)}
-                        className="flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs transition"
+                        className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm transition"
                       >
                         <Play className="w-3 h-3 fill-current" />
                         <span>Start Attendance</span>
@@ -248,7 +248,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
       {/* KIOSK MODAL FOR LECTURER / REP */}
       {isKioskOpen && activeSession && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-xs animate-fadeIn">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
           <div className="w-full max-w-xl">
             <KioskTerminal
               sessionId={activeSession.id}
@@ -267,7 +267,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
       {/* SYLLABUS / COURSE DELIVERY & PENDING DISPUTES */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Syllabus Progress */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <BookOpen className="w-4 h-4 text-[#8d4a27]" />
@@ -293,13 +293,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                       {topic.topicTitle}
                     </span>
                   </div>
-                  <p className="text-[11px] text-slate-500 mt-1">
+                  <p className="text-xs text-slate-500 mt-1">
                     {topic.learningObjectives}
                   </p>
                 </div>
                 <button
                   onClick={() => handleToggleSyllabus(topic.id, !!topic.isCompleted)}
-                  className={`px-2.5 py-1 rounded-lg text-[10px] font-bold shrink-0 transition ${
+                  className={`px-3 py-1.5 rounded-lg text-xs font-bold shrink-0 transition ${
                     topic.isCompleted
                       ? 'bg-slate-100 text-slate-800 border border-slate-200'
                       : 'bg-white text-slate-600 border border-slate-300 hover:bg-slate-50'
@@ -313,7 +313,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
         </div>
 
         {/* Attendance Disputes / Correction Queue */}
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs">
+        <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
           <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
             <div className="flex items-center gap-2">
               <AlertCircle className="w-4 h-4 text-amber-600" />
@@ -338,29 +338,29 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                 return (
                   <div
                     key={c.id}
-                    className="p-3.5 rounded-xl border border-amber-200/80 bg-amber-50/50 text-xs space-y-2"
+                    className="p-3.5 rounded-xl border border-amber-200 bg-amber-50/50 text-xs space-y-2"
                   >
                     <div className="flex items-center justify-between">
                       <span className="font-bold text-slate-900">
                         {studentName} ({matric})
                       </span>
-                      <span className="text-[10px] text-slate-400 font-medium">
+                      <span className="text-xs text-slate-400 font-medium">
                         {new Date(c.createdAt).toLocaleDateString()}
                       </span>
                     </div>
-                    <p className="text-[11px] text-slate-600 italic">
+                    <p className="text-xs text-slate-600 italic">
                       "{c.reason}"
                     </p>
                     <div className="flex items-center justify-end gap-2 pt-1 border-t border-amber-200/60">
                       <button
                         onClick={() => handleResolveCorrection(c.id, 'REJECTED')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-rose-700 bg-rose-50 hover:bg-rose-100 border border-rose-200 transition"
                       >
                         Reject
                       </button>
                       <button
                         onClick={() => handleResolveCorrection(c.id, 'APPROVED')}
-                        className="px-2.5 py-1 rounded-lg text-[10px] font-bold text-white bg-[#8d4a27] hover:bg-[#743c22]"
+                        className="px-3 py-1.5 rounded-lg text-xs font-bold text-white bg-[#8d4a27] hover:bg-[#743c22] transition shadow-sm"
                       >
                         Approve & Mark Present
                       </button>

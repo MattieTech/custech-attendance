@@ -54,7 +54,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   return (
     <div className="space-y-6">
       {/* Super Admin Banner */}
-      <div className="bg-white border border-slate-200/90 rounded-2xl p-6 shadow-xs flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-4">
         <div>
           <div className="flex items-center gap-2">
             <span className="text-xs font-bold uppercase tracking-wider text-[#8d4a27]">
@@ -72,7 +72,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         </div>
 
         <div className="flex items-center gap-2">
-          <span className="px-3 py-1 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+          <span className="px-3 py-1.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
             Root Authority: Active
           </span>
         </div>
@@ -80,33 +80,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
       {/* University Directory Overview */}
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="text-xs text-slate-500 font-semibold">Faculties</div>
           <p className="text-3xl font-black text-slate-900 mt-1">{faculties.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Computing, Engineering, Science</p>
+          <p className="text-xs text-slate-400 mt-1">Computing, Engineering, Science</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="text-xs text-slate-500 font-semibold">Departments</div>
           <p className="text-3xl font-black text-slate-900 mt-1">{departments.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1">CSC, SEN, CYS</p>
+          <p className="text-xs text-slate-400 mt-1">CSC, SEN, CYS</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="text-xs text-slate-500 font-semibold">Audited Events</div>
           <p className="text-3xl font-black text-slate-900 mt-1">{auditLogs.length}</p>
-          <p className="text-[11px] text-slate-400 mt-1">Tamper-proof record trail</p>
+          <p className="text-xs text-slate-400 mt-1">Tamper-proof record trail</p>
         </div>
 
-        <div className="bg-white border border-slate-200/80 rounded-2xl p-5 shadow-xs hover:shadow-sm transition">
+        <div className="bg-white border border-slate-200 rounded-xl p-5 shadow-sm hover:shadow-md transition">
           <div className="text-xs text-slate-500 font-semibold">Campus Coverage</div>
           <p className="text-3xl font-black text-slate-900 mt-1">100%</p>
-          <p className="text-[11px] text-slate-400 mt-1">Dual QR + Kiosk Active</p>
+          <p className="text-xs text-slate-400 mt-1">Dual QR + Kiosk Active</p>
         </div>
       </div>
 
       {/* SYSTEM SETTINGS & POLICY CONFIGURATOR */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <Sliders className="w-4 h-4 text-[#8d4a27]" />
@@ -124,7 +124,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
         <form onSubmit={handleSaveSettings} className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
           <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Exam Eligibility Threshold (%)
             </label>
             <input
@@ -135,13 +135,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               onChange={(e) =>
                 setSettings({ ...settings, examEligibilityThreshold: Number(e.target.value) })
               }
-              className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 font-mono"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-none transition"
             />
-            <p className="text-[10px] text-zinc-400 mt-1">Statutory attendance requirement (default 75%)</p>
+            <p className="text-xs text-slate-400 mt-1">Statutory attendance requirement (default 75%)</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Warning Notice Threshold (%)
             </label>
             <input
@@ -152,13 +152,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               onChange={(e) =>
                 setSettings({ ...settings, minimumAttendanceWarningThreshold: Number(e.target.value) })
               }
-              className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 font-mono"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-none transition"
             />
-            <p className="text-[10px] text-zinc-400 mt-1">Triggers student portal alert (default 70%)</p>
+            <p className="text-xs text-slate-400 mt-1">Triggers student portal alert (default 70%)</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               QR Code Rotation Interval (Seconds)
             </label>
             <input
@@ -169,13 +169,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               onChange={(e) =>
                 setSettings({ ...settings, qrRotationSeconds: Number(e.target.value) })
               }
-              className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 font-mono"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-none transition"
             />
-            <p className="text-[10px] text-zinc-400 mt-1">Anti-proxy refresh period (default 20s)</p>
+            <p className="text-xs text-slate-400 mt-1">Anti-proxy refresh period (default 20s)</p>
           </div>
 
           <div>
-            <label className="block text-xs font-bold text-zinc-700 dark:text-zinc-300 mb-1">
+            <label className="block text-xs font-bold text-slate-700 mb-1">
               Late Status Grace Period (Minutes)
             </label>
             <input
@@ -186,16 +186,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               onChange={(e) =>
                 setSettings({ ...settings, lateThresholdMinutes: Number(e.target.value) })
               }
-              className="w-full px-3 py-2 text-xs rounded-xl border border-zinc-300 dark:border-zinc-700 bg-zinc-50 dark:bg-zinc-800 font-mono"
+              className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-none transition"
             />
-            <p className="text-[10px] text-zinc-400 mt-1">Classes after this are marked LATE (default 15m)</p>
+            <p className="text-xs text-slate-400 mt-1">Classes after this are marked LATE (default 15m)</p>
           </div>
 
           <div className="sm:col-span-2 lg:col-span-4 flex justify-end pt-2">
             <button
               type="submit"
               disabled={isSaving}
-              className="px-5 py-2.5 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs transition"
+              className="px-5 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm transition disabled:opacity-50"
             >
               {isSaving ? 'Applying Changes...' : 'Save & Publish Policy Changes'}
             </button>
@@ -204,7 +204,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       </div>
 
       {/* IMMUTABLE AUDIT LOG EXPLORER */}
-      <div className="bg-white border border-slate-200/80 rounded-2xl p-6 shadow-xs">
+      <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
         <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
           <div className="flex items-center gap-2">
             <ShieldCheck className="w-4 h-4 text-[#8d4a27]" />
@@ -212,42 +212,42 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               Immutable Security & System Audit Trail ({auditLogs.length} Events)
             </h3>
           </div>
-          <span className="text-[10px] font-mono text-slate-400">PostgreSQL Append-Only</span>
+          <span className="text-xs font-mono text-slate-400">PostgreSQL Append-Only</span>
         </div>
 
         <div className="overflow-x-auto w-full">
           <table className="w-full text-left text-xs min-w-[640px]">
-            <thead className="border-b border-slate-200 text-slate-400 uppercase text-[10px]">
+            <thead className="border-b border-slate-200 text-slate-400 uppercase text-xs font-semibold">
               <tr>
-                <th className="pb-2.5">Timestamp</th>
-                <th className="pb-2.5">Actor</th>
-                <th className="pb-2.5">Role</th>
-                <th className="pb-2.5">Action</th>
-                <th className="pb-2.5">Target Entity</th>
-                <th className="pb-2.5">Details</th>
+                <th className="pb-3 pt-1">Timestamp</th>
+                <th className="pb-3 pt-1">Actor</th>
+                <th className="pb-3 pt-1">Role</th>
+                <th className="pb-3 pt-1">Action</th>
+                <th className="pb-3 pt-1">Target Entity</th>
+                <th className="pb-3 pt-1">Details</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
               {auditLogs.map((log) => (
                 <tr key={log.id} className="hover:bg-slate-50 transition">
-                  <td className="py-2.5 font-mono text-[11px] text-slate-400">
+                  <td className="py-3 font-mono text-xs text-slate-500">
                     {formatTime(log.createdAt)}
                   </td>
-                  <td className="py-2.5 font-semibold text-slate-800">
+                  <td className="py-3 font-semibold text-slate-800">
                     {log.actorName}
                   </td>
-                  <td className="py-2.5">
-                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+                  <td className="py-3">
+                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
                       {log.actorRole}
                     </span>
                   </td>
-                  <td className="py-2.5 font-mono text-slate-900 font-bold">
+                  <td className="py-3 font-mono text-slate-900 font-bold">
                     {log.action}
                   </td>
-                  <td className="py-2.5 text-slate-500 font-mono text-[11px]">
+                  <td className="py-3 text-slate-500 font-mono text-xs">
                     {log.entityType}
                   </td>
-                  <td className="py-2.5 text-slate-400 text-[11px] max-w-xs truncate">
+                  <td className="py-3 text-slate-400 text-xs max-w-xs truncate">
                     {JSON.stringify(log.details || {})}
                   </td>
                 </tr>
