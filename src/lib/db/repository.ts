@@ -53,9 +53,160 @@ import {
   initialNotifications,
 } from './initial-data';
 import { generateTemporaryCode, verifyAttendancePin } from '../crypto';
+import bcrypt from 'bcryptjs';
 
 class CustechDatabase {
   private profiles = [...initialProfiles];
+  private faculties = [...initialFaculties];
+  private departments = [...initialDepartments];
+  private programs = [...initialPrograms];
+  private academicSessions = [...initialAcademicSessions];
+  private semesters = [...initialSemesters];
+  private students = [...initialStudents];
+  private staff = [...initialStaff];
+  private classrooms = [...initialClassrooms];
+  private courses = [...initialCourses];
+  private courseOfferings = [...initialCourseOfferings];
+  private timetables = [...initialTimetable];
+  private enrollments = [...initialEnrollments];
+  private courseReps = [...initialCourseReps];
+  private sessions = [...initialSessions];
+  private attendanceRecords = [...initialAttendanceRecords];
+  private corrections = [...initialCorrections];
+  private syllabusTopics = [...initialSyllabusTopics];
+  private materials = [...initialMaterials];
+  private staffAttendance = [...initialStaffAttendance];
+  private systemSettings: SystemSettings = { ...initialSystemSettings };
+  private auditLogs = [...initialAuditLogs];
+  private medicalWaivers = [...initialMedicalWaivers];
+  private deviceCollisionAlerts = [...initialDeviceCollisionAlerts];
+  private notifications = [...initialNotifications];
+
+  constructor() {
+    this.loadPersistentData();
+  }
+
+  // ==========================================
+  // LOCAL & FILESYSTEM DATA PERSISTENCE
+  // ==========================================
+  private getStorageFilePath(): string | null {
+    if (typeof window !== 'undefined') return null;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const path = require('path');
+      return path.join(process.cwd(), 'src', 'data', 'custech_store.json');
+    } catch {
+      return null;
+    }
+  }
+
+  private loadPersistentData(): void {
+    // 1. Client-side browser persistence
+    if (typeof window !== 'undefined') {
+      try {
+        const raw = localStorage.getItem('custech_persisted_store_v1');
+        if (raw) {
+          const parsed = JSON.parse(raw);
+          if (Array.isArray(parsed.customProfiles)) {
+            parsed.customProfiles.forEach((p: UserProfile) => {
+              if (!this.profiles.some((ep) => ep.id === p.id)) this.profiles.unshift(p);
+            });
+          }
+          if (Array.isArray(parsed.customStudents)) {
+            parsed.customStudents.forEach((s: Student) => {
+              if (!this.students.some((es) => es.id === s.id)) this.students.unshift(s);
+            });
+          }
+          if (Array.isArray(parsed.customEnrollments)) {
+            parsed.customEnrollments.forEach((e: Enrollment) => {
+              if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
+            });
+          }
+          if (parsed.systemSettings) {
+            this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
+          }
+        }
+      } catch (err) {
+        console.warn('Failed to load localStorage custech_store:', err);
+      }
+      return;
+    }
+
+    // 2. Server-side Node.js filesystem persistence
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs');
+      const storeFile = this.getStorageFilePath();
+      if (storeFile && fs.existsSync(storeFile)) {
+        const fileContent = fs.readFileSync(storeFile, 'utf8');
+        const parsed = JSON.parse(fileContent);
+        if (Array.isArray(parsed.customProfiles)) {
+          parsed.customProfiles.forEach((p: UserProfile) => {
+            if (!this.profiles.some((ep) => ep.id === p.id)) this.profiles.unshift(p);
+          });
+        }
+        if (Array.isArray(parsed.customStudents)) {
+          parsed.customStudents.forEach((s: Student) => {
+            if (!this.students.some((es) => es.id === s.id)) this.students.unshift(s);
+          });
+        }
+        if (Array.isArray(parsed.customEnrollments)) {
+          parsed.customEnrollments.forEach((e: Enrollment) => {
+            if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
+          });
+        }
+        if (parsed.systemSettings) {
+          this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
+        }
+        if (Array.isArray(parsed.auditLogs)) {
+          parsed.auditLogs.forEach((a: AuditLog) => {
+            if (!this.auditLogs.some((ea) => ea.id === a.id)) this.auditLogs.unshift(a);
+          });
+        }
+      }
+    } catch (err) {
+      console.warn('Failed to load filesystem custech_store:', err);
+    }
+  }
+
+  savePersistentData(): void {
+    const initialProfileIds = new Set(initialProfiles.map((p) => p.id));
+    const initialStudentIds = new Set(initialStudents.map((s) => s.id));
+    const initialEnrollmentIds = new Set(initialEnrollments.map((e) => e.id));
+
+    const customProfiles = this.profiles.filter((p) => !initialProfileIds.has(p.id));
+    const customStudents = this.students.filter((s) => !initialStudentIds.has(s.id));
+    const customEnrollments = this.enrollments.filter((e) => !initialEnrollmentIds.has(e.id));
+
+    const payload = {
+      customProfiles,
+      customStudents,
+      customEnrollments,
+      systemSettings: this.systemSettings,
+      auditLogs: this.auditLogs.slice(0, 100),
+      updatedAt: new Date().toISOString(),
+    };
+
+    if (typeof window !== 'undefined') {
+      try {
+        localStorage.setItem('custech_persisted_store_v1', JSON.stringify(payload));
+      } catch (err) {
+        console.warn('Could not save to localStorage:', err);
+      }
+      return;
+    }
+
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs');
+      const storeFile = this.getStorageFilePath();
+      if (storeFile) {
+        fs.writeFileSync(storeFile, JSON.stringify(payload, null, 2), 'utf8');
+      }
+    } catch (err) {
+      console.warn('Could not save to filesystem:', err);
+    }
+  }
   private faculties = [...initialFaculties];
   private departments = [...initialDepartments];
   private programs = [...initialPrograms];
@@ -131,6 +282,170 @@ class CustechDatabase {
     return this.enrollments.some(
       (e) => e.studentId === studentId && e.courseOfferingId === courseOfferingId && e.isActive
     );
+  }
+
+  registerStudent(params: {
+    firstName: string;
+    lastName: string;
+    matricNumber: string;
+    email: string;
+    departmentId?: string;
+    programId?: string;
+    currentLevel?: 100 | 200 | 300 | 400 | 500;
+    pin?: string;
+    enrollInCourses?: boolean;
+    actorId?: string;
+  }): { student: Student; profile: UserProfile } {
+    const cleanMatric = params.matricNumber.trim().toUpperCase();
+    const cleanEmail = params.email.trim().toLowerCase();
+
+    // Prevent duplicate matriculation number
+    if (this.students.some((s) => s.matricNumber.toUpperCase() === cleanMatric)) {
+      throw new Error(`Matriculation number "${cleanMatric}" is already registered in the CUSTECH academic database.`);
+    }
+
+    // Prevent duplicate email
+    if (this.profiles.some((p) => p.email.toLowerCase() === cleanEmail)) {
+      throw new Error(`Email "${cleanEmail}" is already registered.`);
+    }
+
+    const timestamp = Date.now();
+    const profileId = `user-stu-${timestamp}`;
+    const studentId = `stu-${timestamp}`;
+    const pin = params.pin || '1234';
+    const pinHash = bcrypt.hashSync(pin, 10);
+
+    const deptId = params.departmentId || 'dept-csc';
+    const dept = this.departments.find((d) => d.id === deptId);
+    const facultyId = dept?.facultyId || 'fac-comp';
+    const level = params.currentLevel || 200;
+
+    const newProfile: UserProfile = {
+      id: profileId,
+      email: cleanEmail,
+      firstName: params.firstName.trim(),
+      lastName: params.lastName.trim(),
+      matricNumber: cleanMatric,
+      primaryRole: 'STUDENT',
+      assignedRoles: ['STUDENT'],
+      departmentId: deptId,
+      facultyId: facultyId,
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    const newStudent: Student = {
+      id: studentId,
+      profileId: profileId,
+      matricNumber: cleanMatric,
+      programId: params.programId || 'prog-csc',
+      currentLevel: level,
+      attendancePinHash: pinHash,
+      profile: newProfile,
+    };
+
+    this.profiles.unshift(newProfile);
+    this.students.unshift(newStudent);
+
+    // Auto-enroll in active courses for their level/department (or default offerings like CSC 201)
+    if (params.enrollInCourses !== false) {
+      const activeOfferings = this.courseOfferings.filter((co) => {
+        const c = this.courses.find((course) => course.id === co.courseId);
+        return c && (c.departmentId === deptId || c.level === level);
+      });
+
+      const targetOfferings = activeOfferings.length > 0 ? activeOfferings : this.courseOfferings;
+      targetOfferings.forEach((off) => {
+        if (!this.enrollments.some((e) => e.studentId === studentId && e.courseOfferingId === off.id)) {
+          this.enrollments.push({
+            id: `enr_${timestamp}_${off.id}`,
+            studentId,
+            courseOfferingId: off.id,
+            isActive: true,
+          });
+        }
+      });
+    }
+
+    this.logAudit({
+      actorId: params.actorId || 'user-admin',
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_REGISTERED_STUDENT',
+      entityType: 'students',
+      entityId: studentId,
+      details: {
+        matricNumber: cleanMatric,
+        fullName: `${params.firstName} ${params.lastName}`,
+        departmentId: deptId,
+        level,
+      },
+    });
+
+    this.savePersistentData();
+
+    return { student: newStudent, profile: newProfile };
+  }
+
+  deleteStudent(studentId: string, actorId: string): boolean {
+    const student = this.students.find((s) => s.id === studentId);
+    if (!student) return false;
+
+    this.students = this.students.filter((s) => s.id !== studentId);
+    this.profiles = this.profiles.filter((p) => p.id !== student.profileId);
+    this.enrollments = this.enrollments.filter((e) => e.studentId !== studentId);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_DELETED_STUDENT',
+      entityType: 'students',
+      entityId: studentId,
+      details: { matricNumber: student.matricNumber },
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  resetStudentPin(studentId: string, newPin: string, actorId: string): boolean {
+    const student = this.students.find((s) => s.id === studentId);
+    if (!student) return false;
+
+    student.attendancePinHash = bcrypt.hashSync(newPin, 10);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_RESET_STUDENT_PIN',
+      entityType: 'students',
+      entityId: studentId,
+      details: { matricNumber: student.matricNumber },
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  getAllStudentsDetailed(): (Student & {
+    profile?: UserProfile;
+    enrolledCoursesCount: number;
+    departmentName: string;
+    facultyName: string;
+  })[] {
+    return this.students.map((s) => {
+      const profile = this.getProfileById(s.profileId);
+      const enrolledCount = this.enrollments.filter((e) => e.studentId === s.id && e.isActive).length;
+      const dept = this.departments.find((d) => d.id === profile?.departmentId);
+      const fac = this.faculties.find((f) => f.id === dept?.facultyId);
+
+      return {
+        ...s,
+        profile,
+        enrolledCoursesCount: enrolledCount,
+        departmentName: dept?.name || 'Computer Science',
+        facultyName: fac?.name || 'Faculty of Computing',
+      };
+    });
   }
 
   getEnrolledStudentsForOffering(courseOfferingId: string): (Student & { profile?: UserProfile })[] {

@@ -1,5 +1,6 @@
 import { UserProfile, UserRole } from '@/types';
 import { initialProfiles } from '../db/initial-data';
+import { custechDb } from '../db/repository';
 
 export interface AuthenticatedSession {
   user: UserProfile;
@@ -29,7 +30,9 @@ export function getStoredSession(): AuthenticatedSession | null {
     if (!raw) return null;
     const parsed: AuthenticatedSession = JSON.parse(raw);
     // Ensure user still exists in database and update profile data in case it changed
-    const freshUser = initialProfiles.find((p) => p.id === parsed.user.id);
+    const freshUser =
+      custechDb.getProfileById(parsed.user.id) ||
+      initialProfiles.find((p) => p.id === parsed.user.id);
     if (!freshUser) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
@@ -67,9 +70,10 @@ export function loginStudent(
     return { success: false, error: 'Please enter your Matriculation Number.' };
   }
 
-  const profile = initialProfiles.find(
-    (p) => p.matricNumber?.toUpperCase() === cleanMatric
-  );
+  const allProfiles = custechDb.getProfiles();
+  const profile =
+    allProfiles.find((p) => p.matricNumber?.toUpperCase() === cleanMatric) ||
+    initialProfiles.find((p) => p.matricNumber?.toUpperCase() === cleanMatric);
 
   if (!profile) {
     return {
@@ -108,11 +112,18 @@ export function loginStaff(
     return { success: false, error: 'Please enter your Staff ID or University Email.' };
   }
 
-  const profile = initialProfiles.find(
-    (p) =>
-      p.email.toLowerCase() === cleanId ||
-      (p.staffId && p.staffId.toLowerCase() === cleanId)
-  );
+  const allProfiles = custechDb.getProfiles();
+  const profile =
+    allProfiles.find(
+      (p) =>
+        p.email.toLowerCase() === cleanId ||
+        (p.staffId && p.staffId.toLowerCase() === cleanId)
+    ) ||
+    initialProfiles.find(
+      (p) =>
+        p.email.toLowerCase() === cleanId ||
+        (p.staffId && p.staffId.toLowerCase() === cleanId)
+    );
 
   if (!profile) {
     return {
