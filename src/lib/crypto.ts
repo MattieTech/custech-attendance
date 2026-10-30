@@ -59,13 +59,14 @@ export function createDynamicQrPayload(
  */
 export function verifyQrPayload(
   payload: RotatingQrPayload,
-  rotationSeconds: number = 20
+  rotationSeconds: number = 20,
+  allowedWindowMargin: number = 3
 ): { isValid: boolean; reason?: string } {
   const currentWindow = Math.floor(Date.now() / 1000 / rotationSeconds);
 
-  // Check if window is within [-1, 0, +1]
+  // Check if window is within margin (default ±3 windows to allow for camera click and browser navigation)
   const windowDiff = Math.abs(currentWindow - payload.timestampWindow);
-  if (windowDiff > 1) {
+  if (windowDiff > allowedWindowMargin) {
     return { isValid: false, reason: 'QR code expired. Please scan the newly rotated code on screen.' };
   }
 

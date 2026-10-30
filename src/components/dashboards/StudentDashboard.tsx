@@ -9,7 +9,7 @@ import { ExamDocketModal } from '../docket/ExamDocketModal';
 import { AttendanceForecast } from '../analytics/AttendanceForecast';
 import { submitAttendanceCorrection } from '@/actions/attendance';
 import { formatDate, formatTime, getStatusBadgeVariant } from '@/lib/utils';
-import { BookOpen, Calendar, Clock, AlertCircle, FileText, CheckCircle2, ChevronRight, MessageSquare, Award, HeartPulse } from 'lucide-react';
+import { BookOpen, Calendar, Clock, AlertCircle, FileText, CheckCircle2, ChevronRight, MessageSquare, Award, HeartPulse, Radio, Key } from 'lucide-react';
 
 interface StudentDashboardProps {
   user: UserProfile;
@@ -22,6 +22,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   const activeSessions = custechDb.getSessions().filter((s) => s.status === 'ACTIVE');
 
   const [selectedSessionForScan, setSelectedSessionForScan] = React.useState<AttendanceSession | null>(null);
+  const [isManualEntryOpen, setIsManualEntryOpen] = React.useState(false);
   const [successToast, setSuccessToast] = React.useState<string | null>(null);
   const [docket, setDocket] = React.useState<ExamDocket | null>(null);
 
@@ -144,19 +145,37 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
       {/* TODAY'S CLASSES & ACTIVE SESSIONS */}
       <div>
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
           <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#8d4a27]" />
+            <Radio className="w-4 h-4 text-[#8d4a27] animate-pulse" />
             <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
               Today’s Lecture Attendance
             </h3>
           </div>
-          <span className="text-xs text-slate-400 font-medium">Thursday, 3 Sep 2026</span>
+          <div className="flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => setIsManualEntryOpen(true)}
+              className="px-3 py-1.5 rounded-lg bg-[#fbf5ef] hover:bg-[#ecdacb] text-[#8d4a27] border border-[#ecdacb] text-xs font-bold transition flex items-center gap-1.5 shadow-xs"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Type Course & Lecture Code</span>
+            </button>
+            <span className="text-xs text-slate-400 font-medium">Thursday, 3 Sep 2026</span>
+          </div>
         </div>
 
         {activeSessions.length === 0 ? (
-          <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-400 text-xs shadow-sm">
-            No active attendance sessions right now. Please wait for your lecturer to start class attendance.
+          <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-slate-400 text-xs shadow-sm space-y-3">
+            <p>No active attendance sessions right now. Please wait for your lecturer to project the lecture attendance screen.</p>
+            <button
+              type="button"
+              onClick={() => setIsManualEntryOpen(true)}
+              className="inline-flex items-center gap-2 px-4 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition shadow-sm"
+            >
+              <Key className="w-3.5 h-3.5" />
+              <span>Enter Course Code & Lecture Code Manually</span>
+            </button>
           </div>
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -309,16 +328,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
         </div>
       </div>
 
-      {/* SCANNER MODAL */}
-      {selectedSessionForScan && (
+      {/* SCANNER / MANUAL ATTENDANCE MODAL */}
+      {(selectedSessionForScan || isManualEntryOpen) && (
         <QrScannerModal
-          sessionId={selectedSessionForScan.id}
-          courseCode="CSC 201"
+          sessionId={selectedSessionForScan?.id}
+          courseCode={
+            selectedSessionForScan
+              ? custechDb.getOfferingById(selectedSessionForScan.courseOfferingId)?.course?.code || 'CSC 201'
+              : ''
+          }
           studentProfileId={user.id}
-          onClose={() => setSelectedSessionForScan(null)}
+          onClose={() => {
+            setSelectedSessionForScan(null);
+            setIsManualEntryOpen(false);
+          }}
           onSuccess={(msg) => {
             setSuccessToast(msg);
             setSelectedSessionForScan(null);
+            setIsManualEntryOpen(false);
           }}
         />
       )}

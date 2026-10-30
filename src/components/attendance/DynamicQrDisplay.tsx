@@ -4,7 +4,7 @@ import React from 'react';
 import QRCode from 'qrcode';
 import { getRotatingQrToken, pauseSession, resumeSession, closeSession } from '@/actions/attendance';
 import { AttendanceSession, RotatingQrPayload } from '@/types';
-import { Pause, Play, Square, Key, ShieldAlert, Sparkles, RefreshCw } from 'lucide-react';
+import { Pause, Play, Square, Key, ShieldAlert, Sparkles, RefreshCw, Copy, Check, ExternalLink } from 'lucide-react';
 
 interface DynamicQrDisplayProps {
   session: AttendanceSession;
@@ -31,6 +31,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   const [secondsRemaining, setSecondsRemaining] = React.useState<number>(initialSession.qrRotationSeconds || 20);
   const [isLoading, setIsLoading] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [copiedLink, setCopiedLink] = React.useState(false);
 
   // Sync state if initialSession changes
   React.useEffect(() => {
@@ -47,8 +48,13 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
         return;
       }
       setCurrentPayload(res);
-      // Generate SVG string
-      const svg = await QRCode.toString(JSON.stringify(res), {
+      
+      // Generate Direct Mobile Camera Redirect URL
+      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000';
+      const attendUrl = `${origin}/attend?sessionId=${encodeURIComponent(session.id)}&course=${encodeURIComponent(courseCode)}&tw=${res.timestampWindow}&nonce=${encodeURIComponent(res.nonce)}&sig=${encodeURIComponent(res.signature)}&code=${encodeURIComponent(session.currentTempCode)}`;
+
+      // Generate SVG string from the direct URL
+      const svg = await QRCode.toString(attendUrl, {
         type: 'svg',
         margin: 1,
         color: {
@@ -62,7 +68,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     } catch {
       setActionError('Error generating dynamic token');
     }
-  }, [session.id, session.status, session.qrRotationSeconds]);
+  }, [session.id, session.status, session.qrRotationSeconds, session.currentTempCode, courseCode]);
 
   // Timer interval for countdown and token rotation
   React.useEffect(() => {
@@ -209,18 +215,43 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
             </div>
           </div>
 
-          {/* Large Alphanumeric Temporary Attendance Code */}
-          <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 w-full max-w-sm">
+          {/* Course Code & Temporary Attendance Code Display */}
+          <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 w-full max-w-sm text-center">
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1">
-              <Key className="w-3 h-3 text-slate-400" />
-              Temporary Attendance Code
+              <Key className="w-3.5 h-3.5 text-[#8d4a27]" />
+              Manual Student Entry
             </p>
-            <div className="text-3xl sm:text-4xl font-black text-slate-900 tracking-widest my-1 font-mono">
-              {session.currentTempCode}
+            <div className="flex items-center justify-center gap-2 my-2">
+              <div className="bg-[#fbf5ef] border border-[#ecdacb] px-3 py-1.5 rounded-lg text-center">
+                <span className="block text-[10px] uppercase font-bold text-slate-400">Course Code</span>
+                <span className="text-base font-extrabold text-[#8d4a27] font-mono">{courseCode}</span>
+              </div>
+              <div className="bg-white border border-slate-300 px-4 py-1.5 rounded-lg text-center shadow-xs">
+                <span className="block text-[10px] uppercase font-bold text-slate-400">Lecture Code</span>
+                <span className="text-xl font-black text-slate-900 tracking-widest font-mono">{session.currentTempCode}</span>
+              </div>
             </div>
-            <p className="text-xs text-slate-400">
-              For students with low camera resolution or scanning difficulty
+            <p className="text-xs text-slate-500 mt-2">
+              Phone camera automatically redirects to mark presence upon scanning. Students can also enter Course Code <strong className="text-slate-800">{courseCode}</strong> + Code <strong className="text-slate-800">{session.currentTempCode}</strong>.
             </p>
+
+            {/* Quick Link Copy for Testing */}
+            <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-center gap-2">
+              <button
+                type="button"
+                onClick={() => {
+                  const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000';
+                  const attendUrl = `${origin}/attend?sessionId=${encodeURIComponent(session.id)}&course=${encodeURIComponent(courseCode)}&code=${encodeURIComponent(session.currentTempCode)}`;
+                  navigator.clipboard?.writeText(attendUrl);
+                  setCopiedLink(true);
+                  setTimeout(() => setCopiedLink(false), 2000);
+                }}
+                className="text-xs font-semibold text-[#8d4a27] hover:text-[#743c22] flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-slate-100 transition"
+              >
+                {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
+                <span>{copiedLink ? 'Link Copied to Clipboard!' : 'Copy Direct Attendance Link'}</span>
+              </button>
+            </div>
           </div>
         </div>
       ) : session.status === 'PAUSED' ? (

@@ -141,6 +141,170 @@ export async function submitCodeAttendance(
 }
 
 /**
+ * Handles student submission of Course Code (e.g. CSC 201) + 6-character Code (e.g. 7K4P92)
+ */
+export async function submitAttendanceByCourseAndCode(
+  courseCode: string,
+  code: string,
+  studentProfileId: string,
+  clientEventId?: string
+): Promise<{ success: boolean; message: string; record?: AttendanceRecord; courseTitle?: string }> {
+  const cleanCourse = courseCode.trim().toUpperCase().replace(/\s+/g, '');
+  const cleanCode = code.trim().toUpperCase();
+
+  if (!cleanCourse) {
+    return { success: false, message: 'Please enter a valid course code (e.g. CSC 201).' };
+  }
+  if (!cleanCode) {
+    return { success: false, message: 'Please enter the 6-character session code.' };
+  }
+
+  // Find active session for this course or matching temp code
+  const allSessions = custechDb.getSessions();
+  const activeSessions = allSessions.filter((s) => s.status === 'ACTIVE');
+
+  // Match by course code
+  let session = activeSessions.find((s) => {
+    const offeringCourseCode = s.courseOffering?.course?.code?.trim().toUpperCase().replace(/\s+/g, '');
+    return offeringCourseCode === cleanCourse;
+  });
+
+  // If not found by course code directly, check if any active session matches the temp code
+  if (!session) {
+    session = activeSessions.find(
+      (s) => s.currentTempCode?.trim().toUpperCase() === cleanCode
+    );
+  }
+
+  if (!session) {
+    return {
+      success: false,
+      message: `No active attendance session found for "${courseCode}". Please ask your lecturer to verify that the session is active.`,
+    };
+  }
+
+  if (session.currentTempCode.toUpperCase() !== cleanCode) {
+    return {
+      success: false,
+      message: `Invalid attendance code for ${session.courseOffering?.course?.code || courseCode}. Please check the code on the screen.`,
+    };
+  }
+
+  const student = custechDb.getStudentByProfileId(studentProfileId);
+  if (!student) {
+    return { success: false, message: 'Student profile not found in CUSTECH registry.' };
+  }
+
+  try {
+    const result = custechDb.recordAttendance({
+      sessionId: session.id,
+      studentId: student.id,
+      method: 'TEMP_CODE',
+      recordedBy: studentProfileId,
+      clientEventId,
+    });
+
+    return {
+      success: true,
+      message: result.message,
+      record: result.record,
+      courseTitle: session.courseOffering?.course?.title,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Error recording attendance',
+    };
+  }
+}
+
+/**
+ * Handles attendance verification when student scans QR code via native mobile camera URL redirect
+ */
+export async function submitAttendanceFromUrl(params: {
+  sessionId: string;
+  courseCode?: string;
+  timestampWindow?: number;
+  nonce?: string;
+  signature?: string;
+  code?: string;
+  studentProfileId: string;
+  clientEventId?: string;
+}): Promise<{ success: boolean; message: string; record?: AttendanceRecord; courseTitle?: string }> {
+  const session = custechDb.getSessionById(params.sessionId);
+  if (!session) {
+    return { success: false, message: 'Attendance session not found or has expired.' };
+  }
+
+  if (session.status !== 'ACTIVE') {
+    return { success: false, message: `This lecture session is currently ${session.status.toLowerCase()}.` };
+  }
+
+  const student = custechDb.getStudentByProfileId(params.studentProfileId);
+  if (!student) {
+    return { success: false, message: 'Student profile not found in CUSTECH registry.' };
+  }
+
+  let verified = false;
+
+  // 1. Try cryptographic verification if signature and window are provided
+  if (params.signature && params.timestampWindow && params.nonce) {
+    const offering = custechDb.getOfferingById(session.courseOfferingId);
+    const courseCode = params.courseCode || offering?.course?.code || 'CUSTECH';
+    const payload: RotatingQrPayload = {
+      sessionId: session.id,
+      courseCode,
+      timestampWindow: Number(params.timestampWindow),
+      nonce: params.nonce,
+      signature: params.signature,
+    };
+
+    const verification = verifyQrPayload(payload, session.qrRotationSeconds || 20, 4); // allow 4 windows for mobile redirect
+    if (verification.isValid) {
+      verified = true;
+    }
+  }
+
+  // 2. Fallback to temp code match if signature check failed or wasn't provided
+  if (!verified && params.code) {
+    if (session.currentTempCode.toUpperCase() === params.code.trim().toUpperCase()) {
+      verified = true;
+    }
+  }
+
+  // If session is active and opened directly via valid QR link, we accept verification
+  if (!verified) {
+    return {
+      success: false,
+      message: 'QR code link has expired. Please scan the current code on screen or enter the 6-character code.',
+    };
+  }
+
+  try {
+    const result = custechDb.recordAttendance({
+      sessionId: session.id,
+      studentId: student.id,
+      method: 'DYNAMIC_QR',
+      recordedBy: params.studentProfileId,
+      clientEventId: params.clientEventId,
+    });
+
+    const offering = custechDb.getOfferingById(session.courseOfferingId);
+    return {
+      success: true,
+      message: result.message,
+      record: result.record,
+      courseTitle: offering?.course?.title,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Error recording attendance',
+    };
+  }
+}
+
+/**
  * Handles Kiosk Assisted Attendance (Matric Number + 4-digit PIN)
  */
 export async function submitKioskAttendance(
