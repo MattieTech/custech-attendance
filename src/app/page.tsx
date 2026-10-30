@@ -19,6 +19,8 @@ import { HodDashboard } from '@/components/dashboards/HodDashboard';
 import { DeanDashboard } from '@/components/dashboards/DeanDashboard';
 import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
 import { StaffDashboard } from '@/components/dashboards/StaffDashboard';
+import { getDatabaseSnapshotAction } from '@/actions/academic';
+import { custechDb } from '@/lib/db/repository';
 
 export default function Home() {
   const [session, setSession] = React.useState<AuthenticatedSession | null>(null);
@@ -31,7 +33,18 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
+    // 1. Fast local session recovery
     refreshSession();
+
+    // 2. Hydrate client database with server persistent store
+    getDatabaseSnapshotAction()
+      .then((snapshot) => {
+        if (snapshot) {
+          custechDb.syncClientSnapshot(snapshot);
+          refreshSession();
+        }
+      })
+      .catch(() => {});
 
     const handleAuthChange = () => refreshSession();
     window.addEventListener('custech-auth-changed', handleAuthChange);

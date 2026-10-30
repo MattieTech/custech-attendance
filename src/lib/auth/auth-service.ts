@@ -58,22 +58,44 @@ export function storeSession(session: AuthenticatedSession): void {
   notifyAuthChange();
 }
 
+import { loginStudentAction, loginStaffAction } from '@/actions/academic';
+
 /**
  * Authenticate a Student using Matriculation Number and Password.
+ * Queries server database and synchronizes into local client store.
  */
-export function loginStudent(
+export async function loginStudent(
   matricNumber: string,
   _password?: string
-): { success: boolean; session?: AuthenticatedSession; error?: string } {
+): Promise<{ success: boolean; session?: AuthenticatedSession; error?: string }> {
   const cleanMatric = matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
     return { success: false, error: 'Please enter your Matriculation Number.' };
   }
 
-  const allProfiles = custechDb.getProfiles();
-  const profile =
-    allProfiles.find((p) => p.matricNumber?.toUpperCase() === cleanMatric) ||
-    initialProfiles.find((p) => p.matricNumber?.toUpperCase() === cleanMatric);
+  // 1. Check local client database
+  let profile = custechDb
+    .getProfiles()
+    .find((p) => p.matricNumber?.toUpperCase() === cleanMatric);
+
+  let student = custechDb.getStudentByMatric(cleanMatric);
+
+  // 2. Query persistent server database if not found or to get freshest state
+  if (!profile) {
+    try {
+      const serverRes = await loginStudentAction(cleanMatric, _password);
+      if (serverRes.success && serverRes.profile) {
+        profile = serverRes.profile;
+        student = serverRes.student;
+        // Sync into client-side database and localStorage
+        custechDb.syncClientProfileAndStudent(profile, student);
+      } else if (serverRes.error) {
+        return { success: false, error: serverRes.error };
+      }
+    } catch (err) {
+      console.warn('Server auth query failed:', err);
+    }
+  }
 
   if (!profile) {
     return {
@@ -103,27 +125,36 @@ export function loginStudent(
  * Authenticate an Academic Staff, HOD, Dean, Principal Officer, or Administrator
  * using Staff ID or University Email.
  */
-export function loginStaff(
+export async function loginStaff(
   identifier: string,
   _password?: string
-): { success: boolean; session?: AuthenticatedSession; error?: string } {
+): Promise<{ success: boolean; session?: AuthenticatedSession; error?: string }> {
   const cleanId = identifier.trim().toLowerCase();
   if (!cleanId) {
     return { success: false, error: 'Please enter your Staff ID or University Email.' };
   }
 
-  const allProfiles = custechDb.getProfiles();
-  const profile =
-    allProfiles.find(
-      (p) =>
-        p.email.toLowerCase() === cleanId ||
-        (p.staffId && p.staffId.toLowerCase() === cleanId)
-    ) ||
-    initialProfiles.find(
+  let profile = custechDb
+    .getProfiles()
+    .find(
       (p) =>
         p.email.toLowerCase() === cleanId ||
         (p.staffId && p.staffId.toLowerCase() === cleanId)
     );
+
+  if (!profile) {
+    try {
+      const serverRes = await loginStaffAction(cleanId, _password);
+      if (serverRes.success && serverRes.profile) {
+        profile = serverRes.profile;
+        custechDb.syncClientProfileAndStudent(profile);
+      } else if (serverRes.error) {
+        return { success: false, error: serverRes.error };
+      }
+    } catch (err) {
+      console.warn('Server staff auth query failed:', err);
+    }
+  }
 
   if (!profile) {
     return {

@@ -29,49 +29,55 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLoginSuccess }) => {
   const [isSubmitting, setIsSubmitting] = React.useState(false);
   const [showDemoDrawer, setShowDemoDrawer] = React.useState(true);
 
-  const handleStudentSubmit = (e: React.FormEvent) => {
+  const handleStudentSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const res = loginStudent(studentMatric, studentPassword);
+    try {
+      const res = await loginStudent(studentMatric, studentPassword);
       setIsSubmitting(false);
       if (res.success) {
         onLoginSuccess();
       } else {
         setErrorMessage(res.error || 'Invalid credentials.');
       }
-    }, 300);
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage('Authentication request failed. Please check connection.');
+    }
   };
 
-  const handleStaffSubmit = (e: React.FormEvent) => {
+  const handleStaffSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
     setIsSubmitting(true);
 
-    setTimeout(() => {
-      const res = loginStaff(staffIdentifier, staffPassword);
+    try {
+      const res = await loginStaff(staffIdentifier, staffPassword);
       setIsSubmitting(false);
       if (res.success) {
         onLoginSuccess();
       } else {
         setErrorMessage(res.error || 'Invalid staff credentials.');
       }
-    }, 300);
+    } catch {
+      setIsSubmitting(false);
+      setErrorMessage('Authentication request failed. Please check connection.');
+    }
   };
 
-  const handleQuickLogin = (profileId: string) => {
+  const handleQuickLogin = async (profileId: string) => {
     const profile = initialProfiles.find((p) => p.id === profileId);
     if (!profile) return;
 
     if (profile.matricNumber) {
       setStudentMatric(profile.matricNumber);
-      loginStudent(profile.matricNumber);
+      await loginStudent(profile.matricNumber);
       onLoginSuccess();
     } else {
       setStaffIdentifier(profile.staffId || profile.email);
-      loginStaff(profile.staffId || profile.email);
+      await loginStaff(profile.staffId || profile.email);
       onLoginSuccess();
     }
   };

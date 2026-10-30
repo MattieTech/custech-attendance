@@ -465,6 +465,45 @@ class CustechDatabase {
     });
   }
 
+  syncClientProfileAndStudent(profile: UserProfile, student?: Student): void {
+    if (!this.profiles.some((p) => p.id === profile.id || p.matricNumber === profile.matricNumber)) {
+      this.profiles.unshift(profile);
+    }
+    if (student && !this.students.some((s) => s.id === student.id || s.matricNumber === student.matricNumber)) {
+      this.students.unshift({ ...student, profile });
+    }
+    this.savePersistentData();
+  }
+
+  syncClientSnapshot(data: {
+    profiles?: UserProfile[];
+    students?: Student[];
+    departments?: Department[];
+  }): void {
+    if (Array.isArray(data.profiles)) {
+      data.profiles.forEach((p) => {
+        if (!this.profiles.some((ep) => ep.id === p.id || (p.matricNumber && ep.matricNumber === p.matricNumber))) {
+          this.profiles.unshift(p);
+        }
+      });
+    }
+    if (Array.isArray(data.students)) {
+      data.students.forEach((s) => {
+        if (!this.students.some((es) => es.id === s.id || es.matricNumber === s.matricNumber)) {
+          this.students.unshift(s);
+        }
+      });
+    }
+    if (Array.isArray(data.departments)) {
+      data.departments.forEach((d) => {
+        if (!this.departments.some((ed) => ed.id === d.id)) {
+          this.departments.push(d);
+        }
+      });
+    }
+    this.savePersistentData();
+  }
+
   getEnrolledStudentsForOffering(courseOfferingId: string): (Student & { profile?: UserProfile })[] {
     const enrolledIds = this.enrollments
       .filter((e) => e.courseOfferingId === courseOfferingId && e.isActive)

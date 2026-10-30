@@ -171,6 +171,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       if (!res.success || !res.student || !res.profile) {
         setFormError(res.error || 'Failed to register student.');
       } else {
+        custechDb.syncClientProfileAndStudent(res.profile, res.student);
         setRegisteredStudentSuccess({
           student: res.student,
           profile: res.profile,
