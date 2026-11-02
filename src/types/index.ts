@@ -344,9 +344,9 @@ export interface KioskAttendanceDTO {
   sessionId: string;
   matricNumber: string;
   attendancePin: string;
-  assistedReason: AssistedReason;
-  operatorProfileId: string;
-  clientEventId: string;
+  assistedReason?: AssistedReason;
+  operatorProfileId?: string;
+  clientEventId?: string;
 }
 
 // Medical Clinic Waiver Exemption

@@ -68,7 +68,7 @@ export const Navbar: React.FC<NavbarProps> = ({
         sessionId: p.sessionId,
         matricNumber: p.matricNumber,
         attendancePin: p.attendancePin,
-        assistedReason: p.assistedReason,
+        assistedReason: p.assistedReason || 'No internet / mobile data',
         operatorProfileId: p.operatorProfileId,
         clientEventId: p.clientEventId,
       }));

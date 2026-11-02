@@ -5,6 +5,8 @@ import { useSearchParams, useRouter } from 'next/navigation';
 import { submitAttendanceFromUrl, submitAttendanceByCourseAndCode } from '@/actions/attendance';
 import { loginStudentAction } from '@/actions/academic';
 import { UserProfile } from '@/types';
+import { enqueueOfflineAttendance } from '@/lib/offline/dexie-db';
+import { OfflineSyncBanner } from '@/components/layout/OfflineSyncBanner';
 import {
   CheckCircle2,
   AlertCircle,
@@ -17,6 +19,7 @@ import {
   Sparkles,
   RefreshCw,
   School,
+  WifiOff,
 } from 'lucide-react';
 
 function AttendContent() {
@@ -98,8 +101,32 @@ function AttendContent() {
         setStatusMessage(res.message);
       }
     } catch {
-      setStatus('ERROR');
-      setStatusMessage('Network error submitting attendance. Please try entering the code manually.');
+      // If offline or network unavailable, save securely in local Dexie IndexedDB
+      try {
+        const clientEventId = `off_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        await enqueueOfflineAttendance({
+          clientEventId,
+          sessionId: sessionId || 'offline_session',
+          matricNumber: user.email?.split('@')[0].toUpperCase() || user.id,
+          attendancePin: code || '1234',
+          assistedReason: 'No internet / mobile data',
+          operatorProfileId: user.id,
+          courseCode: initialCourse || typedCourse,
+        });
+
+        setStatus('SUCCESS');
+        setStatusMessage('Recorded in Offline Storage! Your presence is saved securely on this device and will automatically upload once internet connects.');
+        setSuccessDetails({
+          studentName: `${user.firstName} ${user.lastName}`,
+          matricNumber: user.email?.split('@')[0].toUpperCase(),
+          courseCode: initialCourse || typedCourse,
+          courseTitle: 'Saved in Local Offline Queue (Auto-Syncing on Reconnect)',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        });
+      } catch {
+        setStatus('ERROR');
+        setStatusMessage('Network error submitting attendance. Please try entering the code manually.');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -173,8 +200,32 @@ function AttendContent() {
         setStatusMessage(attendRes.message);
       }
     } catch {
-      setStatus('ERROR');
-      setStatusMessage('Error communicating with CUSTECH attendance registry.');
+      // If offline, save in local Dexie IndexedDB
+      try {
+        const clientEventId = `off_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        await enqueueOfflineAttendance({
+          clientEventId,
+          sessionId: sessionId || 'offline_session',
+          matricNumber: cleanMatric,
+          attendancePin: pin || '1234',
+          assistedReason: 'No internet / mobile data',
+          operatorProfileId: cleanMatric,
+          courseCode: initialCourse || typedCourse,
+        });
+
+        setStatus('SUCCESS');
+        setStatusMessage('Recorded in Offline Storage! Your presence is saved securely on this device and will automatically upload once internet connects.');
+        setSuccessDetails({
+          studentName: cleanMatric,
+          matricNumber: cleanMatric,
+          courseCode: initialCourse || typedCourse,
+          courseTitle: 'Saved in Local Offline Queue (Auto-Syncing on Reconnect)',
+          time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
+        });
+      } catch {
+        setStatus('ERROR');
+        setStatusMessage('Error communicating with CUSTECH attendance registry.');
+      }
     } finally {
       setIsVerifying(false);
     }
@@ -220,6 +271,11 @@ function AttendContent() {
 
   return (
     <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-4">
+      {/* Offline Mode & Auto-Sync Banner */}
+      <div className="w-full max-w-md mb-4">
+        <OfflineSyncBanner />
+      </div>
+
       {/* CUSTECH Brand Header */}
       <div className="text-center mb-6">
         <div className="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-[#8d4a27] text-white shadow-md mb-3">

@@ -314,8 +314,8 @@ export async function submitKioskAttendance(
     sessionId: dto.sessionId,
     matricNumber: dto.matricNumber,
     attendancePin: dto.attendancePin,
-    assistedReason: dto.assistedReason,
-    operatorProfileId: dto.operatorProfileId,
+    assistedReason: dto.assistedReason || 'Other approved reason',
+    operatorProfileId: dto.operatorProfileId || 'SYSTEM',
     clientEventId: dto.clientEventId,
   });
 }
@@ -332,7 +332,14 @@ export async function syncOfflineBatch(
   const details: string[] = [];
 
   for (const item of batch) {
-    const res = await custechDb.verifyAndRecordKiosk(item);
+    const res = await custechDb.verifyAndRecordKiosk({
+      sessionId: item.sessionId,
+      matricNumber: item.matricNumber,
+      attendancePin: item.attendancePin,
+      assistedReason: item.assistedReason || 'No internet / mobile data',
+      operatorProfileId: item.operatorProfileId || 'OFFLINE_SYNC',
+      clientEventId: item.clientEventId,
+    });
     if (res.success) {
       if (res.message.includes('already')) {
         duplicates++;

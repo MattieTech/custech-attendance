@@ -8,7 +8,8 @@ import {
   submitAttendanceFromUrl,
 } from '@/actions/attendance';
 import { RotatingQrPayload } from '@/types';
-import { QrCode, Key, Camera, AlertCircle, CheckCircle2, X, BookOpen, Link as LinkIcon } from 'lucide-react';
+import { enqueueOfflineAttendance } from '@/lib/offline/dexie-db';
+import { QrCode, Key, Camera, AlertCircle, CheckCircle2, X, BookOpen, Link as LinkIcon, WifiOff } from 'lucide-react';
 
 interface QrScannerModalProps {
   sessionId?: string;
@@ -71,7 +72,30 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
         setFeedback({ isError: true, message: res.message });
       }
     } catch {
-      setFeedback({ isError: true, message: 'Network error submitting attendance. Please try again.' });
+      // If offline or network connection fails, store securely in Dexie IndexedDB
+      try {
+        const clientEventId = `off_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
+        await enqueueOfflineAttendance({
+          clientEventId,
+          sessionId: sessionId || 'offline_session',
+          matricNumber: studentProfileId,
+          attendancePin: cleanCode,
+          assistedReason: 'No internet / mobile data',
+          operatorProfileId: studentProfileId,
+          courseCode: cleanCourse,
+        });
+
+        setFeedback({
+          isError: false,
+          message: 'Saved Offline! Recorded in local device storage and will automatically upload once internet connects.',
+        });
+        setTimeout(() => {
+          onSuccess('Recorded offline in device storage');
+          onClose();
+        }, 1800);
+      } catch {
+        setFeedback({ isError: true, message: 'Network error submitting attendance. Please try again.' });
+      }
     } finally {
       setIsLoading(false);
     }

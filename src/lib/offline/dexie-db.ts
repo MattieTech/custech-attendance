@@ -7,8 +7,9 @@ export interface OfflineAttendanceRecord {
   sessionId: string;
   matricNumber: string;
   attendancePin: string;
-  assistedReason: AssistedReason;
+  assistedReason?: AssistedReason;
   operatorProfileId: string;
+  courseCode?: string;
   createdAt: string;
   syncStatus: 'PENDING' | 'SYNCING' | 'SYNCED' | 'FAILED';
   errorMessage?: string;
@@ -37,8 +38,9 @@ export async function enqueueOfflineAttendance(item: {
   sessionId: string;
   matricNumber: string;
   attendancePin: string;
-  assistedReason: AssistedReason;
+  assistedReason?: AssistedReason;
   operatorProfileId: string;
+  courseCode?: string;
 }): Promise<number> {
   const id = await offlineDb.attendanceQueue.add({
     ...item,
@@ -74,5 +76,19 @@ export async function getPendingOfflineRecords(): Promise<OfflineAttendanceRecor
       .toArray();
   } catch {
     return [];
+  }
+}
+
+/**
+ * Marks a batch of offline attendance records as successfully synced
+ */
+export async function markOfflineRecordsSynced(clientEventIds: string[]): Promise<void> {
+  try {
+    await offlineDb.attendanceQueue
+      .where('clientEventId')
+      .anyOf(clientEventIds)
+      .modify({ syncStatus: 'SYNCED' });
+  } catch (err) {
+    console.error('Failed to update synced status in Dexie:', err);
   }
 }

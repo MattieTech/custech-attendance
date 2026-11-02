@@ -21,6 +21,7 @@ import { AdminDashboard } from '@/components/dashboards/AdminDashboard';
 import { StaffDashboard } from '@/components/dashboards/StaffDashboard';
 import { getDatabaseSnapshotAction } from '@/actions/academic';
 import { custechDb } from '@/lib/db/repository';
+import { OfflineSyncBanner } from '@/components/layout/OfflineSyncBanner';
 
 export default function Home() {
   const [session, setSession] = React.useState<AuthenticatedSession | null>(null);
@@ -105,6 +106,9 @@ export default function Home() {
         onRoleSwitched={handleRoleSwitched}
         onLogout={handleLogout}
       />
+
+      {/* Offline Mode Banner & Auto-Sync Notification */}
+      <OfflineSyncBanner />
 
       {/* Main Perspective Dashboard */}
       <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
