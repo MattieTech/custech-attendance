@@ -1,19 +1,50 @@
 {
   "customProfiles": [
     {
-      "id": "user-stu-1793368357128",
-      "email": "matthewaliu01@gmail.com",
-      "firstName": "Matthew",
-      "lastName": "Aliu",
-      "matricNumber": "25L1SE0000",
+      "id": "user-stu-1794149751800",
+      "email": "25l1cv8802@student.custech.edu.ng",
+      "firstName": "Halima",
+      "lastName": "Dikko",
+      "matricNumber": "25L1CV8802",
       "primaryRole": "STUDENT",
       "assignedRoles": [
         "STUDENT"
       ],
-      "departmentId": "dept-sen",
+      "departmentId": "dept-civil-engineering",
       "facultyId": "fac-comp",
       "isActive": true,
-      "createdAt": "2026-10-30T13:52:37.321Z"
+      "createdAt": "2026-11-08T14:55:52.254Z"
+    },
+    {
+      "id": "user-stu-1794149751377",
+      "email": "25l1me8801@student.custech.edu.ng",
+      "firstName": "Kabir",
+      "lastName": "Bello",
+      "matricNumber": "25L1ME8801",
+      "primaryRole": "STUDENT",
+      "assignedRoles": [
+        "STUDENT"
+      ],
+      "departmentId": "dept-mechanical-engineering",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-11-08T14:55:51.786Z"
+    },
+    {
+      "id": "user-stu-1794149751116",
+      "email": "bilikisu.sani@student.custech.edu.ng",
+      "firstName": "Bilikisu",
+      "lastName": "Sani",
+      "matricNumber": "25L1CS9999",
+      "primaryRole": "COURSE_REP",
+      "assignedRoles": [
+        "STUDENT",
+        "COURSE_REP"
+      ],
+      "departmentId": "dept-csc",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-11-08T14:55:51.367Z"
     },
     {
       "id": "user-stu-1793368278372",
@@ -29,30 +60,92 @@
       "facultyId": "fac-comp",
       "isActive": true,
       "createdAt": "2026-10-30T13:51:18.566Z"
+    },
+    {
+      "id": "user-stu-1793368357128",
+      "email": "matthewaliu01@gmail.com",
+      "firstName": "Matthew",
+      "lastName": "Aliu",
+      "matricNumber": "25L1SE0000",
+      "primaryRole": "STUDENT",
+      "assignedRoles": [
+        "STUDENT"
+      ],
+      "departmentId": "dept-sen",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-10-30T13:52:37.321Z"
     }
   ],
   "customStudents": [
     {
-      "id": "stu-1793368357128",
-      "profileId": "user-stu-1793368357128",
-      "matricNumber": "25L1SE0000",
+      "id": "stu-1794149751800",
+      "profileId": "user-stu-1794149751800",
+      "matricNumber": "25L1CV8802",
       "programId": "prog-csc",
-      "currentLevel": 200,
-      "attendancePinHash": "$2b$10$HqTIVLHKJLY7g0EK0JBWCOuQTvJnu7LMJZaeIZAdvBtNEEopsXSAG",
+      "currentLevel": 100,
+      "attendancePinHash": "$2b$10$rK1T9Dnt/QnYlsEWOwe4cuFmSe0dX/LleaUOZuTyp62RuPlz6dWPy",
       "profile": {
-        "id": "user-stu-1793368357128",
-        "email": "matthewaliu01@gmail.com",
-        "firstName": "Matthew",
-        "lastName": "Aliu",
-        "matricNumber": "25L1SE0000",
+        "id": "user-stu-1794149751800",
+        "email": "25l1cv8802@student.custech.edu.ng",
+        "firstName": "Halima",
+        "lastName": "Dikko",
+        "matricNumber": "25L1CV8802",
         "primaryRole": "STUDENT",
         "assignedRoles": [
           "STUDENT"
         ],
-        "departmentId": "dept-sen",
+        "departmentId": "dept-civil-engineering",
         "facultyId": "fac-comp",
         "isActive": true,
-        "createdAt": "2026-10-30T13:52:37.321Z"
+        "createdAt": "2026-11-08T14:55:52.254Z"
+      }
+    },
+    {
+      "id": "stu-1794149751377",
+      "profileId": "user-stu-1794149751377",
+      "matricNumber": "25L1ME8801",
+      "programId": "prog-csc",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$Oqupy3/X26KaaGQgBdw2B.bfEJDiAmmqhVrLKBU2HZpXeEVtZVQW6",
+      "profile": {
+        "id": "user-stu-1794149751377",
+        "email": "25l1me8801@student.custech.edu.ng",
+        "firstName": "Kabir",
+        "lastName": "Bello",
+        "matricNumber": "25L1ME8801",
+        "primaryRole": "STUDENT",
+        "assignedRoles": [
+          "STUDENT"
+        ],
+        "departmentId": "dept-mechanical-engineering",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-11-08T14:55:51.786Z"
+      }
+    },
+    {
+      "id": "stu-1794149751116",
+      "profileId": "user-stu-1794149751116",
+      "matricNumber": "25L1CS9999",
+      "programId": "prog-csc",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$6Q.W8FCwkHYZ/dT2J119MOwF5G9iQjW5VbTObDcB5ZWQeS5ysXTeS",
+      "profile": {
+        "id": "user-stu-1794149751116",
+        "email": "bilikisu.sani@student.custech.edu.ng",
+        "firstName": "Bilikisu",
+        "lastName": "Sani",
+        "matricNumber": "25L1CS9999",
+        "primaryRole": "COURSE_REP",
+        "assignedRoles": [
+          "STUDENT",
+          "COURSE_REP"
+        ],
+        "departmentId": "dept-csc",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-11-08T14:55:51.367Z"
       }
     },
     {
@@ -76,6 +169,29 @@
         "facultyId": "fac-comp",
         "isActive": true,
         "createdAt": "2026-10-30T13:51:18.566Z"
+      }
+    },
+    {
+      "id": "stu-1793368357128",
+      "profileId": "user-stu-1793368357128",
+      "matricNumber": "25L1SE0000",
+      "programId": "prog-csc",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$HqTIVLHKJLY7g0EK0JBWCOuQTvJnu7LMJZaeIZAdvBtNEEopsXSAG",
+      "profile": {
+        "id": "user-stu-1793368357128",
+        "email": "matthewaliu01@gmail.com",
+        "firstName": "Matthew",
+        "lastName": "Aliu",
+        "matricNumber": "25L1SE0000",
+        "primaryRole": "STUDENT",
+        "assignedRoles": [
+          "STUDENT"
+        ],
+        "departmentId": "dept-sen",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-10-30T13:52:37.321Z"
       }
     }
   ],
@@ -115,9 +231,76 @@
       "studentId": "stu-1793368357128",
       "courseOfferingId": "offering-mth201",
       "isActive": true
+    },
+    {
+      "id": "enr_1794149751116_offering-csc201",
+      "studentId": "stu-1794149751116",
+      "courseOfferingId": "offering-csc201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751116_offering-sen201",
+      "studentId": "stu-1794149751116",
+      "courseOfferingId": "offering-sen201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751116_offering-mth201",
+      "studentId": "stu-1794149751116",
+      "courseOfferingId": "offering-mth201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751377_offering-csc201",
+      "studentId": "stu-1794149751377",
+      "courseOfferingId": "offering-csc201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751377_offering-sen201",
+      "studentId": "stu-1794149751377",
+      "courseOfferingId": "offering-sen201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751377_offering-mth201",
+      "studentId": "stu-1794149751377",
+      "courseOfferingId": "offering-mth201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751800_offering-csc201",
+      "studentId": "stu-1794149751800",
+      "courseOfferingId": "offering-csc201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751800_offering-sen201",
+      "studentId": "stu-1794149751800",
+      "courseOfferingId": "offering-sen201",
+      "isActive": true
+    },
+    {
+      "id": "enr_1794149751800_offering-mth201",
+      "studentId": "stu-1794149751800",
+      "courseOfferingId": "offering-mth201",
+      "isActive": true
     }
   ],
-  "customDepartments": [],
+  "customDepartments": [
+    {
+      "id": "dept-mechanical-engineering",
+      "facultyId": "fac-comp",
+      "code": "ME",
+      "name": "Mechanical Engineering"
+    },
+    {
+      "id": "dept-civil-engineering",
+      "facultyId": "fac-comp",
+      "code": "CE",
+      "name": "Civil Engineering"
+    }
+  ],
   "systemSettings": {
     "qrRotationSeconds": 20,
     "attendanceDurationMinutes": 60,
@@ -132,20 +315,190 @@
   },
   "auditLogs": [
     {
-      "id": "audit_1793368357321_870",
+      "id": "audit_1794149752298_295",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_ASSIGNED_ROLE",
+      "entityType": "user_profiles",
+      "entityId": "user-stu-1794149751116",
+      "details": {
+        "userName": "Bilikisu Sani",
+        "email": "bilikisu.sani@student.custech.edu.ng",
+        "oldRole": "STUDENT",
+        "newRole": "COURSE_REP"
+      },
+      "createdAt": "2026-11-08T14:55:52.298Z"
+    },
+    {
+      "id": "audit_1794149752287_976",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REACTIVATED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "isActive": true
+      },
+      "createdAt": "2026-11-08T14:55:52.287Z"
+    },
+    {
+      "id": "audit_1794149752284_51",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_DEACTIVATED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "isActive": false
+      },
+      "createdAt": "2026-11-08T14:55:52.284Z"
+    },
+    {
+      "id": "audit_1794149752268_109",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_BULK_STUDENT_IMPORT",
+      "entityType": "students",
+      "details": {
+        "totalProcessed": 3,
+        "successful": 2,
+        "skipped": 1,
+        "failed": 0
+      },
+      "createdAt": "2026-11-08T14:55:52.268Z"
+    },
+    {
+      "id": "audit_1794149752254_652",
       "actorId": "user-admin",
       "actorName": "Faruq Bello",
       "actorRole": "SUPER_ADMIN",
       "action": "ADMIN_REGISTERED_STUDENT",
       "entityType": "students",
-      "entityId": "stu-1793368357128",
+      "entityId": "stu-1794149751800",
       "details": {
-        "matricNumber": "25L1SE0000",
-        "fullName": "Matthew Aliu",
-        "departmentId": "dept-sen",
+        "matricNumber": "25L1CV8802",
+        "fullName": "Halima Dikko",
+        "departmentId": "dept-civil-engineering",
+        "level": 100
+      },
+      "createdAt": "2026-11-08T14:55:52.254Z"
+    },
+    {
+      "id": "audit_1794149751786_486",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751377",
+      "details": {
+        "matricNumber": "25L1ME8801",
+        "fullName": "Kabir Bello",
+        "departmentId": "dept-mechanical-engineering",
         "level": 200
       },
-      "createdAt": "2026-10-30T13:52:37.321Z"
+      "createdAt": "2026-11-08T14:55:51.786Z"
+    },
+    {
+      "id": "audit_1794149751367_977",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "fullName": "Bilikisu Sani",
+        "departmentId": "dept-csc",
+        "level": 200
+      },
+      "createdAt": "2026-11-08T14:55:51.367Z"
+    },
+    {
+      "id": "audit_1794149751115_20",
+      "actorId": "user-dean",
+      "actorName": "Prof. M. O. Yusuf",
+      "actorRole": "DEAN",
+      "action": "APPROVE_MEDICAL_WAIVER",
+      "entityType": "medical_waivers",
+      "entityId": "waiver_1794149751114",
+      "details": {
+        "studentId": "stu-3",
+        "startDate": "2026-08-26",
+        "endDate": "2026-08-28"
+      },
+      "createdAt": "2026-11-08T14:55:51.115Z"
+    },
+    {
+      "id": "audit_1794149751113_621",
+      "actorId": "user-stu-2",
+      "actorName": "Emeka Okonkwo",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751113_851",
+      "details": {
+        "studentId": "stu-2",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:51.113Z"
+    },
+    {
+      "id": "audit_1794149751113_868",
+      "actorId": "user-rep",
+      "actorName": "Ibrahim Aliyu",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751113_440",
+      "details": {
+        "studentId": "stu-rep",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:51.113Z"
+    },
+    {
+      "id": "audit_1794149751102_346",
+      "actorId": "user-rep",
+      "actorName": "Ibrahim Aliyu",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751102_531",
+      "details": {
+        "studentId": "stu-3",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "KIOSK_PIN"
+      },
+      "createdAt": "2026-11-08T14:55:51.102Z"
+    },
+    {
+      "id": "audit_1794149750816_980",
+      "actorId": "user-stu-1",
+      "actorName": "Amina Usman",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149750815_625",
+      "details": {
+        "studentId": "stu-1",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:50.816Z"
     },
     {
       "id": "audit_1793368278567_905",
@@ -162,6 +515,22 @@
         "level": 200
       },
       "createdAt": "2026-10-30T13:51:18.567Z"
+    },
+    {
+      "id": "audit_1793368357321_870",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1793368357128",
+      "details": {
+        "matricNumber": "25L1SE0000",
+        "fullName": "Matthew Aliu",
+        "departmentId": "dept-sen",
+        "level": 200
+      },
+      "createdAt": "2026-10-30T13:52:37.321Z"
     },
     {
       "id": "audit-1",
@@ -191,5 +560,5 @@
       "createdAt": "2026-09-03T10:05:00Z"
     }
   ],
-  "updatedAt": "2026-10-30T13:52:37.322Z"
+  "updatedAt": "2026-11-08T14:55:52.298Z"
 }

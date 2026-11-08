@@ -4,7 +4,7 @@ import React from 'react';
 import { custechDb } from '@/lib/db/repository';
 import { UserProfile } from '@/types';
 import { KioskTerminal } from '../attendance/KioskTerminal';
-import { Users, PhoneOff, Calendar, ShieldCheck, CheckCircle2 } from 'lucide-react';
+import { Users, PhoneOff, Calendar, ShieldCheck, CheckCircle2, Search, UserCheck } from 'lucide-react';
 
 interface CourseRepDashboardProps {
   user: UserProfile;
@@ -14,10 +14,19 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
   const [isKioskActive, setIsKioskActive] = React.useState(false);
   const [coSignDone, setCoSignDone] = React.useState(false);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+  const [searchQuery, setSearchQuery] = React.useState('');
+  const [assistTargetMatric, setAssistTargetMatric] = React.useState<string | undefined>(undefined);
 
   const activeSession = custechDb.getSessionById('sess-today-csc');
   const enrolledStudents = custechDb.getEnrolledStudentsForOffering('offering-csc201');
   const records = activeSession ? custechDb.getRecordsForSession(activeSession.id) : [];
+
+  const filteredStudents = enrolledStudents.filter((st) => {
+    const q = searchQuery.toLowerCase();
+    const name = `${st.profile?.firstName} ${st.profile?.lastName}`.toLowerCase();
+    const matric = st.matricNumber.toLowerCase();
+    return name.includes(q) || matric.includes(q);
+  });
 
   const handleCoSign = () => {
     custechDb.logAudit({
@@ -92,7 +101,7 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
 
       {/* CLASS ROSTER & TODAY'S ASSISTANCE OVERVIEW */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm">
-        <div className="flex items-center justify-between pb-3 mb-4 border-b border-slate-100">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pb-3 mb-4 border-b border-slate-100">
           <div>
             <h3 className="text-sm font-bold text-slate-900">
               Assigned Class Roster (CSC 201 - 200 Level)
@@ -101,38 +110,67 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
               {records.length} of {enrolledStudents.length} students logged in current lecture
             </p>
           </div>
+
+          {/* Search Box */}
+          <div className="relative w-full sm:w-64">
+            <Search className="w-3.5 h-3.5 text-slate-400 absolute left-3 top-1/2 -translate-y-1/2" />
+            <input
+              type="text"
+              placeholder="Search classmate by name or matric..."
+              value={searchQuery}
+              onChange={(e) => setSearchQuery(e.target.value)}
+              className="w-full pl-8 pr-3 py-1.5 text-xs rounded-lg border border-slate-200 bg-slate-50 focus:bg-white focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
+            />
+          </div>
         </div>
 
-        <div className="divide-y divide-slate-100">
-          {enrolledStudents.map((st) => {
-            const hasAttended = records.some((r) => r.studentId === st.id);
-            const record = records.find((r) => r.studentId === st.id);
+        <div className="divide-y divide-slate-100 max-h-96 overflow-y-auto">
+          {filteredStudents.length === 0 ? (
+            <p className="text-xs text-slate-500 py-6 text-center">No classmates matched your search.</p>
+          ) : (
+            filteredStudents.map((st) => {
+              const hasAttended = records.some((r) => r.studentId === st.id);
+              const record = records.find((r) => r.studentId === st.id);
 
-            return (
-              <div key={st.id} className="py-3 flex items-center justify-between text-xs">
-                <div>
-                  <p className="font-semibold text-slate-900">
-                    {st.profile?.firstName} {st.profile?.lastName}
-                  </p>
-                  <p className="text-xs font-mono text-slate-500">
-                    {st.matricNumber}
-                  </p>
-                </div>
+              return (
+                <div key={st.id} className="py-3 flex items-center justify-between text-xs">
+                  <div>
+                    <p className="font-semibold text-slate-900">
+                      {st.profile?.firstName} {st.profile?.lastName}
+                    </p>
+                    <p className="text-xs font-mono text-slate-500">
+                      {st.matricNumber}
+                    </p>
+                  </div>
 
-                <div>
-                  {hasAttended ? (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
-                      Logged ({record?.method.replace('_', ' ')})
-                    </span>
-                  ) : (
-                    <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
-                      Not Yet Logged
-                    </span>
-                  )}
+                  <div className="flex items-center gap-2">
+                    {hasAttended ? (
+                      <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+                        Logged ({record?.method.replace('_', ' ')})
+                      </span>
+                    ) : (
+                      <>
+                        <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-slate-100 text-slate-600 border border-slate-200">
+                          Not Yet Logged
+                        </span>
+                        <button
+                          type="button"
+                          onClick={() => {
+                            setAssistTargetMatric(st.matricNumber);
+                            setIsKioskActive(true);
+                          }}
+                          className="inline-flex items-center gap-1 px-2.5 py-1 bg-[#8d4a27] hover:bg-[#743c22] text-white rounded-lg text-[11px] font-bold shadow-xs transition"
+                        >
+                          <UserCheck className="w-3 h-3" />
+                          <span>Assist</span>
+                        </button>
+                      </>
+                    )}
+                  </div>
                 </div>
-              </div>
-            );
-          })}
+              );
+            })
+          )}
         </div>
       </div>
 
@@ -147,7 +185,11 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
               operatorProfileId={user.id}
               operatorName={`${user.firstName} ${user.lastName}`}
               operatorRoleTitle="Course Representative"
-              onClose={() => setIsKioskActive(false)}
+              initialMatric={assistTargetMatric}
+              onClose={() => {
+                setIsKioskActive(false);
+                setAssistTargetMatric(undefined);
+              }}
               onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
             />
           </div>

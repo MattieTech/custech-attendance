@@ -9,6 +9,7 @@ import { ExamDocketModal } from '../docket/ExamDocketModal';
 import { AttendanceForecast } from '../analytics/AttendanceForecast';
 import { submitAttendanceCorrection } from '@/actions/attendance';
 import { formatDate, formatTime, getStatusBadgeVariant } from '@/lib/utils';
+import { OfflineSyncBanner } from '../layout/OfflineSyncBanner';
 import { BookOpen, Calendar, Clock, AlertCircle, FileText, CheckCircle2, ChevronRight, MessageSquare, Award, HeartPulse, Radio, Key } from 'lucide-react';
 
 interface StudentDashboardProps {
@@ -64,6 +65,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
   return (
     <div className="space-y-6">
+      {/* Offline Mode & Auto-Sync Banner */}
+      <OfflineSyncBanner />
+
       {/* Student Welcome & Profile Banner */}
       <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
         <div className="flex items-center gap-4">

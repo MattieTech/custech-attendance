@@ -101,7 +101,7 @@ async function runTests() {
   console.log('\nTest 5: Kiosk Assisted Attendance (No-Smartphone Workflow)');
   const kioskRes = await custechDb.verifyAndRecordKiosk({
     sessionId: testSessionId,
-    matricNumber: 'CUSTECH/2024/CSC/045', // Maryam Yakubu
+    matricNumber: '25L1CS1045', // Maryam Yakubu
     attendancePin: '1234',
     assistedReason: 'No smartphone',
     operatorProfileId: 'user-rep',
@@ -205,7 +205,127 @@ async function runTests() {
   assert.strictEqual(forecast.isEligible, true);
   console.log('  ✓ Forecast calculation (6 of 8 = 75%) accurately verified eligibility target');
 
-  console.log('\n🎉 ALL 10 VERIFICATION TEST SUITES (INCLUDING OPTIONS A, B, C, D) PASSED FLAWLESSLY!\n');
+  // ==========================================
+  // TEST 11: Manual Student Registration & Duplicate Matriculation Prevention
+  // ==========================================
+  console.log('\nTest 11: Manual Student Registration & Duplicate Matric Prevention');
+  const testMatric = '25L1CS9999';
+  const newStudent = custechDb.registerStudent({
+    firstName: 'Bilikisu',
+    lastName: 'Sani',
+    matricNumber: testMatric,
+    email: 'bilikisu.sani@student.custech.edu.ng',
+    departmentName: 'Computer Science',
+    currentLevel: 200,
+    pin: '5678',
+    enrollInCourses: true,
+    actorId: 'user-admin',
+  });
+  assert.ok(newStudent.student.id, 'New student must have an ID');
+  assert.strictEqual(newStudent.student.matricNumber, testMatric);
+  console.log('  ✓ Registered new student:', newStudent.profile.firstName, newStudent.profile.lastName, `(${newStudent.student.matricNumber})`);
+
+  // Attempt duplicate registration with same matriculation number
+  let duplicateCaught = false;
+  try {
+    custechDb.registerStudent({
+      firstName: 'Imposter',
+      lastName: 'Student',
+      matricNumber: testMatric,
+      departmentName: 'Computer Science',
+      actorId: 'user-admin',
+    });
+  } catch (err: unknown) {
+    duplicateCaught = true;
+    console.log('  ✓ Caught duplicate matriculation rejection error:', (err as Error).message);
+  }
+  assert.strictEqual(duplicateCaught, true, 'Duplicate matriculation registration must be rejected');
+
+  // ==========================================
+  // TEST 12: Bulk Student Import & Summary Generation
+  // ==========================================
+  console.log('\nTest 12: Bulk Student Import & Error Auditing');
+  const bulkBatch = [
+    {
+      firstName: 'Kabir',
+      lastName: 'Bello',
+      matricNumber: '25L1ME8801',
+      departmentName: 'Mechanical Engineering',
+      currentLevel: 200 as const,
+    },
+    {
+      firstName: 'Halima',
+      lastName: 'Dikko',
+      matricNumber: '25L1CV8802',
+      departmentName: 'Civil Engineering',
+      currentLevel: 100 as const,
+    },
+    {
+      firstName: 'Duplicate',
+      lastName: 'Entry',
+      matricNumber: testMatric, // Should be skipped as duplicate
+      departmentName: 'Computer Science',
+    },
+  ];
+
+  const bulkSummary = custechDb.bulkRegisterStudents(bulkBatch, 'user-admin');
+  assert.strictEqual(bulkSummary.successful, 2, 'Two valid students must be imported');
+  assert.strictEqual(bulkSummary.skipped, 1, 'One duplicate must be skipped');
+  assert.strictEqual(bulkSummary.failed, 0, 'No rows failed with parse errors');
+  console.log('  ✓ Bulk Import Summary:', bulkSummary.successful, 'imported,', bulkSummary.skipped, 'skipped (duplicate detected)');
+
+  // ==========================================
+  // TEST 13: Student Status Toggle (Archive / Deactivate) Preserving Attendance
+  // ==========================================
+  console.log('\nTest 13: Student Deactivation / Archiving');
+  const deactivated = custechDb.toggleStudentActiveStatus(newStudent.student.id, false, 'user-admin');
+  assert.strictEqual(deactivated.profile?.isActive, false, 'Student profile must be marked inactive');
+  console.log('  ✓ Student record archived without deleting historical profile or audit entries');
+
+  const reactivated = custechDb.toggleStudentActiveStatus(newStudent.student.id, true, 'user-admin');
+  assert.strictEqual(reactivated.profile?.isActive, true, 'Student profile must be reactivated');
+  console.log('  ✓ Student record successfully reactivated');
+
+  // ==========================================
+  // TEST 14: Role Assignment by ICT Administrator & Self-Revocation Prevention
+  // ==========================================
+  console.log('\nTest 14: Role-Based Access Control (RBAC) & Authority Enforcement');
+  // Assign Course Rep role to a student
+  const updatedRoleProfile = custechDb.assignUserRole(newStudent.profile.id, 'COURSE_REP', 'user-admin');
+  assert.strictEqual(updatedRoleProfile.primaryRole, 'COURSE_REP', 'Primary role must update to COURSE_REP');
+  console.log('  ✓ Super Admin assigned COURSE_REP role to', updatedRoleProfile.firstName);
+
+  // Attempt self-revocation (Super Admin attempting to revoke their own Super Admin role)
+  let selfRevokeCaught = false;
+  try {
+    custechDb.assignUserRole('user-admin', 'STUDENT', 'user-admin');
+  } catch (err: unknown) {
+    selfRevokeCaught = true;
+    console.log('  ✓ Correctly prevented self-revocation of ICT Administrator privileges:', (err as Error).message);
+  }
+  assert.strictEqual(selfRevokeCaught, true, 'Self-revocation of Super Admin role must be blocked');
+
+  // Attempt unauthorized role assignment by non-admin
+  let unauthorizedCaught = false;
+  try {
+    custechDb.assignUserRole(newStudent.profile.id, 'HOD', 'user-stu-1');
+  } catch (err: unknown) {
+    unauthorizedCaught = true;
+    console.log('  ✓ Correctly rejected unauthorized role change attempt by student:', (err as Error).message);
+  }
+  assert.strictEqual(unauthorizedCaught, true, 'Non-admin role assignments must be blocked');
+
+  // ==========================================
+  // TEST 15: Department Attendance Analytics Aggregation
+  // ==========================================
+  console.log('\nTest 15: Department-Wide Attendance Aggregation');
+  const deptStats = custechDb.getDepartmentAttendanceStats('dept-csc');
+  assert.ok(deptStats.totalCourses >= 1, 'Dept must have active courses');
+  assert.ok(deptStats.totalSessionsHeld >= 1, 'Dept must have sessions');
+  assert.ok(deptStats.totalEnrolledStudents >= 1, 'Dept must have enrolled students');
+  console.log('  ✓ Dept Stats Computed: Rate =', `${deptStats.attendancePercentage}%`, '| Courses =', deptStats.totalCourses, '| Sessions =', deptStats.totalSessionsHeld);
+
+  console.log('\n🎉 ALL 15 VERIFICATION TEST SUITES (CORE + EXTENDED AUDIT) PASSED FLAWLESSLY!\n');
 }
 
 runTests().catch((err) => {

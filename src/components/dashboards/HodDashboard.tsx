@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { custechDb } from '@/lib/db/repository';
-import { UserProfile } from '@/types';
+import { UserProfile, AttendanceRecord } from '@/types';
 import {
   Users,
   GraduationCap,
@@ -14,6 +14,7 @@ import {
   Download,
   ShieldAlert,
   HeartPulse,
+  Printer,
 } from 'lucide-react';
 import { FraudMonitoringModal } from '../fraud/FraudMonitoringModal';
 import { MedicalWaiverModal } from '../medical/MedicalWaiverModal';
@@ -33,21 +34,59 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
   const collisionAlerts = custechDb.getDeviceCollisionAlerts();
   const unreviewedCount = collisionAlerts.filter((a) => !a.isReviewed).length;
 
-  // Export CSV Report
+  const deptStats = React.useMemo(() => {
+    return custechDb.getDepartmentAttendanceStats('dept-csc');
+  }, [refreshTrigger]);
+
+  // Export Dynamic CSV Report from real database records
   const handleExportCSV = () => {
-    const rows = [
-      ['Matric Number', 'Student Name', 'Course', 'Sessions Attended', 'Eligible Sessions', 'Attendance %', 'Status'],
-      ['25L1CS1014', 'Amina Usman', 'CSC 201', '3', '3', '100.0%', 'Eligible for Exams'],
-      ['25L1CS1029', 'Emeka Okonkwo', 'CSC 201', '2', '3', '66.7%', 'ATTENDANCE WARNING (<75%)'],
-      ['25L1CS1045', 'Maryam Yakubu', 'CSC 201', '3', '3', '100.0%', 'Eligible for Exams (Assisted Kiosk)'],
-      ['25L1CS1001', 'Ibrahim Aliyu', 'CSC 201', '3', '3', '100.0%', 'Eligible for Exams (Course Rep)'],
+    const detailedStudents = custechDb.getAllStudentsDetailed().filter(
+      (s) => s.profile?.departmentId === 'dept-csc' || s.departmentName?.toLowerCase().includes('computer')
+    );
+    const allRecords = custechDb.getAttendanceRecords();
+    const totalSessions = sessions.length || 1;
+
+    const headers = [
+      'Matric Number',
+      'Student Full Name',
+      'Department',
+      'Level',
+      'Account Status',
+      'Sessions Attended',
+      'Total Held Sessions',
+      'Attendance Percentage',
+      'Statutory Exam Status',
     ];
 
-    const csvContent = 'data:text/csv;charset=utf-8,' + rows.map((e) => e.join(',')).join('\n');
-    const encodedUri = encodeURI(csvContent);
+    const dataRows = detailedStudents.map((st) => {
+      const studentRecords = allRecords.filter((r: AttendanceRecord) => r.studentId === st.id);
+      const attended = studentRecords.filter(
+        (r: AttendanceRecord) => r.status === 'PRESENT' || r.status === 'LATE' || r.status === 'EXCUSED'
+      ).length;
+      const pct = Math.round((attended / totalSessions) * 100);
+      const clearance = pct >= 75 ? 'ELIGIBLE' : 'BARRED (< 75%)';
+      const name = `${st.profile?.firstName || ''} ${st.profile?.lastName || ''}`.trim() || 'Student';
+      const isActive = st.profile?.isActive !== false ? 'Active' : 'Archived';
+
+      return [
+        st.matricNumber,
+        `"${name}"`,
+        `"${st.departmentName || 'Computer Science'}"`,
+        `${st.currentLevel || 200}L`,
+        isActive,
+        attended,
+        totalSessions,
+        `${pct}%`,
+        clearance,
+      ];
+    });
+
+    const csvContent = [headers.join(','), ...dataRows.map((r) => r.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
     const link = document.createElement('a');
-    link.setAttribute('href', encodedUri);
-    link.setAttribute('download', 'CUSTECH_CSC_Department_Attendance_Report.csv');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `CUSTECH_CSC_Official_Attendance_Register_${new Date().toISOString().split('T')[0]}.csv`);
     document.body.appendChild(link);
     link.click();
     document.body.removeChild(link);
@@ -93,6 +132,14 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
           >
             <HeartPulse className="w-3.5 h-3.5" />
             <span>Clinic Waivers</span>
+          </button>
+
+          <button
+            onClick={() => window.print()}
+            className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-slate-300 bg-white hover:bg-slate-50 text-slate-700 text-xs font-bold shadow-sm transition"
+          >
+            <Printer className="w-3.5 h-3.5" />
+            <span>Print Sheet</span>
           </button>
 
           <button

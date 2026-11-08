@@ -3,7 +3,7 @@
 import React from 'react';
 import { AttendanceRecord, Student, UserProfile } from '@/types';
 import { formatTime, getStatusBadgeVariant } from '@/lib/utils';
-import { Users, QrCode, Key, PhoneOff, CheckCircle2, Clock } from 'lucide-react';
+import { Users, QrCode, Key, PhoneOff, CheckCircle2, Clock, Download, Printer } from 'lucide-react';
 
 interface LiveCounterProps {
   records: (AttendanceRecord & { student?: Student & { profile?: UserProfile } })[];
@@ -16,6 +16,24 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ records, totalEnrolled
   const assistedCount = records.filter((r) => r.method === 'KIOSK_PIN').length;
   const totalAttended = records.length;
   const attendanceRate = totalEnrolled > 0 ? Math.round((totalAttended / totalEnrolled) * 100) : 0;
+
+  const handleExportSessionCsv = () => {
+    const headers = ['Matric Number', 'Student Name', 'Status', 'Method', 'Timestamp'];
+    const rows = records.map((r) => {
+      const name = r.student?.profile ? `${r.student.profile.firstName} ${r.student.profile.lastName}` : 'Student';
+      const matric = r.student?.matricNumber || 'CUSTECH';
+      return [matric, `"${name}"`, r.status, r.method, `"${new Date(r.recordedAt).toLocaleTimeString()}"`];
+    });
+    const csvContent = [headers.join(','), ...rows.map((e) => e.join(','))].join('\n');
+    const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+    const url = URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.setAttribute('href', url);
+    link.setAttribute('download', `CUSTECH_Lecture_Session_Attendance_${new Date().toISOString().split('T')[0]}.csv`);
+    document.body.appendChild(link);
+    link.click();
+    document.body.removeChild(link);
+  };
 
   const getMethodBadge = (method: string) => {
     switch (method) {
@@ -58,8 +76,26 @@ export const LiveCounter: React.FC<LiveCounterProps> = ({ records, totalEnrolled
             Live Attendance Count
           </h3>
         </div>
-        <div className="text-xs font-bold text-slate-600">
-          {totalAttended} / {totalEnrolled} Enrolled ({attendanceRate}%)
+        <div className="flex items-center gap-2">
+          <button
+            type="button"
+            onClick={() => window.print()}
+            title="Print roll sheet"
+            className="p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+          >
+            <Printer className="w-3.5 h-3.5" />
+          </button>
+          <button
+            type="button"
+            onClick={handleExportSessionCsv}
+            title="Export session attendance CSV"
+            className="p-1.5 rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-50 transition"
+          >
+            <Download className="w-3.5 h-3.5" />
+          </button>
+          <div className="text-xs font-bold text-slate-600 ml-1">
+            {totalAttended} / {totalEnrolled} ({attendanceRate}%)
+          </div>
         </div>
       </div>
 

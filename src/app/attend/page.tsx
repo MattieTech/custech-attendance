@@ -41,7 +41,7 @@ function AttendContent() {
   const [typedCourse, setTypedCourse] = React.useState(initialCourse || 'CSC 201');
   const [typedCode, setTypedCode] = React.useState(code || '');
   const [isVerifying, setIsVerifying] = React.useState(false);
-  const [status, setStatus] = React.useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'ERROR'>('IDLE');
+  const [status, setStatus] = React.useState<'IDLE' | 'LOADING' | 'SUCCESS' | 'OFFLINE_PENDING' | 'ERROR'>('IDLE');
   const [statusMessage, setStatusMessage] = React.useState('');
   const [successDetails, setSuccessDetails] = React.useState<{
     studentName?: string;
@@ -114,13 +114,13 @@ function AttendContent() {
           courseCode: initialCourse || typedCourse,
         });
 
-        setStatus('SUCCESS');
-        setStatusMessage('Recorded in Offline Storage! Your presence is saved securely on this device and will automatically upload once internet connects.');
+        setStatus('OFFLINE_PENDING');
+        setStatusMessage('Saved in local device offline storage. Official attendance is pending server synchronization and verification.');
         setSuccessDetails({
           studentName: `${user.firstName} ${user.lastName}`,
           matricNumber: user.email?.split('@')[0].toUpperCase(),
           courseCode: initialCourse || typedCourse,
-          courseTitle: 'Saved in Local Offline Queue (Auto-Syncing on Reconnect)',
+          courseTitle: 'Saved Locally in Offline Queue (Awaiting Server Verification)',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         });
       } catch {
@@ -213,13 +213,13 @@ function AttendContent() {
           courseCode: initialCourse || typedCourse,
         });
 
-        setStatus('SUCCESS');
-        setStatusMessage('Recorded in Offline Storage! Your presence is saved securely on this device and will automatically upload once internet connects.');
+        setStatus('OFFLINE_PENDING');
+        setStatusMessage('Saved in local device offline storage. Official attendance is pending server synchronization and verification.');
         setSuccessDetails({
           studentName: cleanMatric,
           matricNumber: cleanMatric,
           courseCode: initialCourse || typedCourse,
-          courseTitle: 'Saved in Local Offline Queue (Auto-Syncing on Reconnect)',
+          courseTitle: 'Saved Locally in Offline Queue (Awaiting Server Verification)',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }),
         });
       } catch {
@@ -365,6 +365,63 @@ function AttendContent() {
                   <div className="flex justify-between items-center">
                     <span className="text-slate-500 font-medium">Recorded At</span>
                     <span className="font-mono text-slate-600">{successDetails.time}</span>
+                  </div>
+                </div>
+              )}
+
+              <button
+                type="button"
+                onClick={() => router.push('/')}
+                className="w-full mt-2 py-3 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2"
+              >
+                <span>Go to Student Portal</span>
+                <ArrowRight className="w-4 h-4" />
+              </button>
+            </div>
+          )}
+
+          {/* STATE 2B: OFFLINE PENDING (Awaiting Server Verification & Sync) */}
+          {status === 'OFFLINE_PENDING' && (
+            <div className="py-6 flex flex-col items-center justify-center text-center space-y-4 animate-fadeIn">
+              <div className="w-20 h-20 rounded-full bg-amber-50 border-2 border-amber-500 flex items-center justify-center shadow-lg">
+                <WifiOff className="w-10 h-10 text-amber-600" />
+              </div>
+
+              <div>
+                <span className="inline-block px-3 py-1 rounded-full bg-amber-100 text-amber-800 text-xs font-extrabold uppercase tracking-wider mb-1">
+                  Pending Server Sync
+                </span>
+                <h3 className="text-lg font-black text-slate-900">
+                  Recorded in Offline Queue
+                </h3>
+                <div className="text-xs text-amber-900 bg-amber-50 border border-amber-200 rounded-xl p-3 max-w-sm mx-auto mt-2 text-left">
+                  <p className="font-bold mb-1">Status: Unconfirmed Offline Submission</p>
+                  <p className="text-[11px] leading-relaxed">
+                    Your attendance has been captured in local device storage. To maintain institutional integrity, presence is <strong>NOT officially confirmed</strong> until uploaded to the CUSTECH central server for session validity and duplicate prevention. It will automatically upload as soon as connectivity returns.
+                  </p>
+                </div>
+              </div>
+
+              {/* Offline Details Sheet */}
+              {successDetails && (
+                <div className="w-full bg-slate-50 border border-slate-200 rounded-2xl p-4 text-left space-y-2 text-xs">
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                    <span className="text-slate-500 font-medium">Student / Matric</span>
+                    <span className="font-extrabold text-slate-900">{successDetails.matricNumber || successDetails.studentName}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                    <span className="text-slate-500 font-medium">Course Code</span>
+                    <span className="font-bold text-slate-900">{successDetails.courseCode}</span>
+                  </div>
+                  <div className="flex justify-between items-center border-b border-slate-200 pb-1.5">
+                    <span className="text-slate-500 font-medium">Capture Timestamp</span>
+                    <span className="font-mono text-slate-600">{successDetails.time}</span>
+                  </div>
+                  <div className="flex justify-between items-center">
+                    <span className="text-slate-500 font-medium">Verification Status</span>
+                    <span className="font-bold text-amber-700 bg-amber-100 px-2 py-0.5 rounded text-[11px]">
+                      Awaiting Server Verification
+                    </span>
                   </div>
                 </div>
               )}

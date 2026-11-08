@@ -14,6 +14,7 @@ interface KioskTerminalProps {
   operatorProfileId: string;
   operatorName: string;
   operatorRoleTitle: string;
+  initialMatric?: string;
   onClose?: () => void;
   onSuccess?: () => void;
 }
@@ -34,12 +35,14 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   operatorProfileId,
   operatorName,
   operatorRoleTitle,
+  initialMatric,
   onClose,
   onSuccess,
 }) => {
-  const [matricNumber, setMatricNumber] = React.useState('');
+  const [matricNumber, setMatricNumber] = React.useState(initialMatric || '');
   const [attendancePin, setAttendancePin] = React.useState('');
   const [assistedReason, setAssistedReason] = React.useState<AssistedReason>('No smartphone');
+  const [presenceConfirmed, setPresenceConfirmed] = React.useState(false);
   const [isLoading, setIsLoading] = React.useState(false);
   const [errorMessage, setErrorMessage] = React.useState<string | null>(null);
   const [successInfo, setSuccessInfo] = React.useState<{
@@ -51,6 +54,7 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
   const resetForm = React.useCallback(() => {
     setMatricNumber('');
     setAttendancePin('');
+    setPresenceConfirmed(false);
     setErrorMessage(null);
     setSuccessInfo(null);
   }, []);
@@ -67,6 +71,10 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
     }
     if (cleanPin.length !== 4) {
       setErrorMessage('Please enter the confidential 4-digit Attendance PIN.');
+      return;
+    }
+    if (!presenceConfirmed) {
+      setErrorMessage('You must verify that the student is physically present in the lecture hall.');
       return;
     }
 
@@ -312,11 +320,26 @@ export const KioskTerminal: React.FC<KioskTerminalProps> = ({
                 ))}
               </select>
             </div>
+ 
+            {/* Physical Presence Verification */}
+            <div className="p-3 bg-[#fbf5ef] border border-[#ecdacb] rounded-xl flex items-start gap-2.5">
+              <input
+                type="checkbox"
+                id="physical-presence-check"
+                required
+                checked={presenceConfirmed}
+                onChange={(e) => setPresenceConfirmed(e.target.checked)}
+                className="mt-0.5 accent-[#8d4a27] w-4 h-4 rounded cursor-pointer"
+              />
+              <label htmlFor="physical-presence-check" className="text-xs text-slate-800 font-medium select-none cursor-pointer">
+                <strong>Physical Presence Verified:</strong> I certify that this student is physically present inside the lecture hall and is personally entering their 4-digit PIN.
+              </label>
+            </div>
 
             {/* Submit Action */}
             <button
               type="submit"
-              disabled={isLoading}
+              disabled={isLoading || !presenceConfirmed}
               className="w-full mt-4 flex items-center justify-center gap-2 py-3 px-4 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-sm tracking-wide shadow-sm transition disabled:opacity-50"
             >
               {isLoading ? (

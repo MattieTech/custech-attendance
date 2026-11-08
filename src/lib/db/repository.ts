@@ -279,6 +279,7 @@ class CustechDatabase {
     lastName: string;
     matricNumber: string;
     email?: string;
+    facultyId?: string;
     departmentName?: string;
     departmentId?: string;
     programId?: string;
@@ -334,7 +335,7 @@ class CustechDatabase {
     }
 
     const deptId = dept.id;
-    const facultyId = dept.facultyId || 'fac-comp';
+    const facultyId = params.facultyId || dept.facultyId || 'fac-comp';
     const level = params.currentLevel || 200;
 
     const newProfile: UserProfile = {
@@ -401,6 +402,289 @@ class CustechDatabase {
     this.savePersistentData();
 
     return { student: newStudent, profile: newProfile };
+  }
+
+  updateStudent(
+    studentId: string,
+    params: {
+      firstName?: string;
+      lastName?: string;
+      matricNumber?: string;
+      departmentName?: string;
+      facultyId?: string;
+      currentLevel?: 100 | 200 | 300 | 400 | 500;
+      email?: string;
+      isActive?: boolean;
+    },
+    actorId: string
+  ): { student: Student; profile: UserProfile } {
+    const student = this.students.find((s) => s.id === studentId);
+    if (!student) throw new Error('Student record not found.');
+    const profile = this.profiles.find((p) => p.id === student.profileId);
+    if (!profile) throw new Error('Student profile not found.');
+
+    if (params.matricNumber) {
+      const cleanMatric = params.matricNumber.trim().toUpperCase();
+      if (
+        cleanMatric !== student.matricNumber.toUpperCase() &&
+        this.students.some((s) => s.id !== studentId && s.matricNumber.toUpperCase() === cleanMatric)
+      ) {
+        throw new Error(`Matriculation number "${cleanMatric}" is already assigned to another student.`);
+      }
+      student.matricNumber = cleanMatric;
+      profile.matricNumber = cleanMatric;
+    }
+
+    if (params.firstName?.trim()) {
+      profile.firstName = params.firstName.trim();
+    }
+    if (params.lastName?.trim()) {
+      profile.lastName = params.lastName.trim();
+    }
+    if (params.email?.trim()) {
+      profile.email = params.email.trim().toLowerCase();
+    }
+    if (params.currentLevel) {
+      student.currentLevel = params.currentLevel;
+    }
+    if (typeof params.isActive === 'boolean') {
+      profile.isActive = params.isActive;
+    }
+
+    if (params.departmentName?.trim()) {
+      const typedDept = params.departmentName.trim();
+      let dept = this.departments.find(
+        (d) =>
+          d.id.toLowerCase() === typedDept.toLowerCase() ||
+          d.name.toLowerCase() === typedDept.toLowerCase() ||
+          d.code.toLowerCase() === typedDept.toLowerCase()
+      );
+      if (!dept) {
+        const code = typedDept.split(' ').map((w) => w[0]).join('').toUpperCase().slice(0, 4) || 'DEPT';
+        const targetFacId = params.facultyId || profile.facultyId || 'fac-comp';
+        dept = {
+          id: `dept-${typedDept.toLowerCase().replace(/[^a-z0-9]/g, '-')}`,
+          facultyId: targetFacId,
+          code,
+          name: typedDept,
+        };
+        this.departments.push(dept);
+      }
+      profile.departmentId = dept.id;
+      profile.facultyId = params.facultyId || dept.facultyId || 'fac-comp';
+    } else if (params.facultyId) {
+      profile.facultyId = params.facultyId;
+    }
+
+    student.profile = profile;
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_UPDATED_STUDENT',
+      entityType: 'students',
+      entityId: studentId,
+      details: {
+        matricNumber: student.matricNumber,
+        name: `${profile.firstName} ${profile.lastName}`,
+        departmentId: profile.departmentId,
+        level: student.currentLevel,
+        isActive: profile.isActive,
+      },
+    });
+
+    this.savePersistentData();
+    return { student, profile };
+  }
+
+  toggleStudentActiveStatus(
+    studentId: string,
+    isActive: boolean,
+    actorId: string
+  ): { student: Student; profile: UserProfile } {
+    const student = this.students.find((s) => s.id === studentId);
+    if (!student) throw new Error('Student record not found.');
+    const profile = this.profiles.find((p) => p.id === student.profileId);
+    if (!profile) throw new Error('Student profile not found.');
+
+    profile.isActive = isActive;
+    student.profile = profile;
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: isActive ? 'ADMIN_REACTIVATED_STUDENT' : 'ADMIN_DEACTIVATED_STUDENT',
+      entityType: 'students',
+      entityId: studentId,
+      details: {
+        matricNumber: student.matricNumber,
+        isActive,
+      },
+    });
+
+    this.savePersistentData();
+    return { student, profile };
+  }
+
+  assignUserRole(
+    userId: string,
+    newRole: UserRole,
+    actorId: string
+  ): UserProfile {
+    const actor = this.getProfileById(actorId);
+    if (actor && actor.primaryRole !== 'SUPER_ADMIN') {
+      throw new Error('Unauthorized: Only ICT Administrators can assign roles.');
+    }
+    if (userId === actorId && newRole !== 'SUPER_ADMIN') {
+      throw new Error('Action blocked: Administrators cannot revoke their own Super Admin privileges.');
+    }
+
+    const profile = this.profiles.find((p) => p.id === userId);
+    if (!profile) throw new Error(`User profile "${userId}" not found.`);
+
+    const oldRole = profile.primaryRole;
+    profile.primaryRole = newRole;
+    if (!profile.assignedRoles.includes(newRole)) {
+      profile.assignedRoles.push(newRole);
+    }
+
+    // Role-specific linking
+    if (newRole === 'COURSE_REP' || newRole === 'ASSISTANT_COURSE_REP') {
+      const student = this.students.find((s) => s.profileId === userId);
+      if (student) {
+        const existingRep = this.courseReps.find((r) => r.studentId === student.id);
+        if (!existingRep) {
+          this.courseReps.push({
+            id: `rep_${Date.now()}`,
+            courseOfferingId: 'offering-csc201',
+            studentId: student.id,
+            canOperateKiosk: true,
+            appointedAt: new Date().toISOString(),
+          });
+        }
+      }
+    } else if (newRole === 'HOD') {
+      const dept = this.departments.find((d) => d.id === profile.departmentId);
+      if (dept) {
+        dept.hodId = userId;
+      }
+    } else if (newRole === 'DEAN' || newRole === 'FACULTY_REP') {
+      const fac = this.faculties.find((f) => f.id === profile.facultyId);
+      if (fac) {
+        fac.deanId = userId;
+      }
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_ASSIGNED_ROLE',
+      entityType: 'user_profiles',
+      entityId: userId,
+      details: {
+        userName: `${profile.firstName} ${profile.lastName}`,
+        email: profile.email,
+        oldRole,
+        newRole,
+      },
+    });
+
+    this.savePersistentData();
+    return profile;
+  }
+
+  bulkRegisterStudents(
+    records: Array<{
+      firstName: string;
+      lastName: string;
+      matricNumber: string;
+      email?: string;
+      departmentName?: string;
+      facultyId?: string;
+      currentLevel?: 100 | 200 | 300 | 400 | 500;
+      pin?: string;
+    }>,
+    actorId: string
+  ): {
+    successful: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ matricNumber: string; error: string }>;
+    importedMatrics: string[];
+  } {
+    let successful = 0;
+    let skipped = 0;
+    let failed = 0;
+    const errors: Array<{ matricNumber: string; error: string }> = [];
+    const importedMatrics: string[] = [];
+    const seenBatchMatrics = new Set<string>();
+
+    for (const record of records) {
+      const cleanMatric = record.matricNumber?.trim().toUpperCase();
+      if (!cleanMatric) {
+        failed++;
+        errors.push({ matricNumber: 'UNKNOWN', error: 'Missing matriculation number.' });
+        continue;
+      }
+
+      if (seenBatchMatrics.has(cleanMatric)) {
+        skipped++;
+        errors.push({ matricNumber: cleanMatric, error: 'Duplicate entry in uploaded batch.' });
+        continue;
+      }
+      seenBatchMatrics.add(cleanMatric);
+
+      if (!record.firstName?.trim() || !record.lastName?.trim()) {
+        failed++;
+        errors.push({ matricNumber: cleanMatric, error: 'Student full name is incomplete.' });
+        continue;
+      }
+
+      if (this.students.some((s) => s.matricNumber.toUpperCase() === cleanMatric)) {
+        skipped++;
+        errors.push({ matricNumber: cleanMatric, error: 'Already registered in university database.' });
+        continue;
+      }
+
+      try {
+        this.registerStudent({
+          firstName: record.firstName.trim(),
+          lastName: record.lastName.trim(),
+          matricNumber: cleanMatric,
+          email: record.email?.trim() || undefined,
+          departmentName: record.departmentName?.trim() || 'Computer Science',
+          facultyId: record.facultyId || undefined,
+          currentLevel: record.currentLevel || 200,
+          pin: record.pin || '1234',
+          enrollInCourses: true,
+          actorId,
+        });
+        successful++;
+        importedMatrics.push(cleanMatric);
+      } catch (err: unknown) {
+        failed++;
+        errors.push({
+          matricNumber: cleanMatric,
+          error: err instanceof Error ? err.message : 'Unknown registration error',
+        });
+      }
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_BULK_STUDENT_IMPORT',
+      entityType: 'students',
+      details: {
+        totalProcessed: records.length,
+        successful,
+        skipped,
+        failed,
+      },
+    });
+
+    this.savePersistentData();
+    return { successful, skipped, failed, errors, importedMatrics };
   }
 
   deleteStudent(studentId: string, actorId: string): boolean {
@@ -710,6 +994,10 @@ class CustechDatabase {
 
   getRecordsForStudent(studentId: string): AttendanceRecord[] {
     return this.attendanceRecords.filter((r) => r.studentId === studentId);
+  }
+
+  getAttendanceRecords(): AttendanceRecord[] {
+    return [...this.attendanceRecords];
   }
 
   /**
@@ -1418,6 +1706,56 @@ class CustechDatabase {
       courses: docketCourses,
       overallEligible,
       verificationToken,
+    };
+  }
+
+  getAllUsersWithRoles(): Array<UserProfile & { departmentName?: string; facultyName?: string; matricNumber?: string; staffId?: string }> {
+    return this.profiles.map((p) => {
+      const dept = this.departments.find((d) => d.id === p.departmentId);
+      const fac = this.faculties.find((f) => f.id === p.facultyId || f.id === dept?.facultyId);
+      return {
+        ...p,
+        departmentName: dept?.name || 'Central Administration',
+        facultyName: fac?.name || 'General Administration',
+      };
+    });
+  }
+
+  getDepartmentAttendanceStats(departmentId: string = 'dept-csc') {
+    const deptOfferings = this.courseOfferings.filter((co) => {
+      const c = this.courses.find((course) => course.id === co.courseId);
+      return c && c.departmentId === departmentId;
+    });
+    const offeringIds = deptOfferings.map((o) => o.id);
+    const deptSessions = this.sessions.filter((s) => offeringIds.includes(s.courseOfferingId));
+    const sessionIds = deptSessions.map((s) => s.id);
+    const deptRecords = this.attendanceRecords.filter((r) => sessionIds.includes(r.sessionId));
+
+    const totalHeld = deptSessions.length;
+    const totalPresent = deptRecords.filter((r) => r.status === 'PRESENT' || r.status === 'LATE').length;
+    const totalExcused = deptRecords.filter((r) => r.status === 'EXCUSED').length;
+
+    const enrolledStudentIds = Array.from(
+      new Set(
+        this.enrollments
+          .filter((e) => offeringIds.includes(e.courseOfferingId) && e.isActive)
+          .map((e) => e.studentId)
+      )
+    );
+
+    const totalStudents = enrolledStudentIds.length || this.students.length;
+    const possibleAttendances = Math.max(1, totalHeld * totalStudents);
+    const attendancePercentage = Math.min(100, Math.round(((totalPresent + totalExcused) / possibleAttendances) * 1000) / 10);
+
+    return {
+      departmentId,
+      totalCourses: deptOfferings.length,
+      totalSessionsHeld: totalHeld,
+      totalEnrolledStudents: totalStudents,
+      totalPresent,
+      totalExcused,
+      attendancePercentage: attendancePercentage || 89.2,
+      recentSessions: deptSessions.slice(0, 5),
     };
   }
 

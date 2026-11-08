@@ -1,6 +1,7 @@
 'use server';
 
 import { custechDb } from '@/lib/db/repository';
+import { UserRole } from '@/types';
 
 export async function toggleSyllabusStatus(topicId: string, isCompleted: boolean, actorId: string) {
   return custechDb.toggleSyllabusTopic(topicId, isCompleted, actorId);
@@ -26,6 +27,7 @@ export async function registerStudentAction(
     email?: string;
     departmentName?: string;
     departmentId?: string;
+    facultyId?: string;
     currentLevel?: 100 | 200 | 300 | 400 | 500;
     pin?: string;
     enrollInCourses?: boolean;
@@ -44,6 +46,95 @@ export async function registerStudentAction(
       error: err instanceof Error ? err.message : 'Failed to register student',
     };
   }
+}
+
+export async function updateStudentAction(
+  studentId: string,
+  studentData: {
+    firstName?: string;
+    lastName?: string;
+    matricNumber?: string;
+    email?: string;
+    departmentName?: string;
+    facultyId?: string;
+    currentLevel?: 100 | 200 | 300 | 400 | 500;
+    isActive?: boolean;
+  },
+  actorId: string
+) {
+  try {
+    const result = custechDb.updateStudent(studentId, studentData, actorId);
+    return { success: true, student: result.student, profile: result.profile };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update student',
+    };
+  }
+}
+
+export async function toggleStudentStatusAction(
+  studentId: string,
+  isActive: boolean,
+  actorId: string
+) {
+  try {
+    const result = custechDb.toggleStudentActiveStatus(studentId, isActive, actorId);
+    return { success: true, student: result.student, profile: result.profile };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update student status',
+    };
+  }
+}
+
+export async function assignUserRoleAction(
+  userId: string,
+  newRole: UserRole,
+  actorId: string
+) {
+  try {
+    const profile = custechDb.assignUserRole(userId, newRole, actorId);
+    return { success: true, profile };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to assign role',
+    };
+  }
+}
+
+export async function bulkImportStudentsAction(
+  records: Array<{
+    firstName: string;
+    lastName: string;
+    matricNumber: string;
+    email?: string;
+    departmentName?: string;
+    facultyId?: string;
+    currentLevel?: 100 | 200 | 300 | 400 | 500;
+    pin?: string;
+  }>,
+  actorId: string
+) {
+  try {
+    const summary = custechDb.bulkRegisterStudents(records, actorId);
+    return { success: true, summary };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to process bulk import',
+    };
+  }
+}
+
+export async function getAllUsersWithRolesAction() {
+  return custechDb.getAllUsersWithRoles();
+}
+
+export async function getDepartmentAttendanceStatsAction(departmentId: string = 'dept-csc') {
+  return custechDb.getDepartmentAttendanceStats(departmentId);
 }
 
 export async function deleteStudentAction(studentId: string, actorId: string) {

@@ -2,6 +2,8 @@ export type UserRole =
   | 'SUPER_ADMIN'
   | 'PRINCIPAL_OFFICER'
   | 'DEAN'
+  | 'FACULTY_REP'
+  | 'ASST_FACULTY_REP'
   | 'HOD'
   | 'LECTURER'
   | 'COURSE_REP'
