@@ -45,14 +45,23 @@ import {
   Database,
   Network,
   Info,
+  BookOpen,
+  Calendar,
+  ShieldAlert,
 } from 'lucide-react';
+import { CourseManagementTab } from '@/components/admin/CourseManagementTab';
+import { TimetableManagementTab } from '@/components/admin/TimetableManagementTab';
+import { LecturerManagementTab } from '@/components/admin/LecturerManagementTab';
+import { AttendanceMonitoringTab } from '@/components/admin/AttendanceMonitoringTab';
 
 interface AdminDashboardProps {
   user: UserProfile;
 }
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
-  const [activeTab, setActiveTab] = React.useState<'STUDENTS' | 'ROLES' | 'INTEGRATION' | 'POLICIES' | 'AUDIT'>('STUDENTS');
+  const [activeTab, setActiveTab] = React.useState<
+    'COURSES' | 'TIMETABLE' | 'LECTURERS' | 'MONITORING' | 'STUDENTS' | 'ROLES' | 'INTEGRATION' | 'POLICIES' | 'AUDIT'
+  >('COURSES');
   const [settings, setSettings] = React.useState<SystemSettings>(custechDb.getSystemSettings());
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
@@ -582,67 +591,135 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       </div>
 
       {/* Primary Tab Navigation */}
-      <div className="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-sm overflow-x-auto">
+      <div className="flex border-b border-slate-200 bg-white rounded-xl p-1 shadow-sm overflow-x-auto gap-1">
+        <button
+          onClick={() => setActiveTab('COURSES')}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+            activeTab === 'COURSES'
+              ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <BookOpen className="w-4 h-4 text-[#8d4a27]" />
+          <span>Course Catalogue</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('TIMETABLE')}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+            activeTab === 'TIMETABLE'
+              ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <Calendar className="w-4 h-4 text-[#8d4a27]" />
+          <span>Timetable &amp; Schedules</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('LECTURERS')}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+            activeTab === 'LECTURERS'
+              ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <Users className="w-4 h-4 text-[#8d4a27]" />
+          <span>Lecturer Directory</span>
+        </button>
+
+        <button
+          onClick={() => setActiveTab('MONITORING')}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+            activeTab === 'MONITORING'
+              ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <ShieldAlert className="w-4 h-4 text-amber-600" />
+          <span>Live Monitor &amp; Anti-Proxy</span>
+        </button>
+
         <button
           onClick={() => setActiveTab('STUDENTS')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'STUDENTS'
               ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <GraduationCap className="w-4 h-4 text-[#8d4a27]" />
-          <span>Student Directory ({students.length})</span>
+          <span>Students ({students.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('ROLES')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'ROLES'
               ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Users className="w-4 h-4 text-[#8d4a27]" />
-          <span>User Roles &amp; Permissions ({usersList.length})</span>
+          <span>User Roles ({usersList.length})</span>
         </button>
 
         <button
           onClick={() => setActiveTab('INTEGRATION')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'INTEGRATION'
               ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Database className="w-4 h-4 text-[#8d4a27]" />
-          <span>University SIS Connector</span>
+          <span>SIS Connector</span>
         </button>
 
         <button
           onClick={() => setActiveTab('POLICIES')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'POLICIES'
               ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <Sliders className="w-4 h-4 text-[#8d4a27]" />
-          <span>Attendance Policies</span>
+          <span>Policies</span>
         </button>
 
         <button
           onClick={() => setActiveTab('AUDIT')}
-          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'AUDIT'
               ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
               : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
           }`}
         >
           <ShieldCheck className="w-4 h-4 text-[#8d4a27]" />
-          <span>Audit Trail ({auditLogs.length})</span>
+          <span>Audit ({auditLogs.length})</span>
         </button>
       </div>
+
+      {/* ============================================================== */}
+      {/* TAB: COURSE CATALOGUE MANAGEMENT                               */}
+      {/* ============================================================== */}
+      {activeTab === 'COURSES' && <CourseManagementTab adminUserId={user.id} />}
+
+      {/* ============================================================== */}
+      {/* TAB: TIMETABLE & SCHEDULING                                    */}
+      {/* ============================================================== */}
+      {activeTab === 'TIMETABLE' && <TimetableManagementTab adminUserId={user.id} />}
+
+      {/* ============================================================== */}
+      {/* TAB: LECTURER DIRECTORY & ASSIGNMENTS                          */}
+      {/* ============================================================== */}
+      {activeTab === 'LECTURERS' && <LecturerManagementTab adminUserId={user.id} />}
+
+      {/* ============================================================== */}
+      {/* TAB: LIVE ATTENDANCE & ANTI-PROXY SURVEILLANCE                 */}
+      {/* ============================================================== */}
+      {activeTab === 'MONITORING' && <AttendanceMonitoringTab adminUserId={user.id} />}
 
       {/* ============================================================== */}
       {/* TAB 1: STUDENT REGISTRY & ADMISSIONS                           */}

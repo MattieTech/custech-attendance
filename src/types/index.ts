@@ -146,6 +146,8 @@ export interface Course {
   title: string;
   creditUnits: number;
   level: 100 | 200 | 300 | 400 | 500;
+  isActive?: boolean;
+  description?: string;
 }
 
 export interface CourseOffering {
@@ -153,8 +155,11 @@ export interface CourseOffering {
   courseId: string;
   semesterId: string;
   primaryLecturerId: string;
+  assignedLecturerIds?: string[];
   course?: Course;
   primaryLecturer?: UserProfile;
+  academicSessionId?: string;
+  isActive?: boolean;
 }
 
 export interface TimetableEntry {
@@ -166,6 +171,8 @@ export interface TimetableEntry {
   endTime: string; // '12:00'
   courseOffering?: CourseOffering;
   classroom?: Classroom;
+  venue?: string;
+  isRecurring?: boolean;
 }
 
 export interface Enrollment {
@@ -190,6 +197,9 @@ export interface AttendanceSession {
   lecturerId: string;
   substituteLecturerId?: string;
   classroomId?: string;
+  venue?: string;
+  weekNumber?: number; // e.g. Week 1, Week 2...
+  topicTitle?: string;
   date: string; // YYYY-MM-DD
   scheduledStart: string; // ISO
   scheduledEnd: string; // ISO
@@ -198,6 +208,8 @@ export interface AttendanceSession {
   status: SessionStatus;
   currentTempCode: string; // 6 chars, e.g. '7K4P92'
   tempCodeExpiresAt: string;
+  isCodeActive?: boolean;
+  previousCodes?: string[];
   qrRotationSeconds: number; // default 20s
   lateThresholdMinutes: number; // default 15m
   sessionSecretNonce: string; // HMAC secret
@@ -373,11 +385,21 @@ export interface DeviceCollisionAlert {
   sessionId: string;
   deviceFingerprintHash: string;
   matchedMatricNumbers: string[];
+  matchedStudentNames?: string[];
+  studentIds?: string[];
   sessionCode: string;
+  courseCode?: string;
   ipAddress?: string;
+  userAgent?: string;
+  deviceType?: string;
+  browser?: string;
+  os?: string;
   attemptCount: number;
+  riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
+  riskReason?: string;
   isReviewed: boolean;
   reviewedBy?: string;
+  reviewNotes?: string;
   actionTaken?: 'CLEARED' | 'FLAGGED_DISCIPLINARY';
   createdAt: string;
 }

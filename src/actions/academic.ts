@@ -244,3 +244,312 @@ export async function getDatabaseSnapshotAction() {
     departments: custechDb.getDepartments(),
   };
 }
+
+/**
+ * ==========================================
+ * COURSE MANAGEMENT SERVER ACTIONS
+ * ==========================================
+ */
+export async function getCoursesDetailedAction() {
+  return custechDb.getCoursesWithDetails();
+}
+
+export async function createCourseAction(
+  courseData: {
+    code: string;
+    title: string;
+    creditUnits: number;
+    departmentId: string;
+    level: 100 | 200 | 300 | 400 | 500;
+    description?: string;
+  },
+  actorId: string
+) {
+  try {
+    const course = custechDb.createCourse(courseData, actorId);
+    return { success: true, course };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to create course',
+    };
+  }
+}
+
+export async function updateCourseAction(
+  courseId: string,
+  courseData: Partial<{
+    code: string;
+    title: string;
+    creditUnits: number;
+    departmentId: string;
+    level: 100 | 200 | 300 | 400 | 500;
+    description?: string;
+    isActive: boolean;
+    primaryLecturerId: string;
+  }>,
+  actorId: string
+) {
+  try {
+    const course = custechDb.updateCourse(courseId, courseData, actorId);
+    return { success: true, course };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update course',
+    };
+  }
+}
+
+export async function toggleCourseAction(
+  courseId: string,
+  isActive: boolean,
+  actorId: string
+) {
+  try {
+    const course = custechDb.toggleCourseActive(courseId, isActive, actorId);
+    return { success: true, course };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update course status',
+    };
+  }
+}
+
+export async function deleteCourseAction(courseId: string, actorId: string) {
+  try {
+    custechDb.deleteCourse(courseId, actorId);
+    return { success: true };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to delete course',
+    };
+  }
+}
+
+export async function bulkImportCoursesAction(
+  records: Array<{
+    code: string;
+    title: string;
+    creditUnits: number;
+    departmentName?: string;
+    departmentId?: string;
+    level?: 100 | 200 | 300 | 400 | 500;
+    description?: string;
+    lecturerEmailOrName?: string;
+  }>,
+  actorId: string
+) {
+  try {
+    const summary = custechDb.bulkImportCourses(records, actorId);
+    return { success: true, summary };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to import courses',
+    };
+  }
+}
+
+/**
+ * ==========================================
+ * LECTURER DIRECTORY & ASSIGNMENTS
+ * ==========================================
+ */
+export async function getLecturersAction() {
+  return custechDb.getLecturers();
+}
+
+export async function createLecturerAction(
+  lecturerData: {
+    firstName: string;
+    lastName: string;
+    email: string;
+    departmentId: string;
+    facultyId?: string;
+    staffId?: string;
+  },
+  actorId: string
+) {
+  try {
+    const lecturer = custechDb.createLecturer(lecturerData, actorId);
+    return { success: true, lecturer };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to create lecturer',
+    };
+  }
+}
+
+export async function updateLecturerAction(
+  lecturerId: string,
+  lecturerData: Partial<{
+    firstName: string;
+    lastName: string;
+    email: string;
+    departmentId: string;
+    isActive: boolean;
+    staffId: string;
+  }>,
+  actorId: string
+) {
+  try {
+    const lecturer = custechDb.updateLecturer(lecturerId, lecturerData, actorId);
+    return { success: true, lecturer };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update lecturer',
+    };
+  }
+}
+
+export async function toggleLecturerActiveAction(
+  lecturerId: string,
+  isActive: boolean,
+  actorId: string
+) {
+  try {
+    const lecturer = custechDb.toggleLecturerActive(lecturerId, isActive, actorId);
+    return { success: true, lecturer };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update lecturer status',
+    };
+  }
+}
+
+export async function assignLecturerToCourseAction(
+  courseOfferingId: string,
+  lecturerId: string,
+  actorId: string
+) {
+  try {
+    const offering = custechDb.assignLecturerToCourseOffering(courseOfferingId, lecturerId, actorId);
+    return { success: true, offering };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to assign lecturer to course',
+    };
+  }
+}
+
+/**
+ * ==========================================
+ * TIMETABLE MANAGEMENT
+ * ==========================================
+ */
+export async function getTimetablesDetailedAction() {
+  return custechDb.getTimetablesWithDetails();
+}
+
+export async function createTimetableAction(
+  timetableData: {
+    courseOfferingId: string;
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    classroomId?: string;
+    venue?: string;
+    isRecurring?: boolean;
+  },
+  actorId: string
+) {
+  try {
+    const entry = custechDb.createTimetableEntry(timetableData, actorId);
+    return { success: true, entry };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to create timetable entry',
+    };
+  }
+}
+
+export async function updateTimetableAction(
+  timetableId: string,
+  timetableData: Partial<{
+    dayOfWeek: number;
+    startTime: string;
+    endTime: string;
+    classroomId?: string;
+    venue?: string;
+    isRecurring?: boolean;
+  }>,
+  actorId: string
+) {
+  try {
+    const entry = custechDb.updateTimetableEntry(timetableId, timetableData, actorId);
+    return { success: true, entry };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update timetable entry',
+    };
+  }
+}
+
+export async function deleteTimetableAction(timetableId: string, actorId: string) {
+  try {
+    custechDb.deleteTimetableEntry(timetableId, actorId);
+    return { success: true };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to delete timetable entry',
+    };
+  }
+}
+
+/**
+ * ==========================================
+ * STUDENT MATRICULATION NUMBER VERIFICATION (PHASE 7)
+ * ==========================================
+ */
+export async function verifyMatriculationNumberAction(matricNumber: string) {
+  return custechDb.verifyStudentMatric(matricNumber);
+}
+
+/**
+ * ==========================================
+ * INVESTIGATE DEVICE COLLISION ALERTS (PHASE 8.5)
+ * ==========================================
+ */
+export async function investigateDeviceAlertAction(
+  alertId: string,
+  reviewerId: string,
+  action: 'CLEARED' | 'FLAGGED_FRAUD',
+  reviewNotes?: string
+) {
+  try {
+    const alert = custechDb.investigateDeviceAlert(alertId, reviewerId, action, reviewNotes);
+    return { success: true, alert };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to review alert',
+    };
+  }
+}
+
+export async function getDeviceCollisionAlertsAction(sessionId?: string) {
+  return custechDb.getDeviceCollisionAlerts(sessionId);
+}
+
+export async function getAllSessionsDetailedAction() {
+  return custechDb.getSessions();
+}
+
+export async function getSessionRecordsAction(sessionId: string) {
+  return custechDb.getRecordsForSession(sessionId);
+}
+
+export async function getCourseOfferingsAction() {
+  return custechDb.getCourseOfferings();
+}
+

@@ -128,6 +128,46 @@ class CustechDatabase {
               if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
             });
           }
+          if (Array.isArray(parsed.customCourses)) {
+            parsed.customCourses.forEach((c: Course) => {
+              const existingIdx = this.courses.findIndex((ec) => ec.id === c.id);
+              if (existingIdx >= 0) this.courses[existingIdx] = c;
+              else this.courses.unshift(c);
+            });
+          }
+          if (Array.isArray(parsed.customCourseOfferings)) {
+            parsed.customCourseOfferings.forEach((co: CourseOffering) => {
+              const existingIdx = this.courseOfferings.findIndex((eco) => eco.id === co.id);
+              if (existingIdx >= 0) this.courseOfferings[existingIdx] = co;
+              else this.courseOfferings.push(co);
+            });
+          }
+          if (Array.isArray(parsed.customTimetables)) {
+            parsed.customTimetables.forEach((t: TimetableEntry) => {
+              const existingIdx = this.timetables.findIndex((et) => et.id === t.id);
+              if (existingIdx >= 0) this.timetables[existingIdx] = t;
+              else this.timetables.push(t);
+            });
+          }
+          if (Array.isArray(parsed.customSessions)) {
+            parsed.customSessions.forEach((s: AttendanceSession) => {
+              const existingIdx = this.sessions.findIndex((es) => es.id === s.id);
+              if (existingIdx >= 0) this.sessions[existingIdx] = s;
+              else this.sessions.unshift(s);
+            });
+          }
+          if (Array.isArray(parsed.customAttendanceRecords)) {
+            parsed.customAttendanceRecords.forEach((r: AttendanceRecord) => {
+              if (!this.attendanceRecords.some((er) => er.id === r.id)) this.attendanceRecords.push(r);
+            });
+          }
+          if (Array.isArray(parsed.customDeviceCollisionAlerts)) {
+            parsed.customDeviceCollisionAlerts.forEach((a: DeviceCollisionAlert) => {
+              const existingIdx = this.deviceCollisionAlerts.findIndex((ea) => ea.id === a.id);
+              if (existingIdx >= 0) this.deviceCollisionAlerts[existingIdx] = a;
+              else this.deviceCollisionAlerts.unshift(a);
+            });
+          }
           if (parsed.systemSettings) {
             this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
           }
@@ -166,6 +206,46 @@ class CustechDatabase {
             if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
           });
         }
+        if (Array.isArray(parsed.customCourses)) {
+          parsed.customCourses.forEach((c: Course) => {
+            const existingIdx = this.courses.findIndex((ec) => ec.id === c.id);
+            if (existingIdx >= 0) this.courses[existingIdx] = c;
+            else this.courses.unshift(c);
+          });
+        }
+        if (Array.isArray(parsed.customCourseOfferings)) {
+          parsed.customCourseOfferings.forEach((co: CourseOffering) => {
+            const existingIdx = this.courseOfferings.findIndex((eco) => eco.id === co.id);
+            if (existingIdx >= 0) this.courseOfferings[existingIdx] = co;
+            else this.courseOfferings.push(co);
+          });
+        }
+        if (Array.isArray(parsed.customTimetables)) {
+          parsed.customTimetables.forEach((t: TimetableEntry) => {
+            const existingIdx = this.timetables.findIndex((et) => et.id === t.id);
+            if (existingIdx >= 0) this.timetables[existingIdx] = t;
+            else this.timetables.push(t);
+          });
+        }
+        if (Array.isArray(parsed.customSessions)) {
+          parsed.customSessions.forEach((s: AttendanceSession) => {
+            const existingIdx = this.sessions.findIndex((es) => es.id === s.id);
+            if (existingIdx >= 0) this.sessions[existingIdx] = s;
+            else this.sessions.unshift(s);
+          });
+        }
+        if (Array.isArray(parsed.customAttendanceRecords)) {
+          parsed.customAttendanceRecords.forEach((r: AttendanceRecord) => {
+            if (!this.attendanceRecords.some((er) => er.id === r.id)) this.attendanceRecords.push(r);
+          });
+        }
+        if (Array.isArray(parsed.customDeviceCollisionAlerts)) {
+          parsed.customDeviceCollisionAlerts.forEach((a: DeviceCollisionAlert) => {
+            const existingIdx = this.deviceCollisionAlerts.findIndex((ea) => ea.id === a.id);
+            if (existingIdx >= 0) this.deviceCollisionAlerts[existingIdx] = a;
+            else this.deviceCollisionAlerts.unshift(a);
+          });
+        }
         if (parsed.systemSettings) {
           this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
         }
@@ -185,17 +265,35 @@ class CustechDatabase {
     const initialStudentIds = new Set(initialStudents.map((s) => s.id));
     const initialEnrollmentIds = new Set(initialEnrollments.map((e) => e.id));
     const initialDeptIds = new Set(initialDepartments.map((d) => d.id));
+    const initialCourseIds = new Set(initialCourses.map((c) => c.id));
+    const initialOfferingIds = new Set(initialCourseOfferings.map((o) => o.id));
+    const initialTimetableIds = new Set(initialTimetable.map((t) => t.id));
+    const initialSessionIds = new Set(initialSessions.map((s) => s.id));
+    const initialRecordIds = new Set(initialAttendanceRecords.map((r) => r.id));
+    const initialAlertIds = new Set(initialDeviceCollisionAlerts.map((a) => a.id));
 
     const customProfiles = this.profiles.filter((p) => !initialProfileIds.has(p.id));
     const customStudents = this.students.filter((s) => !initialStudentIds.has(s.id));
     const customEnrollments = this.enrollments.filter((e) => !initialEnrollmentIds.has(e.id));
     const customDepartments = this.departments.filter((d) => !initialDeptIds.has(d.id));
+    const customCourses = this.courses.filter((c) => !initialCourseIds.has(c.id));
+    const customCourseOfferings = this.courseOfferings.filter((o) => !initialOfferingIds.has(o.id));
+    const customTimetables = this.timetables.filter((t) => !initialTimetableIds.has(t.id));
+    const customSessions = this.sessions;
+    const customAttendanceRecords = this.attendanceRecords.filter((r) => !initialRecordIds.has(r.id));
+    const customDeviceCollisionAlerts = this.deviceCollisionAlerts;
 
     const payload = {
       customProfiles,
       customStudents,
       customEnrollments,
       customDepartments,
+      customCourses,
+      customCourseOfferings,
+      customTimetables,
+      customSessions,
+      customAttendanceRecords,
+      customDeviceCollisionAlerts,
       systemSettings: this.systemSettings,
       auditLogs: this.auditLogs.slice(0, 100),
       updatedAt: new Date().toISOString(),
@@ -797,6 +895,26 @@ class CustechDatabase {
       .map((s) => ({ ...s, profile: this.getProfileById(s.profileId) }));
   }
 
+  enrollStudentInCourse(studentId: string, courseOfferingId: string, actorId?: string): Enrollment {
+    const existing = this.enrollments.find(
+      (e) => e.studentId === studentId && e.courseOfferingId === courseOfferingId
+    );
+    if (existing) {
+      existing.isActive = true;
+      this.savePersistentData();
+      return existing;
+    }
+    const newEnrollment: Enrollment = {
+      id: `enr_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      studentId,
+      courseOfferingId,
+      isActive: true,
+    };
+    this.enrollments.push(newEnrollment);
+    this.savePersistentData();
+    return newEnrollment;
+  }
+
   // ==========================================
   // COURSES, TIMETABLES & OFFERINGS
   // ==========================================
@@ -886,30 +1004,64 @@ class CustechDatabase {
   }
 
   startSession(
-    courseOfferingId: string,
-    lecturerId: string,
-    classroomId?: string
+    optionsOrOfferingId:
+      | {
+          courseOfferingId: string;
+          lecturerId: string;
+          classroomId?: string;
+          venue?: string;
+          weekNumber?: number;
+          topicTitle?: string;
+          durationMinutes?: number;
+          forceNew?: boolean;
+        }
+      | string,
+    lecturerIdParam?: string,
+    classroomIdParam?: string
   ): AttendanceSession {
-    const existingActive = this.getActiveSessionForCourse(courseOfferingId);
-    if (existingActive) {
-      return existingActive;
+    const isObj = typeof optionsOrOfferingId === 'object';
+    const courseOfferingId = isObj ? optionsOrOfferingId.courseOfferingId : optionsOrOfferingId;
+    const lecturerId = isObj ? optionsOrOfferingId.lecturerId : (lecturerIdParam || 'user-lec-csc1');
+    const classroomId = isObj ? (optionsOrOfferingId.classroomId || 'room-lh101') : (classroomIdParam || 'room-lh101');
+    const venue = isObj ? optionsOrOfferingId.venue : undefined;
+    const weekNumber = isObj ? (optionsOrOfferingId.weekNumber || 1) : 1;
+    const topicTitle = isObj ? optionsOrOfferingId.topicTitle : undefined;
+    const durationMinutes = isObj ? (optionsOrOfferingId.durationMinutes || 120) : 120;
+    const forceNew = isObj ? optionsOrOfferingId.forceNew : false;
+
+    if (!forceNew) {
+      const existingActive = this.sessions.find(
+        (s) => s.courseOfferingId === courseOfferingId && s.status === 'ACTIVE' && (!weekNumber || s.weekNumber === weekNumber)
+      );
+      if (existingActive) {
+        return existingActive;
+      }
     }
 
+    const tempCode = generateTemporaryCode();
+    const now = new Date();
+    const scheduledEnd = new Date(now.getTime() + durationMinutes * 60000).toISOString();
+
     const newSession: AttendanceSession = {
-      id: `sess_${Date.now()}`,
+      id: `sess_${Date.now()}_wk${weekNumber}`,
       courseOfferingId,
       lecturerId,
-      classroomId: classroomId || 'room-lh101',
-      date: new Date().toISOString().split('T')[0],
-      scheduledStart: new Date().toISOString(),
-      scheduledEnd: new Date(Date.now() + 2 * 3600000).toISOString(),
-      actualStart: new Date().toISOString(),
+      classroomId,
+      venue: venue || 'Lecture Hall 101',
+      weekNumber,
+      topicTitle: topicTitle || `Week ${weekNumber} Lecture Session`,
+      date: now.toISOString().split('T')[0],
+      scheduledStart: now.toISOString(),
+      scheduledEnd,
+      actualStart: now.toISOString(),
       status: 'ACTIVE',
-      currentTempCode: generateTemporaryCode(),
-      tempCodeExpiresAt: new Date(Date.now() + 3600000).toISOString(),
-      qrRotationSeconds: this.systemSettings.qrRotationSeconds,
-      lateThresholdMinutes: this.systemSettings.lateThresholdMinutes,
-      sessionSecretNonce: `nonce_${Date.now()}`,
+      currentTempCode: tempCode,
+      tempCodeExpiresAt: scheduledEnd,
+      isCodeActive: true,
+      previousCodes: [],
+      qrRotationSeconds: this.systemSettings.qrRotationSeconds || 20,
+      lateThresholdMinutes: this.systemSettings.lateThresholdMinutes || 15,
+      sessionSecretNonce: `nonce_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     };
 
     this.sessions.unshift(newSession);
@@ -920,10 +1072,71 @@ class CustechDatabase {
       action: 'START_ATTENDANCE_SESSION',
       entityType: 'attendance_sessions',
       entityId: newSession.id,
-      details: { courseOfferingId, date: newSession.date },
+      details: { courseOfferingId, date: newSession.date, weekNumber, venue: newSession.venue, tempCode },
     });
 
+    this.savePersistentData();
     return newSession;
+  }
+
+  regenerateSessionCode(sessionId: string, actorId: string): { newCode: string; expiresAt: string } {
+    const session = this.sessions.find((s) => s.id === sessionId);
+    if (!session) throw new Error('Session not found');
+
+    if (!session.previousCodes) {
+      session.previousCodes = [];
+    }
+    if (session.currentTempCode && !session.previousCodes.includes(session.currentTempCode)) {
+      session.previousCodes.push(session.currentTempCode);
+    }
+
+    const newCode = generateTemporaryCode();
+    session.currentTempCode = newCode;
+    session.tempCodeExpiresAt = new Date(Date.now() + 2 * 3600000).toISOString(); // 2 hours
+    session.isCodeActive = true;
+
+    this.logAudit({
+      actorId,
+      action: 'REGENERATE_SESSION_CODE',
+      entityType: 'attendance_sessions',
+      entityId: sessionId,
+      details: { newCode, previousCodes: session.previousCodes },
+    });
+
+    this.savePersistentData();
+    return { newCode, expiresAt: session.tempCodeExpiresAt };
+  }
+
+  deactivateSessionCode(sessionId: string, actorId: string): boolean {
+    const session = this.sessions.find((s) => s.id === sessionId);
+    if (!session) throw new Error('Session not found');
+    session.isCodeActive = false;
+
+    this.logAudit({
+      actorId,
+      action: 'DEACTIVATE_SESSION_CODE',
+      entityType: 'attendance_sessions',
+      entityId: sessionId,
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  reactivateSessionCode(sessionId: string, actorId: string): boolean {
+    const session = this.sessions.find((s) => s.id === sessionId);
+    if (!session) throw new Error('Session not found');
+    session.isCodeActive = true;
+
+    this.logAudit({
+      actorId,
+      action: 'REACTIVATE_SESSION_CODE',
+      entityType: 'attendance_sessions',
+      entityId: sessionId,
+    });
+
+    this.savePersistentData();
+    return true;
   }
 
   pauseSession(sessionId: string, actorId: string): AttendanceSession {
@@ -938,6 +1151,7 @@ class CustechDatabase {
       entityId: sessionId,
     });
 
+    this.savePersistentData();
     return session;
   }
 
@@ -953,6 +1167,7 @@ class CustechDatabase {
       entityId: sessionId,
     });
 
+    this.savePersistentData();
     return session;
   }
 
@@ -969,6 +1184,7 @@ class CustechDatabase {
       entityId: sessionId,
     });
 
+    this.savePersistentData();
     return session;
   }
 
@@ -977,7 +1193,30 @@ class CustechDatabase {
     if (!session) throw new Error('Session not found');
     session.currentTempCode = generateTemporaryCode();
     session.tempCodeExpiresAt = new Date(Date.now() + 300000).toISOString(); // 5m
+    this.savePersistentData();
     return session.currentTempCode;
+  }
+
+  getSessionsForOffering(offeringId: string) {
+    return this.sessions
+      .filter((s) => s.courseOfferingId === offeringId)
+      .map((s) => ({
+        ...s,
+        courseOffering: this.getOfferingById(s.courseOfferingId),
+        classroom: this.classrooms.find((c) => c.id === s.classroomId),
+        lecturer: this.getProfileById(s.lecturerId),
+      }));
+  }
+
+  getSessionsForLecturer(lecturerId: string) {
+    return this.sessions
+      .filter((s) => s.lecturerId === lecturerId)
+      .map((s) => ({
+        ...s,
+        courseOffering: this.getOfferingById(s.courseOfferingId),
+        classroom: this.classrooms.find((c) => c.id === s.classroomId),
+        lecturer: this.getProfileById(s.lecturerId),
+      }));
   }
 
   // ==========================================
@@ -1013,6 +1252,10 @@ class CustechDatabase {
     clientEventId?: string;
     assistedReason?: AssistedReason;
     deviceFingerprintHash?: string;
+    userAgent?: string;
+    deviceType?: string;
+    browser?: string;
+    os?: string;
     latitude?: number;
     longitude?: number;
   }): { record: AttendanceRecord; isDuplicate: boolean; message: string } {
@@ -1062,7 +1305,7 @@ class CustechDatabase {
     const status: AttendanceStatus =
       minutesSinceStart > session.lateThresholdMinutes ? 'LATE' : 'PRESENT';
 
-    // Option B: Anti-Fraud Device Collision / Proxy Ring Telemetry
+    // Option B: Anti-Fraud / Device-Risk Detection (Multi-device, Shared-device, Rapid switching)
     let isFlaggedSuspicious = false;
     let flagReason: string | undefined = undefined;
 
@@ -1076,10 +1319,37 @@ class CustechDatabase {
 
       if (collisionRecords.length > 0) {
         isFlaggedSuspicious = true;
-        flagReason = 'Device Collision: Multiple student accounts submitting from same device';
+        const totalDistinctAccounts = collisionRecords.length + 1;
+
+        // Check time difference between current submission and last submission on this device
+        const lastRecord = collisionRecords[collisionRecords.length - 1];
+        const lastRecordTime = new Date(lastRecord.recordedAt).getTime();
+        const diffSeconds = Math.max(0, Math.round((now - lastRecordTime) / 1000));
+
+        let riskLevel: 'LOW' | 'MEDIUM' | 'HIGH' = 'LOW';
+        let riskReason = `Shared device usage (${totalDistinctAccounts} student accounts). Common in classroom peer assistance.`;
+
+        if (diffSeconds < 30) {
+          riskLevel = 'HIGH';
+          riskReason = `Rapid account switching (${diffSeconds}s interval between distinct accounts) detected on this device.`;
+        } else if (totalDistinctAccounts >= 5) {
+          riskLevel = 'HIGH';
+          riskReason = `High volume collision (${totalDistinctAccounts} distinct student accounts) on single device.`;
+        } else if (totalDistinctAccounts >= 3) {
+          riskLevel = 'MEDIUM';
+          riskReason = `Multiple accounts (${totalDistinctAccounts} students) sharing device. Flagged for review.`;
+        }
+
+        flagReason = riskReason;
 
         const currentStudent = this.getStudentById(params.studentId);
         const studentMatric = currentStudent?.matricNumber || params.studentId;
+        const studentName = currentStudent?.profile
+          ? `${currentStudent.profile.firstName} ${currentStudent.profile.lastName}`
+          : studentMatric;
+
+        const offering = this.getOfferingById(session.courseOfferingId);
+        const courseCode = offering?.course?.code || 'COURSE';
 
         const existingAlert = this.deviceCollisionAlerts.find(
           (a) =>
@@ -1091,19 +1361,41 @@ class CustechDatabase {
           if (!existingAlert.matchedMatricNumbers.includes(studentMatric)) {
             existingAlert.matchedMatricNumbers.push(studentMatric);
           }
-          existingAlert.attemptCount++;
+          if (existingAlert.matchedStudentNames && !existingAlert.matchedStudentNames.includes(studentName)) {
+            existingAlert.matchedStudentNames.push(studentName);
+          }
+          existingAlert.attemptCount = totalDistinctAccounts;
+          if (riskLevel === 'HIGH' || (riskLevel === 'MEDIUM' && existingAlert.riskLevel !== 'HIGH')) {
+            existingAlert.riskLevel = riskLevel;
+            existingAlert.riskReason = riskReason;
+          }
         } else {
           const matchedMatrics = collisionRecords
             .map((cr) => this.getStudentById(cr.studentId)?.matricNumber || cr.studentId)
             .concat(studentMatric);
+
+          const matchedNames = collisionRecords
+            .map((cr) => {
+              const s = this.getStudentById(cr.studentId);
+              return s?.profile ? `${s.profile.firstName} ${s.profile.lastName}` : cr.studentId;
+            })
+            .concat(studentName);
 
           this.deviceCollisionAlerts.unshift({
             id: `alert_col_${Date.now()}`,
             sessionId: params.sessionId,
             deviceFingerprintHash: params.deviceFingerprintHash,
             matchedMatricNumbers: Array.from(new Set(matchedMatrics)),
-            sessionCode: 'CSC 201',
-            attemptCount: collisionRecords.length + 1,
+            matchedStudentNames: Array.from(new Set(matchedNames)),
+            sessionCode: courseCode,
+            courseCode: courseCode,
+            attemptCount: totalDistinctAccounts,
+            userAgent: params.userAgent,
+            deviceType: params.deviceType || 'Mobile Device',
+            browser: params.browser || 'Browser',
+            os: params.os || 'OS',
+            riskLevel,
+            riskReason,
             isReviewed: false,
             createdAt: new Date().toISOString(),
           });
@@ -1140,8 +1432,12 @@ class CustechDatabase {
         sessionId: params.sessionId,
         status,
         method: params.method,
+        isFlaggedSuspicious,
+        flagReason,
       },
     });
+
+    this.savePersistentData();
 
     return {
       record: newRecord,
@@ -1757,6 +2053,648 @@ class CustechDatabase {
       attendancePercentage: attendancePercentage || 89.2,
       recentSessions: deptSessions.slice(0, 5),
     };
+  }
+
+  // ==========================================
+  // DYNAMIC COURSE CATALOGUE & OFFERINGS
+  // ==========================================
+  getCoursesWithDetails() {
+    return this.courses.map((course) => {
+      const dept = this.departments.find((d) => d.id === course.departmentId);
+      const fac = this.faculties.find((f) => f.id === dept?.facultyId);
+      const offerings = this.courseOfferings.filter((o) => o.courseId === course.id);
+      const assignedLecturers = offerings.map((o) => {
+        const p = this.getProfileById(o.primaryLecturerId);
+        return p ? `${p.firstName} ${p.lastName}` : 'Unassigned';
+      });
+
+      return {
+        ...course,
+        departmentName: dept?.name || 'General Studies',
+        facultyName: fac?.name || 'Computing & Applied Sciences',
+        offeringsCount: offerings.length,
+        assignedLecturers: Array.from(new Set(assignedLecturers)),
+        primaryOffering: offerings[0],
+      };
+    });
+  }
+
+  createCourse(
+    data: {
+      code: string;
+      title: string;
+      creditUnits: number;
+      departmentId: string;
+      level: 100 | 200 | 300 | 400 | 500;
+      description?: string;
+    },
+    actorId: string
+  ): Course {
+    const cleanCode = data.code.trim().toUpperCase();
+    if (this.courses.some((c) => c.code.toUpperCase() === cleanCode)) {
+      throw new Error(`Course code "${cleanCode}" already exists in the university catalogue.`);
+    }
+
+    const courseId = `course-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const newCourse: Course = {
+      id: courseId,
+      code: cleanCode,
+      title: data.title.trim(),
+      creditUnits: Number(data.creditUnits) || 2,
+      departmentId: data.departmentId,
+      level: data.level,
+      isActive: true,
+      description: data.description?.trim(),
+    };
+
+    this.courses.unshift(newCourse);
+
+    // Auto-create a default offering for this course so it's ready for timetabling & attendance
+    const offeringId = `offering-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    if (!this.courseOfferings.some((o) => o.id === offeringId)) {
+      this.courseOfferings.push({
+        id: offeringId,
+        courseId: newCourse.id,
+        academicSessionId: 'sess-2026-first',
+        semesterId: 'sem-2026-first',
+        primaryLecturerId: actorId.startsWith('user-lec') ? actorId : 'user-lec-csc1',
+        assignedLecturerIds: [actorId.startsWith('user-lec') ? actorId : 'user-lec-csc1'],
+        isActive: true,
+      });
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_CREATED_COURSE',
+      entityType: 'courses',
+      entityId: courseId,
+      details: { code: cleanCode, title: newCourse.title, departmentId: data.departmentId, level: data.level },
+    });
+
+    this.savePersistentData();
+    return newCourse;
+  }
+
+  updateCourse(
+    courseId: string,
+    data: Partial<{
+      code: string;
+      title: string;
+      creditUnits: number;
+      departmentId: string;
+      level: 100 | 200 | 300 | 400 | 500;
+      description?: string;
+      isActive: boolean;
+      primaryLecturerId: string;
+    }>,
+    actorId: string
+  ): Course {
+    const course = this.courses.find((c) => c.id === courseId);
+    if (!course) throw new Error('Course not found');
+
+    if (data.code && data.code.trim().toUpperCase() !== course.code.toUpperCase()) {
+      const cleanCode = data.code.trim().toUpperCase();
+      if (this.courses.some((c) => c.id !== courseId && c.code.toUpperCase() === cleanCode)) {
+        throw new Error(`Course code "${cleanCode}" is already used by another course.`);
+      }
+      course.code = cleanCode;
+    }
+    if (data.title) course.title = data.title.trim();
+    if (data.creditUnits !== undefined) course.creditUnits = Number(data.creditUnits);
+    if (data.departmentId) course.departmentId = data.departmentId;
+    if (data.level) course.level = data.level;
+    if (data.description !== undefined) course.description = data.description.trim();
+    if (data.isActive !== undefined) course.isActive = data.isActive;
+
+    if (data.primaryLecturerId) {
+      const offerings = this.courseOfferings.filter((o) => o.courseId === courseId);
+      offerings.forEach((off) => {
+        off.primaryLecturerId = data.primaryLecturerId!;
+        if (!off.assignedLecturerIds) off.assignedLecturerIds = [];
+        if (!off.assignedLecturerIds.includes(data.primaryLecturerId!)) {
+          off.assignedLecturerIds.push(data.primaryLecturerId!);
+        }
+      });
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_UPDATED_COURSE',
+      entityType: 'courses',
+      entityId: courseId,
+      details: { ...data },
+    });
+
+    this.savePersistentData();
+    return course;
+  }
+
+  toggleCourseActive(courseId: string, isActive: boolean, actorId: string): Course {
+    const course = this.courses.find((c) => c.id === courseId);
+    if (!course) throw new Error('Course not found');
+    course.isActive = isActive;
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: isActive ? 'ADMIN_ACTIVATED_COURSE' : 'ADMIN_DEACTIVATED_COURSE',
+      entityType: 'courses',
+      entityId: courseId,
+    });
+
+    this.savePersistentData();
+    return course;
+  }
+
+  deleteCourse(courseId: string, actorId: string): boolean {
+    const idx = this.courses.findIndex((c) => c.id === courseId);
+    if (idx === -1) throw new Error('Course not found');
+    const [deleted] = this.courses.splice(idx, 1);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_DELETED_COURSE',
+      entityType: 'courses',
+      entityId: courseId,
+      details: { code: deleted.code, title: deleted.title },
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  bulkImportCourses(
+    records: Array<{
+      code: string;
+      title: string;
+      creditUnits: number;
+      departmentName?: string;
+      departmentId?: string;
+      level?: 100 | 200 | 300 | 400 | 500;
+      description?: string;
+      lecturerEmailOrName?: string;
+    }>,
+    actorId: string
+  ): {
+    successful: number;
+    skipped: number;
+    failed: number;
+    errors: Array<{ code: string; error: string }>;
+    importedCodes: string[];
+  } {
+    let successful = 0;
+    let skipped = 0;
+    let failed = 0;
+    const errors: Array<{ code: string; error: string }> = [];
+    const importedCodes: string[] = [];
+    const seenBatchCodes = new Set<string>();
+
+    for (const record of records) {
+      const cleanCode = record.code?.trim().toUpperCase();
+      if (!cleanCode) {
+        failed++;
+        errors.push({ code: 'UNKNOWN', error: 'Missing course code.' });
+        continue;
+      }
+
+      if (seenBatchCodes.has(cleanCode)) {
+        skipped++;
+        errors.push({ code: cleanCode, error: 'Duplicate course code in uploaded batch.' });
+        continue;
+      }
+      seenBatchCodes.add(cleanCode);
+
+      if (!record.title?.trim()) {
+        failed++;
+        errors.push({ code: cleanCode, error: 'Course title is missing.' });
+        continue;
+      }
+
+      if (this.courses.some((c) => c.code.toUpperCase() === cleanCode)) {
+        skipped++;
+        errors.push({ code: cleanCode, error: 'Course code already exists in university catalogue.' });
+        continue;
+      }
+
+      try {
+        let deptId = record.departmentId;
+        if (!deptId && record.departmentName) {
+          const dept = this.departments.find(
+            (d) =>
+              d.name.toLowerCase() === record.departmentName!.toLowerCase() ||
+              d.code.toLowerCase() === record.departmentName!.toLowerCase()
+          );
+          if (dept) deptId = dept.id;
+        }
+        if (!deptId) deptId = 'dept-csc';
+
+        const newCourse = this.createCourse(
+          {
+            code: cleanCode,
+            title: record.title.trim(),
+            creditUnits: Number(record.creditUnits) || 2,
+            departmentId: deptId,
+            level: (record.level || 100) as 100 | 200 | 300 | 400 | 500,
+            description: record.description,
+          },
+          actorId
+        );
+
+        let lecturerId = 'user-lec-csc1';
+        if (record.lecturerEmailOrName) {
+          const lec = this.profiles.find(
+            (p) =>
+              (p.primaryRole === 'LECTURER' || p.assignedRoles.includes('LECTURER')) &&
+              (p.email.toLowerCase() === record.lecturerEmailOrName!.toLowerCase() ||
+                `${p.firstName} ${p.lastName}`.toLowerCase().includes(record.lecturerEmailOrName!.toLowerCase()))
+          );
+          if (lec) lecturerId = lec.id;
+        }
+
+        const offering = this.courseOfferings.find((o) => o.courseId === newCourse.id);
+        if (offering) {
+          offering.primaryLecturerId = lecturerId;
+          offering.assignedLecturerIds = [lecturerId];
+        }
+
+        successful++;
+        importedCodes.push(cleanCode);
+      } catch (err: unknown) {
+        failed++;
+        errors.push({
+          code: cleanCode,
+          error: err instanceof Error ? err.message : 'Unknown creation error',
+        });
+      }
+    }
+
+    this.savePersistentData();
+    return { successful, skipped, failed, errors, importedCodes };
+  }
+
+  // ==========================================
+  // LECTURER DIRECTORY & ASSIGNMENTS
+  // ==========================================
+  getLecturers(): (UserProfile & { departmentName?: string; assignedCoursesCount?: number; assignedCourses?: string[] })[] {
+    const lecturers = this.profiles.filter(
+      (p) => p.primaryRole === 'LECTURER' || p.assignedRoles.includes('LECTURER')
+    );
+    return lecturers.map((lec) => {
+      const dept = this.departments.find((d) => d.id === lec.departmentId);
+      const offerings = this.courseOfferings.filter(
+        (o) => o.primaryLecturerId === lec.id || o.assignedLecturerIds?.includes(lec.id)
+      );
+      const courseCodes = offerings
+        .map((o) => this.courses.find((c) => c.id === o.courseId)?.code)
+        .filter(Boolean) as string[];
+
+      return {
+        ...lec,
+        departmentName: dept?.name || 'General Academic',
+        assignedCoursesCount: offerings.length,
+        assignedCourses: Array.from(new Set(courseCodes)),
+      };
+    });
+  }
+
+  createLecturer(
+    data: {
+      firstName: string;
+      lastName: string;
+      email: string;
+      departmentId: string;
+      facultyId?: string;
+      staffId?: string;
+    },
+    actorId: string
+  ): UserProfile {
+    const cleanEmail = data.email.trim().toLowerCase();
+    if (this.profiles.some((p) => p.email.toLowerCase() === cleanEmail)) {
+      throw new Error(`User with email "${cleanEmail}" already exists.`);
+    }
+
+    const dept = this.departments.find((d) => d.id === data.departmentId);
+    const facultyId = data.facultyId || dept?.facultyId || 'fac-comp';
+
+    const newLecturer: UserProfile = {
+      id: `user-lec-${Date.now()}`,
+      email: cleanEmail,
+      firstName: data.firstName.trim(),
+      lastName: data.lastName.trim(),
+      primaryRole: 'LECTURER',
+      assignedRoles: ['LECTURER'],
+      departmentId: data.departmentId,
+      facultyId,
+      staffId: data.staffId?.trim(),
+      isActive: true,
+      createdAt: new Date().toISOString(),
+    };
+
+    this.profiles.unshift(newLecturer);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_CREATED_LECTURER',
+      entityType: 'user_profiles',
+      entityId: newLecturer.id,
+      details: { name: `${newLecturer.firstName} ${newLecturer.lastName}`, email: cleanEmail },
+    });
+
+    this.savePersistentData();
+    return newLecturer;
+  }
+
+  updateLecturer(
+    lecturerId: string,
+    data: Partial<{
+      firstName: string;
+      lastName: string;
+      email: string;
+      departmentId: string;
+      isActive: boolean;
+      staffId: string;
+    }>,
+    actorId: string
+  ): UserProfile {
+    const lecturer = this.profiles.find((p) => p.id === lecturerId);
+    if (!lecturer) throw new Error('Lecturer not found');
+
+    if (data.email && data.email.trim().toLowerCase() !== lecturer.email.toLowerCase()) {
+      const cleanEmail = data.email.trim().toLowerCase();
+      if (this.profiles.some((p) => p.id !== lecturerId && p.email.toLowerCase() === cleanEmail)) {
+        throw new Error(`Email "${cleanEmail}" is already used by another account.`);
+      }
+      lecturer.email = cleanEmail;
+    }
+    if (data.firstName) lecturer.firstName = data.firstName.trim();
+    if (data.lastName) lecturer.lastName = data.lastName.trim();
+    if (data.departmentId) lecturer.departmentId = data.departmentId;
+    if (data.isActive !== undefined) lecturer.isActive = data.isActive;
+    if (data.staffId !== undefined) lecturer.staffId = data.staffId.trim();
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ADMIN_UPDATED_LECTURER',
+      entityType: 'user_profiles',
+      entityId: lecturerId,
+      details: { ...data },
+    });
+
+    this.savePersistentData();
+    return lecturer;
+  }
+
+  toggleLecturerActive(lecturerId: string, isActive: boolean, actorId: string): UserProfile {
+    const lecturer = this.profiles.find((p) => p.id === lecturerId);
+    if (!lecturer) throw new Error('Lecturer not found');
+    lecturer.isActive = isActive;
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: isActive ? 'ADMIN_ACTIVATED_LECTURER' : 'ADMIN_DEACTIVATED_LECTURER',
+      entityType: 'user_profiles',
+      entityId: lecturerId,
+    });
+
+    this.savePersistentData();
+    return lecturer;
+  }
+
+  assignLecturerToCourseOffering(
+    courseOfferingId: string,
+    lecturerId: string,
+    actorId: string
+  ): CourseOffering {
+    const offering = this.courseOfferings.find((o) => o.id === courseOfferingId);
+    if (!offering) throw new Error('Course offering not found');
+
+    const lecturer = this.profiles.find((p) => p.id === lecturerId);
+    if (!lecturer) throw new Error('Lecturer profile not found');
+
+    offering.primaryLecturerId = lecturerId;
+    if (!offering.assignedLecturerIds) offering.assignedLecturerIds = [];
+    if (!offering.assignedLecturerIds.includes(lecturerId)) {
+      offering.assignedLecturerIds.push(lecturerId);
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ASSIGNED_LECTURER_TO_OFFERING',
+      entityType: 'course_offerings',
+      entityId: courseOfferingId,
+      details: { lecturerId, lecturerName: `${lecturer.firstName} ${lecturer.lastName}` },
+    });
+
+    this.savePersistentData();
+    return offering;
+  }
+
+  // ==========================================
+  // TIMETABLE MANAGEMENT
+  // ==========================================
+  getTimetablesWithDetails() {
+    return this.timetables.map((tt) => {
+      const offering = this.getOfferingById(tt.courseOfferingId);
+      const classroom = this.classrooms.find((c) => c.id === tt.classroomId);
+      return {
+        ...tt,
+        offering,
+        course: offering?.course,
+        lecturer: offering?.primaryLecturer,
+        classroom,
+        venueDisplay: tt.venue || classroom?.code || classroom?.building || 'Lecture Hall',
+      };
+    });
+  }
+
+  createTimetableEntry(
+    data: {
+      courseOfferingId: string;
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      classroomId?: string;
+      venue?: string;
+      isRecurring?: boolean;
+    },
+    actorId: string
+  ): TimetableEntry {
+    const id = `tt_${Date.now()}`;
+    const newEntry: TimetableEntry = {
+      id,
+      courseOfferingId: data.courseOfferingId,
+      dayOfWeek: Number(data.dayOfWeek) || 1,
+      startTime: data.startTime,
+      endTime: data.endTime,
+      classroomId: data.classroomId || 'room-lh101',
+      venue: data.venue || 'Lecture Hall 101',
+      isRecurring: data.isRecurring !== false,
+    };
+
+    this.timetables.push(newEntry);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'CREATED_TIMETABLE_ENTRY',
+      entityType: 'timetables',
+      entityId: id,
+      details: { ...data },
+    });
+
+    this.savePersistentData();
+    return newEntry;
+  }
+
+  updateTimetableEntry(
+    id: string,
+    data: Partial<{
+      dayOfWeek: number;
+      startTime: string;
+      endTime: string;
+      classroomId?: string;
+      venue?: string;
+      isRecurring?: boolean;
+    }>,
+    actorId: string
+  ): TimetableEntry {
+    const entry = this.timetables.find((t) => t.id === id);
+    if (!entry) throw new Error('Timetable entry not found');
+
+    if (data.dayOfWeek !== undefined) entry.dayOfWeek = Number(data.dayOfWeek);
+    if (data.startTime) entry.startTime = data.startTime;
+    if (data.endTime) entry.endTime = data.endTime;
+    if (data.classroomId) entry.classroomId = data.classroomId;
+    if (data.venue !== undefined) entry.venue = data.venue;
+    if (data.isRecurring !== undefined) entry.isRecurring = data.isRecurring;
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'UPDATED_TIMETABLE_ENTRY',
+      entityType: 'timetables',
+      entityId: id,
+      details: { ...data },
+    });
+
+    this.savePersistentData();
+    return entry;
+  }
+
+  deleteTimetableEntry(id: string, actorId: string): boolean {
+    const idx = this.timetables.findIndex((t) => t.id === id);
+    if (idx === -1) throw new Error('Timetable entry not found');
+    this.timetables.splice(idx, 1);
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'DELETED_TIMETABLE_ENTRY',
+      entityType: 'timetables',
+      entityId: id,
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  // ==========================================
+  // STUDENT MATRICULATION NUMBER VERIFICATION
+  // ==========================================
+  verifyStudentMatric(matric: string): {
+    found: boolean;
+    student?: {
+      id: string;
+      profileId: string;
+      matricNumber: string;
+      fullName: string;
+      firstName: string;
+      lastName: string;
+      departmentName: string;
+      departmentCode: string;
+      facultyName: string;
+      level: number;
+      email: string;
+      isActive: boolean;
+    };
+    error?: string;
+  } {
+    const cleanMatric = matric.trim().toUpperCase();
+    if (!cleanMatric) {
+      return { found: false, error: 'Please enter a valid matriculation number.' };
+    }
+
+    const student = this.getStudentByMatric(cleanMatric);
+    if (!student || !student.profile) {
+      return {
+        found: false,
+        error: `Matriculation number "${cleanMatric}" was not found in the CUSTECH student registry. Please confirm your number or contact the ICT Administrator.`,
+      };
+    }
+
+    if (!student.profile.isActive) {
+      return {
+        found: false,
+        error: `Account for "${cleanMatric}" is currently deactivated or suspended. Please contact the Faculty Office.`,
+      };
+    }
+
+    const dept = this.departments.find((d) => d.id === student.profile?.departmentId);
+    const fac = this.faculties.find((f) => f.id === student.profile?.facultyId || f.id === dept?.facultyId);
+
+    return {
+      found: true,
+      student: {
+        id: student.id,
+        profileId: student.profile.id,
+        matricNumber: student.matricNumber,
+        fullName: `${student.profile.firstName} ${student.profile.lastName}`,
+        firstName: student.profile.firstName,
+        lastName: student.profile.lastName,
+        departmentName: dept?.name || 'Computer Science',
+        departmentCode: dept?.code || 'CSC',
+        facultyName: fac?.name || 'Faculty of Computing and Mathematical Sciences',
+        level: student.currentLevel,
+        email: student.profile.email,
+        isActive: student.profile.isActive,
+      },
+    };
+  }
+
+  // ==========================================
+  // INVESTIGATE DEVICE COLLISION ALERTS
+  // ==========================================
+  investigateDeviceAlert(
+    alertId: string,
+    reviewerId: string,
+    action: 'CLEARED' | 'FLAGGED_FRAUD',
+    reviewNotes?: string
+  ): DeviceCollisionAlert {
+    const alert = this.deviceCollisionAlerts.find((a) => a.id === alertId);
+    if (!alert) throw new Error('Alert not found');
+
+    alert.isReviewed = true;
+    alert.riskLevel = action === 'FLAGGED_FRAUD' ? 'HIGH' : 'LOW';
+    if (reviewNotes) alert.reviewNotes = reviewNotes;
+
+    this.logAudit({
+      actorId: reviewerId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'REVIEWED_DEVICE_ALERT',
+      entityType: 'device_collision_alerts',
+      entityId: alertId,
+      details: { action, reviewNotes },
+    });
+
+    this.savePersistentData();
+    return alert;
   }
 
   getFaculties(): Faculty[] {

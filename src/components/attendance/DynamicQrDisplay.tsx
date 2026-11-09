@@ -2,15 +2,53 @@
 
 import React from 'react';
 import QRCode from 'qrcode';
-import { getRotatingQrToken, pauseSession, resumeSession, closeSession } from '@/actions/attendance';
+import {
+  getRotatingQrToken,
+  pauseSession,
+  resumeSession,
+  closeSession,
+  regenerateSessionCodeAction,
+  deactivateSessionCodeAction,
+  reactivateSessionCodeAction,
+} from '@/actions/attendance';
 import { AttendanceSession, RotatingQrPayload } from '@/types';
-import { Pause, Play, Square, Key, ShieldAlert, Sparkles, RefreshCw, Copy, Check, ExternalLink, Maximize2, Minimize2, Monitor } from 'lucide-react';
+import {
+  Pause,
+  Play,
+  Square,
+  Key,
+  ShieldAlert,
+  Sparkles,
+  RefreshCw,
+  Copy,
+  Check,
+  ExternalLink,
+  Maximize2,
+  Minimize2,
+  Monitor,
+  RotateCcw,
+  Power,
+  PowerOff,
+  Building,
+  User,
+  GraduationCap,
+  Calendar,
+  Clock,
+  MapPin,
+  BookOpen,
+} from 'lucide-react';
 
 interface DynamicQrDisplayProps {
   session: AttendanceSession;
   courseCode: string;
   courseTitle: string;
-  classroomCode: string;
+  creditUnits?: number;
+  lecturerName?: string;
+  departmentName?: string;
+  academicLevel?: string | number;
+  classroomCode?: string;
+  venue?: string;
+  weekNumber?: number;
   lecturerId: string;
   onOpenKiosk: () => void;
   onSessionUpdate?: (updatedSession: AttendanceSession) => void;
@@ -20,7 +58,13 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   session: initialSession,
   courseCode,
   courseTitle,
-  classroomCode,
+  creditUnits = 2,
+  lecturerName = 'Course Lecturer',
+  departmentName = 'Computer Science',
+  academicLevel = '200L',
+  classroomCode = 'LH 101',
+  venue,
+  weekNumber,
   lecturerId,
   onOpenKiosk,
   onSessionUpdate,
@@ -31,6 +75,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   const [secondsRemaining, setSecondsRemaining] = React.useState<number>(initialSession.qrRotationSeconds || 20);
   const [isLoading, setIsLoading] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
+  const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isProjectorMode, setIsProjectorMode] = React.useState(false);
 
@@ -60,7 +105,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
         return;
       }
       setCurrentPayload(res);
-      
+
       // Generate Direct Mobile Camera Redirect URL
       const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000';
       const attendUrl = `${origin}/attend?sessionId=${encodeURIComponent(session.id)}&course=${encodeURIComponent(courseCode)}&tw=${res.timestampWindow}&nonce=${encodeURIComponent(res.nonce)}&sig=${encodeURIComponent(res.signature)}&code=${encodeURIComponent(session.currentTempCode)}`;
@@ -145,40 +190,129 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     }
   };
 
+  // Phase 6: Attendance Code Lifecycle handlers
+  const handleRegenerateCode = async () => {
+    if (!confirm('Regenerating will immediately invalidate the current code and old codes. Students must enter the new code. Continue?')) {
+      return;
+    }
+    try {
+      setIsLoading(true);
+      const res = await regenerateSessionCodeAction(session.id, lecturerId);
+      if (res.success && res.newCode) {
+        const updated = {
+          ...session,
+          currentTempCode: res.newCode,
+          isCodeActive: true,
+          tempCodeExpiresAt: res.expiresAt || session.tempCodeExpiresAt,
+          previousCodes: [...(session.previousCodes || []), session.currentTempCode],
+        };
+        setSession(updated);
+        onSessionUpdate?.(updated);
+        setActionSuccess(`New Code Generated: ${res.newCode}. Previous codes immediately invalidated.`);
+        setTimeout(() => setActionSuccess(null), 4000);
+        fetchNewToken();
+      } else {
+        setActionError(res.error || 'Failed to regenerate attendance code');
+      }
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Error regenerating attendance code');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
+  const handleToggleCodeActive = async () => {
+    const isCurrentlyActive = session.isCodeActive !== false;
+    try {
+      setIsLoading(true);
+      if (isCurrentlyActive) {
+        await deactivateSessionCodeAction(session.id, lecturerId);
+        const updated = { ...session, isCodeActive: false };
+        setSession(updated);
+        onSessionUpdate?.(updated);
+        setActionSuccess('Attendance code deactivated. Submissions using code are now blocked.');
+      } else {
+        await reactivateSessionCodeAction(session.id, lecturerId);
+        const updated = { ...session, isCodeActive: true };
+        setSession(updated);
+        onSessionUpdate?.(updated);
+        setActionSuccess('Attendance code reactivated. Students can now submit again.');
+      }
+      setTimeout(() => setActionSuccess(null), 3500);
+    } catch (err: unknown) {
+      setActionError(err instanceof Error ? err.message : 'Failed to toggle code status');
+    } finally {
+      setIsLoading(false);
+    }
+  };
+
   const rotationInterval = session.qrRotationSeconds || 20;
   const progressPercent = ((rotationInterval - secondsRemaining) / rotationInterval) * 100;
+  const displayVenue = venue || session.venue || classroomCode;
+  const displayWeek = weekNumber || session.weekNumber || 1;
+  const displayStartTime = session.actualStart ? new Date(session.actualStart).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '10:00 AM';
+  const displayEndTime = session.scheduledEnd ? new Date(session.scheduledEnd).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) : '12:00 PM';
+  const displayDate = session.date || new Date().toISOString().split('T')[0];
 
   return (
     <div className="bg-white border border-slate-200 rounded-2xl p-6 shadow-sm flex flex-col items-center text-center relative">
-      {/* Course Header Banner */}
-      <div className="w-full flex flex-col sm:flex-row sm:items-center justify-between gap-2 pb-4 mb-4 border-b border-slate-100">
-        <div className="text-left">
-          <div className="flex items-center gap-2 flex-wrap">
-            <span className="text-lg font-black text-slate-900 tracking-tight">
-              {courseCode}
-            </span>
-            <span className="text-xs text-slate-300">•</span>
-            <span className="text-xs font-semibold text-slate-600">
-              {classroomCode}
+      {/* Course Header Banner with Phase 5 Specifications */}
+      <div className="w-full flex flex-col gap-3 pb-4 mb-4 border-b border-slate-100 text-left">
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2">
+          <div>
+            <div className="flex items-center gap-2 flex-wrap">
+              <span className="text-xl font-black text-slate-900 tracking-tight">
+                {courseCode}
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-md font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+                {creditUnits} Credit Units
+              </span>
+              <span className="text-xs px-2 py-0.5 rounded-md font-bold bg-slate-100 text-slate-700">
+                Week {displayWeek}
+              </span>
+              <span className="text-xs text-slate-400">•</span>
+              <span className="text-xs font-semibold text-slate-600">
+                {displayVenue}
+              </span>
+            </div>
+            <h3 className="text-sm font-bold text-slate-800 mt-0.5">
+              {courseTitle}
+            </h3>
+          </div>
+
+          <div className="flex items-center gap-2">
+            <span
+              className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
+                session.status === 'ACTIVE'
+                  ? 'bg-emerald-50 text-emerald-800 border border-emerald-200 animate-pulse'
+                  : session.status === 'PAUSED'
+                  ? 'bg-amber-100 text-amber-800 border border-amber-200'
+                  : 'bg-slate-100 text-slate-700 border border-slate-200'
+              }`}
+            >
+              Session: {session.status}
             </span>
           </div>
-          <p className="text-xs text-slate-500 font-medium truncate max-w-[280px] sm:max-w-md">
-            {courseTitle}
-          </p>
         </div>
 
-        <div className="flex items-center gap-2">
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${
-              session.status === 'ACTIVE'
-                ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb] animate-pulse'
-                : session.status === 'PAUSED'
-                ? 'bg-amber-100 text-amber-800 border border-amber-200'
-                : 'bg-slate-100 text-slate-700 border border-slate-200'
-            }`}
-          >
-            {session.status}
-          </span>
+        {/* Phase 5 Lecture Session Details Bar */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-2 text-xs text-slate-600 bg-slate-50 p-2.5 rounded-xl border border-slate-100">
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-slate-400">Lecturer</span>
+            <span className="font-semibold text-slate-800 truncate block">{lecturerName}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-slate-400">Department & Level</span>
+            <span className="font-semibold text-slate-800 truncate block">{departmentName} ({academicLevel})</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-slate-400">Date</span>
+            <span className="font-semibold text-slate-800 truncate block">{displayDate}</span>
+          </div>
+          <div>
+            <span className="block text-[10px] uppercase font-bold text-slate-400">Schedule</span>
+            <span className="font-semibold text-slate-800 truncate block">{displayStartTime} – {displayEndTime}</span>
+          </div>
         </div>
       </div>
 
@@ -186,6 +320,13 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
         <div className="w-full mb-4 p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-700 text-xs flex items-center gap-2 text-left">
           <ShieldAlert className="w-4 h-4 shrink-0" />
           <span>{actionError}</span>
+        </div>
+      )}
+
+      {actionSuccess && (
+        <div className="w-full mb-4 p-3 rounded-xl bg-emerald-50 border border-emerald-200 text-emerald-800 text-xs flex items-center gap-2 text-left animate-fadeIn">
+          <Check className="w-4 h-4 shrink-0 text-emerald-600" />
+          <span>{actionSuccess}</span>
         </div>
       )}
 
@@ -238,27 +379,89 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
           </div>
 
           {/* Course Code & Temporary Attendance Code Display */}
+          {/* Course Code & Dynamic Attendance Code Management (Phase 6) */}
           <div className="mt-5 p-4 rounded-xl bg-slate-50 border border-slate-200 w-full max-w-sm text-center">
-            <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider flex items-center justify-center gap-1">
-              <Key className="w-3.5 h-3.5 text-[#8d4a27]" />
-              Manual Student Entry
-            </p>
+            <div className="flex items-center justify-between mb-2">
+              <span className="text-[11px] font-bold text-slate-500 uppercase tracking-wider flex items-center gap-1">
+                <Key className="w-3.5 h-3.5 text-[#8d4a27]" />
+                Attendance Code
+              </span>
+              <span
+                className={`text-[10px] px-2 py-0.5 rounded-full font-extrabold uppercase tracking-wider ${
+                  session.isCodeActive !== false
+                    ? 'bg-emerald-100 text-emerald-800 border border-emerald-200'
+                    : 'bg-rose-100 text-rose-800 border border-rose-200'
+                }`}
+              >
+                {session.isCodeActive !== false ? '● Code Active' : '✕ Deactivated'}
+              </span>
+            </div>
+
             <div className="flex items-center justify-center gap-2 my-2">
               <div className="bg-[#fbf5ef] border border-[#ecdacb] px-3 py-1.5 rounded-lg text-center">
                 <span className="block text-[10px] uppercase font-bold text-slate-400">Course Code</span>
                 <span className="text-base font-extrabold text-[#8d4a27] font-mono">{courseCode}</span>
               </div>
-              <div className="bg-white border border-slate-300 px-4 py-1.5 rounded-lg text-center shadow-xs">
-                <span className="block text-[10px] uppercase font-bold text-slate-400">Lecture Code</span>
-                <span className="text-xl font-black text-slate-900 tracking-widest font-mono">{session.currentTempCode}</span>
+              <div
+                className={`border px-4 py-1.5 rounded-lg text-center shadow-xs ${
+                  session.isCodeActive !== false
+                    ? 'bg-white border-slate-300'
+                    : 'bg-slate-100 border-dashed border-rose-300 opacity-60'
+                }`}
+              >
+                <span className="block text-[10px] uppercase font-bold text-slate-400">Session Code</span>
+                <span className="text-xl font-black text-slate-900 tracking-widest font-mono">
+                  {session.isCodeActive !== false ? session.currentTempCode : '------'}
+                </span>
               </div>
             </div>
-            <p className="text-xs text-slate-500 mt-2">
-              Phone camera automatically redirects to mark presence upon scanning. Students can also enter Course Code <strong className="text-slate-800">{courseCode}</strong> + Code <strong className="text-slate-800">{session.currentTempCode}</strong>.
-            </p>
+
+            {session.previousCodes && session.previousCodes.length > 0 && (
+              <p className="text-[10px] text-amber-700 bg-amber-50 px-2 py-1 rounded border border-amber-200 mt-1">
+                Notice: {session.previousCodes.length} previous code(s) invalidated. Only current code accepted.
+              </p>
+            )}
+
+            {/* Code Management Controls (Phase 6) */}
+            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200">
+              <button
+                type="button"
+                onClick={handleRegenerateCode}
+                disabled={isLoading}
+                title="Generates a fresh 6-character code and immediately invalidates previous codes"
+                className="flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold bg-white hover:bg-slate-100 text-slate-700 border border-slate-200 shadow-2xs transition"
+              >
+                <RotateCcw className="w-3.5 h-3.5 text-[#8d4a27]" />
+                <span>Regenerate Code</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={handleToggleCodeActive}
+                disabled={isLoading}
+                title={session.isCodeActive !== false ? 'Prevent further submissions using this code' : 'Reactivate submissions for this code'}
+                className={`flex items-center justify-center gap-1.5 px-2.5 py-1.5 rounded-lg text-xs font-bold border shadow-2xs transition ${
+                  session.isCodeActive !== false
+                    ? 'bg-rose-50 hover:bg-rose-100 text-rose-700 border-rose-200'
+                    : 'bg-emerald-50 hover:bg-emerald-100 text-emerald-700 border-emerald-200'
+                }`}
+              >
+                {session.isCodeActive !== false ? (
+                  <>
+                    <PowerOff className="w-3.5 h-3.5" />
+                    <span>Deactivate Code</span>
+                  </>
+                ) : (
+                  <>
+                    <Power className="w-3.5 h-3.5" />
+                    <span>Reactivate Code</span>
+                  </>
+                )}
+              </button>
+            </div>
 
             {/* Quick Link Copy for Testing */}
-            <div className="mt-3 pt-2.5 border-t border-slate-200 flex items-center justify-center gap-2">
+            <div className="mt-2 pt-2 border-t border-slate-200 flex items-center justify-center">
               <button
                 type="button"
                 onClick={() => {
@@ -271,7 +474,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
                 className="text-xs font-semibold text-[#8d4a27] hover:text-[#743c22] flex items-center gap-1.5 py-1 px-2.5 rounded-lg hover:bg-slate-100 transition"
               >
                 {copiedLink ? <Check className="w-3.5 h-3.5 text-emerald-600" /> : <Copy className="w-3.5 h-3.5" />}
-                <span>{copiedLink ? 'Link Copied to Clipboard!' : 'Copy Direct Attendance Link'}</span>
+                <span>{copiedLink ? 'Direct Link Copied!' : 'Copy Direct Attendance Link'}</span>
               </button>
             </div>
           </div>
@@ -363,23 +566,36 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       {/* ============================================================== */}
       {isProjectorMode && (
         <div className="fixed inset-0 z-50 bg-slate-950 text-white flex flex-col justify-between p-6 sm:p-10 select-none animate-fadeIn overflow-y-auto">
-          {/* Top Header */}
-          <div className="flex items-center justify-between border-b border-slate-800 pb-4">
+          {/* Top Header with Full Phase 5 Details */}
+          <div className="flex flex-col md:flex-row md:items-center justify-between border-b border-slate-800 pb-4 gap-3">
             <div className="flex items-center gap-4">
-              <div className="bg-[#8d4a27] text-white px-4 py-2 rounded-xl font-mono text-xl sm:text-2xl font-black shadow-lg">
+              <div className="bg-[#8d4a27] text-white px-4 py-2.5 rounded-xl font-mono text-xl sm:text-2xl font-black shadow-lg">
                 {courseCode}
               </div>
               <div className="text-left">
-                <h1 className="text-xl sm:text-2xl font-black tracking-tight">{courseTitle}</h1>
-                <p className="text-xs sm:text-sm text-slate-400 mt-0.5">
-                  Classroom / Venue: <span className="font-semibold text-slate-200">{classroomCode}</span> • Session Status:{' '}
-                  <span className="font-bold text-emerald-400 uppercase tracking-wider">{session.status}</span>
+                <div className="flex items-center gap-2 flex-wrap">
+                  <h1 className="text-xl sm:text-2xl font-black tracking-tight">{courseTitle}</h1>
+                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-[#8d4a27]/30 text-[#eed7c3] border border-[#8d4a27]/50">
+                    {creditUnits} Credit Units
+                  </span>
+                  <span className="px-2 py-0.5 rounded-md text-xs font-bold bg-slate-800 text-slate-300">
+                    Week {displayWeek}
+                  </span>
+                </div>
+                <p className="text-xs sm:text-sm text-slate-400 mt-1 flex items-center gap-3 flex-wrap">
+                  <span>Lecturer: <strong className="text-slate-200">{lecturerName}</strong></span>
+                  <span>•</span>
+                  <span>Dept/Level: <strong className="text-slate-200">{departmentName} ({academicLevel})</strong></span>
+                  <span>•</span>
+                  <span>Venue: <strong className="text-slate-200">{displayVenue}</strong></span>
+                  <span>•</span>
+                  <span>Status: <strong className="text-emerald-400 uppercase tracking-wider">{session.status}</strong></span>
                 </p>
               </div>
             </div>
             <button
               onClick={() => setIsProjectorMode(false)}
-              className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs sm:text-sm font-bold border border-slate-700 transition"
+              className="flex items-center gap-2 px-4 py-2.5 bg-slate-800 hover:bg-slate-700 text-slate-200 rounded-xl text-xs sm:text-sm font-bold border border-slate-700 transition shrink-0 self-start md:self-auto"
             >
               <Minimize2 className="w-4 h-4" />
               <span>Exit Projector (Esc)</span>
