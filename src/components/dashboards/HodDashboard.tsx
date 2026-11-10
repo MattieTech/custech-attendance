@@ -4,13 +4,10 @@ import React from 'react';
 import { custechDb } from '@/lib/db/repository';
 import { UserProfile, AttendanceRecord } from '@/types';
 import {
-  Users,
   GraduationCap,
   AlertTriangle,
-  FileSpreadsheet,
   CheckCircle2,
   BookOpen,
-  Clock,
   Download,
   ShieldAlert,
   HeartPulse,
@@ -28,15 +25,10 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
   const [isMedicalOpen, setIsMedicalOpen] = React.useState(false);
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
 
-  const departmentCourses = custechDb.getCourses().filter((c) => c.departmentId === 'dept-csc');
-  const allStudents = custechDb.getProfiles().filter((p) => p.primaryRole === 'STUDENT');
+  void refreshTrigger;
   const sessions = custechDb.getSessions();
   const collisionAlerts = custechDb.getDeviceCollisionAlerts();
   const unreviewedCount = collisionAlerts.filter((a) => !a.isReviewed).length;
-
-  const deptStats = React.useMemo(() => {
-    return custechDb.getDepartmentAttendanceStats('dept-csc');
-  }, [refreshTrigger]);
 
   // Export Dynamic CSV Report from real database records
   const handleExportCSV = () => {

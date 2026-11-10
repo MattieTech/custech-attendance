@@ -31,13 +31,16 @@ import {
 } from '@/actions/academic';
 import { Department, Faculty } from '@/types';
 
+type LecturerItem = Awaited<ReturnType<typeof getLecturersAction>>[number];
+type OfferingItem = Awaited<ReturnType<typeof getCourseOfferingsAction>>[number];
+
 interface LecturerManagementTabProps {
   adminUserId: string;
 }
 
 export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ adminUserId }) => {
-  const [lecturers, setLecturers] = useState<any[]>([]);
-  const [offerings, setOfferings] = useState<any[]>([]);
+  const [lecturers, setLecturers] = useState<LecturerItem[]>([]);
+  const [offerings, setOfferings] = useState<OfferingItem[]>([]);
   const [faculties, setFaculties] = useState<Faculty[]>([]);
   const [departments, setDepartments] = useState<Department[]>([]);
   const [isLoading, setIsLoading] = useState(true);
@@ -46,8 +49,8 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingLecturer, setEditingLecturer] = useState<any | null>(null);
-  const [assigningLecturer, setAssigningLecturer] = useState<any | null>(null);
+  const [editingLecturer, setEditingLecturer] = useState<LecturerItem | null>(null);
+  const [assigningLecturer, setAssigningLecturer] = useState<LecturerItem | null>(null);
 
   // Assign Course Modal State
   const [assignMode, setAssignMode] = useState<'MANUAL' | 'SELECT'>('MANUAL');
@@ -100,7 +103,31 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    Promise.all([
+      getLecturersAction(),
+      getCourseOfferingsAction(),
+      getFacultiesAndDepartmentsAction(),
+    ])
+      .then(([lecList, offList, facDept]) => {
+        if (cancelled) return;
+        setLecturers(lecList);
+        setOfferings(offList);
+        setFaculties(facDept.faculties);
+        setDepartments(facDept.departments);
+        if (offList.length > 0) {
+          setSelectedOfferingToAssign((prev) => prev || offList[0].id);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load lecturers', err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const resolveDepartmentName = (deptId?: string) => {
@@ -123,7 +150,7 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
     setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (lec: any) => {
+  const handleOpenEdit = (lec: LecturerItem) => {
     setEditingLecturer(lec);
     setFirstName(lec.firstName);
     setLastName(lec.lastName);
@@ -136,7 +163,7 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
     setFormSuccess(null);
   };
 
-  const handleOpenAssignModal = (lec: any) => {
+  const handleOpenAssignModal = (lec: LecturerItem) => {
     setAssigningLecturer(lec);
     setAssignMode('MANUAL');
     setManualCourseCode('');
@@ -176,8 +203,9 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
       setManualCreditUnits(found.course.creditUnits || 2);
       setManualLevel((found.course.level || 100) as 100 | 200 | 300 | 400 | 500);
       if (found.course.departmentId) {
-        setManualDeptId(found.course.departmentId);
-        const dept = departments.find((d) => d.id === found.course.departmentId);
+        const deptId = found.course.departmentId;
+        setManualDeptId(deptId);
+        const dept = departments.find((d) => d.id === deptId);
         if (dept) setManualFacultyId(dept.facultyId);
       }
     }
@@ -249,7 +277,7 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
     }
   };
 
-  const handleToggleActive = async (lec: any) => {
+  const handleToggleActive = async (lec: LecturerItem) => {
     const actionLabel = lec.isActive ? 'deactivate' : 'activate';
     if (!confirm(`Are you sure you want to ${actionLabel} ${lec.firstName} ${lec.lastName}?`)) return;
     try {
@@ -850,7 +878,7 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
                         <label className="block text-xs font-bold text-slate-700 mb-1">Level</label>
                         <select
                           value={manualLevel}
-                          onChange={(e) => setManualLevel(Number(e.target.value) as any)}
+                          onChange={(e) => setManualLevel(Number(e.target.value) as 100 | 200 | 300 | 400 | 500)}
                           disabled={!!matchedExistingOffering}
                           className="w-full px-2.5 py-2 bg-slate-50 border border-slate-200 rounded-lg text-xs font-bold text-slate-900 disabled:opacity-60"
                         >

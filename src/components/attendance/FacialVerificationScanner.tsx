@@ -340,10 +340,18 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
 
   React.useEffect(() => {
     isMountedRef.current = true;
+    let startTimer: number | null = null;
     if (autoStart && !(mode === 'ENROLL' && requirePinForEnroll)) {
-      startScanner();
+      startTimer = window.setTimeout(() => {
+        if (isMountedRef.current) {
+          void startScanner();
+        }
+      }, 0);
     }
     return () => {
+      if (startTimer !== null) {
+        window.clearTimeout(startTimer);
+      }
       isMountedRef.current = false;
       stopCamera();
     };

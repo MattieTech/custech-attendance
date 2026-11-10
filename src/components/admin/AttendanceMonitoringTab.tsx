@@ -4,16 +4,12 @@ import React, { useState, useEffect } from 'react';
 import {
   ShieldAlert,
   Radio,
-  Clock,
   CheckCircle2,
   AlertTriangle,
-  UserCheck,
   Smartphone,
   Eye,
-  Filter,
   Search,
   RefreshCw,
-  Building2,
   User,
   Calendar,
   Layers,
@@ -31,21 +27,24 @@ import {
 } from '@/actions/academic';
 import { DeviceCollisionAlert } from '@/types';
 
+type DetailedSession = Awaited<ReturnType<typeof getAllSessionsDetailedAction>>[number];
+type SessionRecordItem = Awaited<ReturnType<typeof getSessionRecordsAction>>[number];
+
 interface AttendanceMonitoringTabProps {
   adminUserId: string;
 }
 
 export const AttendanceMonitoringTab: React.FC<AttendanceMonitoringTabProps> = ({ adminUserId }) => {
   const [subTab, setSubTab] = useState<'SESSIONS' | 'ALERTS'>('SESSIONS');
-  const [sessions, setSessions] = useState<any[]>([]);
+  const [sessions, setSessions] = useState<DetailedSession[]>([]);
   const [alerts, setAlerts] = useState<DeviceCollisionAlert[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [statusFilter, setStatusFilter] = useState<'ALL' | 'ACTIVE' | 'CLOSED'>('ALL');
 
   // Modal for Viewing Session Attendees Roster
-  const [inspectingSession, setInspectingSession] = useState<any | null>(null);
-  const [sessionRecords, setSessionRecords] = useState<any[]>([]);
+  const [inspectingSession, setInspectingSession] = useState<DetailedSession | null>(null);
+  const [sessionRecords, setSessionRecords] = useState<SessionRecordItem[]>([]);
   const [isLoadingRecords, setIsLoadingRecords] = useState(false);
 
   // Modal for Investigating an Alert
@@ -72,10 +71,25 @@ export const AttendanceMonitoringTab: React.FC<AttendanceMonitoringTabProps> = (
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    Promise.all([getAllSessionsDetailedAction(), getDeviceCollisionAlertsAction()])
+      .then(([sessList, alertsList]) => {
+        if (cancelled) return;
+        setSessions(sessList);
+        setAlerts(alertsList);
+      })
+      .catch((err) => {
+        console.error('Failed to load monitoring data', err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
-  const handleInspectSession = async (sess: any) => {
+  const handleInspectSession = async (sess: DetailedSession) => {
     setInspectingSession(sess);
     setIsLoadingRecords(true);
     try {
@@ -278,7 +292,7 @@ export const AttendanceMonitoringTab: React.FC<AttendanceMonitoringTabProps> = (
         {subTab === 'SESSIONS' && (
           <select
             value={statusFilter}
-            onChange={(e) => setStatusFilter(e.target.value as any)}
+            onChange={(e) => setStatusFilter(e.target.value as 'ALL' | 'ACTIVE' | 'CLOSED')}
             className="px-3 py-2 bg-white border border-slate-200 rounded-lg text-xs font-medium text-slate-700 focus:outline-none focus:ring-2 focus:ring-[#8d4a27]"
           >
             <option value="ALL">All Session States</option>
@@ -324,7 +338,8 @@ export const AttendanceMonitoringTab: React.FC<AttendanceMonitoringTabProps> = (
                       ? `${sess.lecturer.firstName} ${sess.lecturer.lastName}`
                       : 'Lecturer';
                     const venue = sess.venue || sess.classroom?.code || 'Lecture Hall';
-                    const date = sess.startTime ? new Date(sess.startTime).toLocaleDateString() : 'Today';
+                    const sessionDateValue = sess.actualStart || sess.scheduledStart;
+                    const date = sessionDateValue ? new Date(sessionDateValue).toLocaleDateString() : 'Today';
 
                     return (
                       <tr key={sess.id} className="hover:bg-slate-50/60 transition">
@@ -514,7 +529,7 @@ export const AttendanceMonitoringTab: React.FC<AttendanceMonitoringTabProps> = (
                           )}
                           {alert.reviewNotes && (
                             <div className="text-[10px] text-slate-400 italic mt-0.5">
-                              "{alert.reviewNotes}"
+                              &ldquo;{alert.reviewNotes}&rdquo;
                             </div>
                           )}
                         </td>

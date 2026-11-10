@@ -12,6 +12,7 @@ import {
   resetStudentPinAction,
   assignUserRoleAction,
   bulkImportStudentsAction,
+  getDatabaseSnapshotAction,
 } from '@/actions/academic';
 import {
   getEnrolledFaceStudentIdsAction,
@@ -90,8 +91,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   }, []);
 
   React.useEffect(() => {
-    loadBiometricAdminState();
-  }, [loadBiometricAdminState]);
+    let cancelled = false;
+    Promise.all([getEnrolledFaceStudentIdsAction(), getBiometricPolicyAction()])
+      .then(([ids, policy]) => {
+        if (cancelled) return;
+        setEnrolledFaceIds(ids);
+        setSettings((prev) => ({
+          ...prev,
+          requireFacialVerification: policy.requireFacialVerification,
+          facialMatchThreshold: policy.facialMatchThreshold,
+        }));
+      })
+      .catch(() => {});
+    return () => {
+      cancelled = true;
+    };
+  }, []);
 
   // Student Registry State
   const [students, setStudents] = React.useState(custechDb.getAllStudentsDetailed());
@@ -189,8 +204,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     return Array.from(set).sort();
   }, [departments, students]);
 
-  // Refresh student records from repository
-  const refreshStudentsList = React.useCallback(() => {
+  // Refresh student records from authoritative server snapshot
+  const refreshStudentsList = React.useCallback(async () => {
+    try {
+      const snapshot = await getDatabaseSnapshotAction();
+      if (snapshot) {
+        custechDb.syncClientSnapshot(snapshot);
+      }
+    } catch {
+      // Offline fallback uses local custechDb
+    }
     setStudents(custechDb.getAllStudentsDetailed());
     setUsersList(custechDb.getAllUsersWithRoles());
   }, []);
@@ -893,7 +916,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   {paginatedStudents.length === 0 ? (
                     <tr>
                       <td colSpan={9} className="py-12 text-center text-xs text-slate-400">
-                        No students match the search filter. Click "+ Add New Student" to enroll one.
+                        No students match the search filter. Click &ldquo;+ Add New Student&rdquo; to enroll one.
                       </td>
                     </tr>
                   ) : (
@@ -1754,35 +1777,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                         list="custech-all-departments-list"
                         placeholder="e.g. Computer Science, Mechanical..."
                         value={departmentName}
-                        onChange={(e) => setDepartmentName(e.target.value)}
+                        onChange={(e) => {
+                          const val = e.target.value;
+                          setDepartmentName(val);
+                          const matched = departments.find((d) => d.name.toLowerCase() === val.trim().toLowerCase());
+                          if (matched) setFacultyId(matched.facultyId);
+                        }}
                         className="w-full px-3.5 py-2.5 rounded-lg border border-slate-300 text-xs text-slate-900 focus:outline-hidden focus:ring-2 focus:ring-[#8d4a27]"
                       />
                       <datalist id="custech-all-departments-list">
-                        <option value="Computer Science" />
-                        <option value="Software Engineering" />
-                        <option value="Cybersecurity" />
-                        <option value="Information Technology" />
-                        <option value="Artificial Intelligence and Robotics" />
-                        <option value="Civil Engineering" />
-                        <option value="Mechanical Engineering" />
-                        <option value="Electrical and Electronics Engineering" />
-                        <option value="Mining Engineering" />
-                        <option value="Chemical Engineering" />
-                        <option value="Materials and Metallurgical Engineering" />
-                        <option value="Agricultural and Bioresources Engineering" />
-                        <option value="Mathematics" />
-                        <option value="Physics with Electronics" />
-                        <option value="Chemistry" />
-                        <option value="Biology" />
-                        <option value="Biochemistry" />
-                        <option value="Microbiology" />
-                        <option value="Geology" />
-                        <option value="Applied Geophysics" />
-                        <option value="Statistics" />
-                        <option value="Accounting" />
-                        <option value="Business Administration" />
-                        <option value="Economics" />
-                        <option value="Mass Communication" />
+                        {availableDepartments.map((dName) => (
+                          <option key={dName} value={dName} />
+                        ))}
                       </datalist>
                     </div>
                   </div>

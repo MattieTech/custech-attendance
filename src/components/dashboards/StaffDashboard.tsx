@@ -5,21 +5,20 @@ import { custechDb } from '@/lib/db/repository';
 import { UserProfile, StaffAttendance } from '@/types';
 import { staffCheckInAction, staffCheckOutAction } from '@/actions/staff';
 import { formatTime, formatDate } from '@/lib/utils';
-import { Clock, CheckCircle2, ArrowRight, Building, MapPin, Calendar } from 'lucide-react';
+import { Clock, CheckCircle2 } from 'lucide-react';
 
 interface StaffDashboardProps {
   user: UserProfile;
 }
 
 export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
-  const staff = custechDb.getProfiles().find((p) => p.id === user.id);
-  const staffRecords = custechDb.getStaffAttendanceList();
-  const todayStr = new Date().toISOString().split('T')[0];
-  const todayRecord = staffRecords.find((r) => r.staffId === user.id && r.date === todayStr);
-
-  const [record, setRecord] = React.useState<StaffAttendance | undefined>(todayRecord);
+  const [recordOverride, setRecordOverride] = React.useState<StaffAttendance | undefined>(undefined);
   const [isLoading, setIsLoading] = React.useState(false);
   const [feedback, setFeedback] = React.useState<string | null>(null);
+
+  const staffRecords = custechDb.getStaffAttendanceList();
+  const todayStr = new Date().toISOString().split('T')[0];
+  const record = recordOverride || staffRecords.find((r) => r.staffId === user.id && r.date === todayStr);
 
   const handleCheckIn = async () => {
     setIsLoading(true);
@@ -40,7 +39,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
       }
 
       const res = await staffCheckInAction(user.id, lat, lng);
-      setRecord(res);
+      setRecordOverride(res);
       setFeedback('Checked in successfully.');
       setTimeout(() => setFeedback(null), 3000);
     } catch (err: unknown) {
@@ -54,7 +53,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
     setIsLoading(true);
     try {
       const res = await staffCheckOutAction(user.id);
-      setRecord(res);
+      setRecordOverride(res);
       setFeedback('Checked out successfully. Working hours logged.');
       setTimeout(() => setFeedback(null), 3000);
     } catch (err: unknown) {
@@ -80,7 +79,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
             {user.firstName} {user.lastName}
           </h2>
           <p className="text-xs text-slate-500 mt-0.5">
-            Senior Executive Officer • Staff ID: CUSTECH/NA/088
+            Senior Executive Officer • Staff ID: {user.staffId || 'CUSTECH/NA/088'}
           </p>
         </div>
       </div>
@@ -98,7 +97,7 @@ export const StaffDashboard: React.FC<StaffDashboardProps> = ({ user }) => {
           <div className="flex items-center gap-2">
             <Clock className="w-4 h-4 text-[#8d4a27]" />
             <h3 className="text-sm font-bold text-slate-900">
-              Today's Duty Log
+              Today&apos;s Duty Log
             </h3>
           </div>
           <span className="text-xs text-slate-400 font-medium">Expected Duty: 08:00 – 16:00</span>

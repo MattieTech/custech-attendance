@@ -1,8 +1,7 @@
 'use client';
 
 import React from 'react';
-import { computeAttendanceForecastAction } from '@/actions/advanced';
-import { HelpCircle, Calculator, CheckCircle2, AlertTriangle, ArrowRight } from 'lucide-react';
+import { Calculator, CheckCircle2, AlertTriangle } from 'lucide-react';
 
 interface AttendanceForecastProps {
   currentAttended: number;
@@ -39,7 +38,7 @@ export const AttendanceForecast: React.FC<AttendanceForecastProps> = ({
         <div className="flex items-center gap-2">
           <Calculator className="w-4 h-4 text-[#8d4a27]" />
           <h3 className="text-sm font-bold text-slate-900">
-            Attendance Projection & "What-If" Calculator
+            Attendance Projection &amp; &ldquo;What-If&rdquo; Calculator
           </h3>
         </div>
         <span className="text-xs font-mono font-bold text-[#8d4a27]">

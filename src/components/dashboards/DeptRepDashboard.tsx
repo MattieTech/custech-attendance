@@ -2,11 +2,9 @@
 
 import React from 'react';
 import { UserProfile } from '@/types';
-import { initialCourses, initialProfiles, initialStudents } from '@/lib/db/initial-data';
+import { custechDb } from '@/lib/db/repository';
 import {
-  Users,
   Building2,
-  AlertTriangle,
   FileCheck2,
   CheckCircle2,
   Send,
@@ -20,6 +18,7 @@ interface DeptRepDashboardProps {
 export const DeptRepDashboard: React.FC<DeptRepDashboardProps> = ({ user }) => {
   const [complaintText, setComplaintText] = React.useState('');
   const [submittedFeedback, setSubmittedFeedback] = React.useState<string | null>(null);
+  const totalStudents = custechDb.getAllStudentsDetailed().length;
 
   const handleSubmitIssue = (e: React.FormEvent) => {
     e.preventDefault();
@@ -63,7 +62,7 @@ export const DeptRepDashboard: React.FC<DeptRepDashboardProps> = ({ user }) => {
             Registered Classmates
           </p>
           <p className="text-3xl font-black text-slate-900 mt-1">
-            {initialStudents.length}
+            {totalStudents}
           </p>
           <p className="text-xs text-slate-500 mt-0.5">
             200 Level CS Cohort

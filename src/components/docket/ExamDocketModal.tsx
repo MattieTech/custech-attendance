@@ -3,7 +3,7 @@
 import React from 'react';
 import QRCode from 'qrcode';
 import { ExamDocket } from '@/types';
-import { ShieldCheck, AlertTriangle, Printer, X, Award, CheckCircle2, XCircle } from 'lucide-react';
+import { Printer, X, Award } from 'lucide-react';
 
 interface ExamDocketModalProps {
   docket: ExamDocket;

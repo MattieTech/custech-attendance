@@ -9,7 +9,6 @@ import {
   Trash2,
   Edit,
   Search,
-  BookOpen,
   User,
   AlertCircle,
   CheckCircle2,
@@ -23,6 +22,9 @@ import {
   deleteTimetableAction,
   getCourseOfferingsAction,
 } from '@/actions/academic';
+
+type DetailedTimetableEntry = Awaited<ReturnType<typeof getTimetablesDetailedAction>>[number];
+type DetailedCourseOffering = Awaited<ReturnType<typeof getCourseOfferingsAction>>[number];
 
 interface TimetableManagementTabProps {
   adminUserId: string;
@@ -38,15 +40,15 @@ const DAYS_OF_WEEK = [
 ];
 
 export const TimetableManagementTab: React.FC<TimetableManagementTabProps> = ({ adminUserId }) => {
-  const [timetables, setTimetables] = useState<any[]>([]);
-  const [offerings, setOfferings] = useState<any[]>([]);
+  const [timetables, setTimetables] = useState<DetailedTimetableEntry[]>([]);
+  const [offerings, setOfferings] = useState<DetailedCourseOffering[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedDay, setSelectedDay] = useState<string>('ALL');
 
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = useState(false);
-  const [editingEntry, setEditingEntry] = useState<any | null>(null);
+  const [editingEntry, setEditingEntry] = useState<DetailedTimetableEntry | null>(null);
 
   // Form State
   const [courseOfferingId, setCourseOfferingId] = useState('');
@@ -81,7 +83,25 @@ export const TimetableManagementTab: React.FC<TimetableManagementTabProps> = ({ 
   };
 
   useEffect(() => {
-    loadData();
+    let cancelled = false;
+    Promise.all([getTimetablesDetailedAction(), getCourseOfferingsAction()])
+      .then(([ttList, offList]) => {
+        if (cancelled) return;
+        setTimetables(ttList);
+        setOfferings(offList);
+        if (offList.length > 0) {
+          setCourseOfferingId((prev) => prev || offList[0].id);
+        }
+      })
+      .catch((err) => {
+        console.error('Failed to load timetables', err);
+      })
+      .finally(() => {
+        if (!cancelled) setIsLoading(false);
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   const handleOpenAdd = () => {
@@ -96,7 +116,7 @@ export const TimetableManagementTab: React.FC<TimetableManagementTabProps> = ({ 
     setIsAddModalOpen(true);
   };
 
-  const handleOpenEdit = (entry: any) => {
+  const handleOpenEdit = (entry: DetailedTimetableEntry) => {
     setEditingEntry(entry);
     setFormError(null);
     setFormSuccess(null);
@@ -318,7 +338,7 @@ export const TimetableManagementTab: React.FC<TimetableManagementTabProps> = ({ 
                           <span className="font-semibold text-slate-800">{courseTitle}</span>
                         </div>
                         <div className="text-[10px] text-slate-400 mt-0.5">
-                          {tt.course?.creditUnits || 2} Units • {tt.offering?.academicLevel || 200}L
+                          {tt.course?.creditUnits || 2} Units • {tt.course?.level || 200}L
                         </div>
                       </td>
 
@@ -434,7 +454,7 @@ export const TimetableManagementTab: React.FC<TimetableManagementTabProps> = ({ 
                         : 'Unassigned';
                       return (
                         <option key={off.id} value={off.id}>
-                          {off.course?.code} — {off.course?.title} ({off.academicLevel || 200}L) • {lecturer}
+                          {off.course?.code} — {off.course?.title} ({off.course?.level || 200}L) • {lecturer}
                         </option>
                       );
                     })}

@@ -61,10 +61,11 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   }>({ loaded: false, enrolled: false });
   const [isFaceEnrollOpen, setIsFaceEnrollOpen] = React.useState(false);
 
-  const loadFaceStatus = React.useCallback(async () => {
+  const targetStudentId = student?.id || user.id;
+
+  const loadFaceStatus = async () => {
     try {
-      const targetId = student?.id || user.id;
-      const res = await getStudentFaceStatusAction(targetId);
+      const res = await getStudentFaceStatusAction(targetStudentId);
       setFaceStatus({
         loaded: true,
         enrolled: res.enrolled,
@@ -74,11 +75,28 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     } catch {
       setFaceStatus((prev) => ({ ...prev, loaded: true }));
     }
-  }, [student?.id, user.id]);
+  };
 
   React.useEffect(() => {
-    void loadFaceStatus();
-  }, [loadFaceStatus]);
+    let active = true;
+    getStudentFaceStatusAction(targetStudentId)
+      .then((res) => {
+        if (!active) return;
+        setFaceStatus({
+          loaded: true,
+          enrolled: res.enrolled,
+          enrolledAt: res.enrolledAt,
+          isLocked: res.isLocked,
+        });
+      })
+      .catch(() => {
+        if (!active) return;
+        setFaceStatus((prev) => ({ ...prev, loaded: true }));
+      });
+    return () => {
+      active = false;
+    };
+  }, [targetStudentId]);
 
   // Correction Dispute Modal state
   const [isDisputeOpen, setIsDisputeOpen] = React.useState(false);

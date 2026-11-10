@@ -1,7 +1,7 @@
 'use server';
 
 import { custechDb } from '@/lib/db/repository';
-import { UserRole } from '@/types';
+import { UserRole, Course, CourseOffering, Department } from '@/types';
 
 export async function toggleSyllabusStatus(topicId: string, isCompleted: boolean, actorId: string) {
   return custechDb.toggleSyllabusTopic(topicId, isCompleted, actorId);
@@ -558,7 +558,11 @@ export async function getFacultiesAndDepartmentsAction() {
   };
 }
 
-export async function ensureDepartmentAction(data: { name: string; facultyId?: string; code?: string }) {
+export async function ensureDepartmentAction(data: { name: string; facultyId?: string; code?: string }): Promise<{
+  success: boolean;
+  department?: Department;
+  error?: string;
+}> {
   try {
     const department = custechDb.ensureDepartment(data);
     return { success: true, department };
@@ -582,7 +586,13 @@ export async function assignCourseManuallyAction(
     level?: 100 | 200 | 300 | 400 | 500;
   },
   actorId: string
-) {
+): Promise<{
+  success: boolean;
+  course?: Course;
+  offering?: CourseOffering;
+  createdNewCourse?: boolean;
+  error?: string;
+}> {
   try {
     const result = custechDb.assignCourseManuallyToLecturer(params, actorId);
     return { success: true, ...result };

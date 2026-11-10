@@ -2,13 +2,13 @@
 
 import React from 'react';
 import { UserProfile } from '@/types';
-import { Building2, TrendingUp, Users, Award, Download, CheckCircle } from 'lucide-react';
+import { Download } from 'lucide-react';
 
 interface DeanDashboardProps {
   user: UserProfile;
 }
 
-export const DeanDashboard: React.FC<DeanDashboardProps> = ({ user }) => {
+export const DeanDashboard: React.FC<DeanDashboardProps> = ({ user: _user }) => {
   return (
     <div className="space-y-6">
       {/* Dean Faculty Banner */}

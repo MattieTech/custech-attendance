@@ -71,7 +71,12 @@ export const OfflineSyncBanner: React.FC = () => {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    void checkPending();
+    let cancelled = false;
+    getPendingOfflineCount()
+      .then((count) => {
+        if (!cancelled) setPendingCount(count);
+      })
+      .catch(() => {});
 
     const handleOnline = () => {
       void triggerSync();
@@ -90,6 +95,7 @@ export const OfflineSyncBanner: React.FC = () => {
     }, 15000);
 
     return () => {
+      cancelled = true;
       window.removeEventListener('online', handleOnline);
       window.removeEventListener('offline', handleOffline);
       clearInterval(interval);

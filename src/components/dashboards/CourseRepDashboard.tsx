@@ -197,8 +197,8 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
           <div className="w-full max-w-xl">
             <KioskTerminal
               sessionId={activeSession.id}
-              courseCode="CSC 201"
-              courseTitle="Data Structures and Algorithms"
+              courseCode={custechDb.getOfferingById(activeSession.courseOfferingId)?.course?.code || 'CSC 201'}
+              courseTitle={custechDb.getOfferingById(activeSession.courseOfferingId)?.course?.title || 'Data Structures and Algorithms'}
               operatorProfileId={user.id}
               operatorName={`${user.firstName} ${user.lastName}`}
               operatorRoleTitle="Course Representative"
@@ -207,7 +207,9 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
                 setIsKioskActive(false);
                 setAssistTargetMatric(undefined);
               }}
-              onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+              onSuccess={() => {
+                void syncFromServer();
+              }}
             />
           </div>
         </div>

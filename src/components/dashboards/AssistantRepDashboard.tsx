@@ -112,9 +112,9 @@ export const AssistantRepDashboard: React.FC<AssistantRepDashboardProps> = ({ us
             </div>
           </div>
           <KioskTerminal
-            sessionId="sess-today-csc"
-            courseCode="CSC 201"
-            courseTitle="Data Structures and Algorithms"
+            sessionId={activeSession?.id || 'sess-today-csc'}
+            courseCode={activeCourse?.code || 'CSC 201'}
+            courseTitle={activeCourse?.title || 'Data Structures and Algorithms'}
             operatorProfileId={user.id}
             operatorName={`${user.firstName} ${user.lastName}`}
             operatorRoleTitle="Assistant Course Representative"
@@ -129,11 +129,11 @@ export const AssistantRepDashboard: React.FC<AssistantRepDashboardProps> = ({ us
           <div className="flex items-center gap-2">
             <Users className="w-4 h-4 text-[#8d4a27]" />
             <h3 className="text-sm font-bold text-slate-900">
-              Enrolled Classmates in {cscCourse?.code} ({cscCourse?.title})
+              Enrolled Classmates in {activeCourse?.code || 'CSC 201'} ({activeCourse?.title || 'Data Structures and Algorithms'})
             </h3>
           </div>
           <span className="text-xs text-slate-500 font-medium">
-            Total Classmates: {initialStudents.length} Students
+            Total Classmates: {allStudents.length} Students
           </span>
         </div>
 
@@ -149,8 +149,8 @@ export const AssistantRepDashboard: React.FC<AssistantRepDashboardProps> = ({ us
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {initialStudents.map((st) => {
-                const p = initialProfiles.find((pr) => pr.id === st.profileId);
+              {allStudents.map((st) => {
+                const p = st.profile;
                 const isSelf = st.profileId === user.id;
                 return (
                   <tr key={st.id} className="hover:bg-slate-50/60 transition">
@@ -165,7 +165,7 @@ export const AssistantRepDashboard: React.FC<AssistantRepDashboardProps> = ({ us
                         </span>
                       )}
                     </td>
-                    <td className="px-4 py-3 text-slate-600">200L • Computer Science</td>
+                    <td className="px-4 py-3 text-slate-600">{st.currentLevel}L • {st.departmentName}</td>
                     <td className="px-4 py-3">
                       <span className="px-2.5 py-0.5 rounded-full text-xs font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
                         {p?.primaryRole || 'STUDENT'}

@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { custechDb } from '@/lib/db/repository';
-import { Course, Department, Faculty, UserProfile } from '@/types';
+import { Department, Faculty } from '@/types';
 import {
   createCourseAction,
   updateCourseAction,
@@ -23,17 +23,26 @@ import {
   Edit,
   Trash2,
   CheckCircle2,
-  XCircle,
   FileSpreadsheet,
   Upload,
   AlertCircle,
   X,
-  Filter,
-  Users,
-  Building,
-  GraduationCap,
-  Download,
 } from 'lucide-react';
+
+type DetailedCourse = Awaited<ReturnType<typeof getCoursesDetailedAction>>[number];
+type LecturerItem = Awaited<ReturnType<typeof getLecturersAction>>[number];
+type OfferingItem = Awaited<ReturnType<typeof getCourseOfferingsAction>>[number];
+
+interface BulkCsvCourseRow {
+  code: string;
+  title: string;
+  creditUnits: number;
+  departmentName: string;
+  level: 100 | 200 | 300 | 400 | 500;
+  lecturerEmailOrName: string;
+}
+
+type BulkImportSummary = NonNullable<Awaited<ReturnType<typeof bulkImportCoursesAction>>['summary']>;
 
 interface CourseManagementTabProps {
   actorId?: string;
@@ -42,10 +51,10 @@ interface CourseManagementTabProps {
 
 export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorId, adminUserId }) => {
   const effectiveActorId = actorId || adminUserId || 'admin';
-  const [courses, setCourses] = React.useState(custechDb.getCoursesWithDetails());
+  const [courses, setCourses] = React.useState<DetailedCourse[]>(custechDb.getCoursesWithDetails());
   const [faculties, setFaculties] = React.useState<Faculty[]>(custechDb.getFaculties());
   const [departments, setDepartments] = React.useState<Department[]>(custechDb.getDepartments());
-  const [lecturers, setLecturers] = React.useState<any[]>(custechDb.getLecturers());
+  const [lecturers, setLecturers] = React.useState<LecturerItem[]>(custechDb.getLecturers());
 
   // Filters
   const [searchQuery, setSearchQuery] = React.useState('');
@@ -57,7 +66,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
-  const [editCourse, setEditCourse] = React.useState<any | null>(null);
+  const [editCourse, setEditCourse] = React.useState<DetailedCourse | null>(null);
 
   // Add Form State
   const [addCode, setAddCode] = React.useState('');
@@ -85,9 +94,9 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
 
   // Bulk Upload State
   const [csvContent, setCsvContent] = React.useState('');
-  const [bulkParsed, setBulkParsed] = React.useState<any[]>([]);
+  const [bulkParsed, setBulkParsed] = React.useState<BulkCsvCourseRow[]>([]);
   const [bulkErrors, setBulkErrors] = React.useState<string[]>([]);
-  const [bulkResult, setBulkResult] = React.useState<any | null>(null);
+  const [bulkResult, setBulkResult] = React.useState<BulkImportSummary | null>(null);
 
   const refreshCourses = async () => {
     try {
@@ -106,11 +115,29 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
   };
 
   React.useEffect(() => {
-    refreshCourses();
+    let cancelled = false;
+    Promise.all([
+      getCoursesDetailedAction(),
+      getFacultiesAndDepartmentsAction(),
+      getLecturersAction(),
+    ])
+      .then(([latestCourses, facDept, latestLecturers]) => {
+        if (cancelled) return;
+        setCourses(latestCourses);
+        setFaculties(facDept.faculties);
+        setDepartments(facDept.departments);
+        setLecturers(latestLecturers);
+      })
+      .catch(() => {
+        if (!cancelled) setCourses(custechDb.getCoursesWithDetails());
+      });
+    return () => {
+      cancelled = true;
+    };
   }, []);
 
   // Filter courses
-  const filteredCourses = courses.filter((c: any) => {
+  const filteredCourses = courses.filter((c) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
@@ -181,7 +208,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
       if (res.success && res.course) {
         if (addLecturerId) {
           const serverOfferings = await getCourseOfferingsAction();
-          const off = serverOfferings.find((o: any) => o.courseId === res.course!.id);
+          const off = serverOfferings.find((o: OfferingItem) => o.courseId === res.course!.id);
           if (off) {
             await assignLecturerToCourseAction(off.id, addLecturerId, effectiveActorId);
           }
@@ -206,7 +233,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
   };
 
   // Handle Edit Course
-  const handleOpenEdit = (course: any) => {
+  const handleOpenEdit = (course: DetailedCourse) => {
     setEditCourse(course);
     setEditCode(course.code);
     setEditTitle(course.title);
@@ -296,7 +323,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
     }
 
     const lines = raw.trim().split('\n');
-    const records: any[] = [];
+    const records: BulkCsvCourseRow[] = [];
     const errors: string[] = [];
 
     lines.forEach((line, index) => {
@@ -403,16 +430,28 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
 
         <div className="flex items-center gap-2 flex-wrap w-full md:w-auto">
           <select
-            value={selectedDept}
-            onChange={(e) => setSelectedDept(e.target.value)}
+            value={selectedFaculty}
+            onChange={(e) => {
+              setSelectedFaculty(e.target.value);
+              setSelectedDept('ALL');
+            }}
             className="px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-xl outline-none focus:border-[#8d4a27]"
           >
-            <option value="ALL">All Departments</option>
-            {departments.map((d) => (
-              <option key={d.id} value={d.id}>
-                {d.name}
+            <option value="ALL">All Faculties ({faculties.length})</option>
+            {faculties.map((f) => (
+              <option key={f.id} value={f.id}>
+                {f.name}
               </option>
             ))}
+          </select>
+
+          <select
+            value={selectedDept}
+            onChange={(e) => setSelectedDept(e.target.value)}
+            className="px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-xl outline-none focus:border-[#8d4a27] max-w-[220px]"
+          >
+            <option value="ALL">All Departments ({departments.length})</option>
+            {renderGroupedDepartmentOptions()}
           </select>
 
           <select
@@ -430,7 +469,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
 
           <select
             value={selectedStatus}
-            onChange={(e) => setSelectedStatus(e.target.value as any)}
+            onChange={(e) => setSelectedStatus(e.target.value as 'ALL' | 'ACTIVE' | 'INACTIVE')}
             className="px-3 py-2 text-xs font-semibold bg-white border border-slate-300 rounded-xl outline-none focus:border-[#8d4a27]"
           >
             <option value="ALL">All Status</option>
@@ -602,24 +641,53 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
 
               <div className="grid grid-cols-2 gap-3">
                 <div>
-                  <label className="block font-bold text-slate-700 uppercase mb-1">Department</label>
-                  <select
-                    value={addDeptId}
-                    onChange={(e) => setAddDeptId(e.target.value)}
-                    className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none"
-                  >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
-                  </select>
+                  <div className="flex items-center justify-between mb-1">
+                    <label className="block font-bold text-slate-700 uppercase">Department</label>
+                    <button
+                      type="button"
+                      onClick={() => setUseCustomAddDept(!useCustomAddDept)}
+                      className="text-[10px] font-bold text-[#8d4a27] hover:underline"
+                    >
+                      {useCustomAddDept ? 'Pick from list' : '+ Type new'}
+                    </button>
+                  </div>
+                  {useCustomAddDept ? (
+                    <div className="space-y-1.5">
+                      <select
+                        value={addCustomFacultyId}
+                        onChange={(e) => setAddCustomFacultyId(e.target.value)}
+                        className="w-full px-2.5 py-1.5 bg-white border border-slate-300 rounded-xl text-[11px]"
+                      >
+                        {faculties.map((f) => (
+                          <option key={f.id} value={f.id}>
+                            {f.name}
+                          </option>
+                        ))}
+                      </select>
+                      <input
+                        type="text"
+                        required
+                        value={addCustomDeptName}
+                        onChange={(e) => setAddCustomDeptName(e.target.value)}
+                        placeholder="Type department name..."
+                        className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none"
+                      />
+                    </div>
+                  ) : (
+                    <select
+                      value={addDeptId}
+                      onChange={(e) => setAddDeptId(e.target.value)}
+                      className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none"
+                    >
+                      {renderGroupedDepartmentOptions()}
+                    </select>
+                  )}
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 uppercase mb-1">Level</label>
                   <select
                     value={addLevel}
-                    onChange={(e) => setAddLevel(Number(e.target.value) as any)}
+                    onChange={(e) => setAddLevel(Number(e.target.value) as 100 | 200 | 300 | 400 | 500)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none font-bold"
                   >
                     <option value={100}>100 Level</option>
@@ -751,18 +819,14 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
                     onChange={(e) => setEditDeptId(e.target.value)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none"
                   >
-                    {departments.map((d) => (
-                      <option key={d.id} value={d.id}>
-                        {d.name}
-                      </option>
-                    ))}
+                    {renderGroupedDepartmentOptions()}
                   </select>
                 </div>
                 <div>
                   <label className="block font-bold text-slate-700 uppercase mb-1">Level</label>
                   <select
                     value={editLevel}
-                    onChange={(e) => setEditLevel(Number(e.target.value) as any)}
+                    onChange={(e) => setEditLevel(Number(e.target.value) as 100 | 200 | 300 | 400 | 500)}
                     className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none font-bold"
                   >
                     <option value={100}>100 Level</option>

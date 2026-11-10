@@ -1,10 +1,10 @@
 'use client';
 
 import React from 'react';
-import { MedicalWaiver, Student } from '@/types';
+import { MedicalWaiver } from '@/types';
 import { issueMedicalWaiverAction } from '@/actions/advanced';
 import { custechDb } from '@/lib/db/repository';
-import { HeartPulse, Plus, CheckCircle2, Calendar, FileText, X, AlertCircle } from 'lucide-react';
+import { HeartPulse, Plus, CheckCircle2, X } from 'lucide-react';
 
 interface MedicalWaiverModalProps {
   reviewerProfileId: string;
@@ -17,9 +17,10 @@ export const MedicalWaiverModal: React.FC<MedicalWaiverModalProps> = ({
   onClose,
   onSuccess,
 }) => {
+  const allStudents = custechDb.getAllStudentsDetailed();
   const [waivers, setWaivers] = React.useState<MedicalWaiver[]>(custechDb.getMedicalWaivers());
   const [isFormOpen, setIsFormOpen] = React.useState(false);
-  const [selectedStudentId, setSelectedStudentId] = React.useState('stu-2'); // Emeka Okonkwo
+  const [selectedStudentId, setSelectedStudentId] = React.useState(allStudents[0]?.id || 'stu-2');
   const [startDate, setStartDate] = React.useState('2026-08-25');
   const [endDate, setEndDate] = React.useState('2026-08-28');
   const [hospitalName, setHospitalName] = React.useState('CUSTECH University Health Centre, Osara');
@@ -90,7 +91,7 @@ export const MedicalWaiverModal: React.FC<MedicalWaiverModalProps> = ({
         <div className="p-6 max-h-[70vh] overflow-y-auto space-y-5">
           <div className="flex items-center justify-between">
             <p className="text-xs text-slate-500 max-w-md">
-              Approved medical certificates automatically adjust the student's attendance denominator so hospital admissions do not penalize exam clearance.
+              Approved medical certificates automatically adjust the student&apos;s attendance denominator so hospital admissions do not penalize exam clearance.
             </p>
             <button
               onClick={() => setIsFormOpen(!isFormOpen)}
@@ -118,9 +119,11 @@ export const MedicalWaiverModal: React.FC<MedicalWaiverModalProps> = ({
                     onChange={(e) => setSelectedStudentId(e.target.value)}
                     className="w-full px-3 py-2 rounded-lg border border-slate-300 bg-white text-slate-900 focus:outline-none focus:ring-2 focus:ring-blue-600"
                   >
-                    <option value="stu-2">Emeka Okonkwo (25L1CS1029)</option>
-                    <option value="stu-1">Amina Usman (25L1CS1014)</option>
-                    <option value="stu-3">Maryam Yakubu (25L1CS1045)</option>
+                    {allStudents.map((s) => (
+                      <option key={s.id} value={s.id}>
+                        {s.profile ? `${s.profile.firstName} ${s.profile.lastName}` : s.matricNumber} ({s.matricNumber})
+                      </option>
+                    ))}
                   </select>
                 </div>
 
@@ -239,7 +242,7 @@ export const MedicalWaiverModal: React.FC<MedicalWaiverModalProps> = ({
                   <strong>Facility:</strong> {w.hospitalName} • <strong>Physician:</strong> {w.doctorName} ({w.doctorLicenseNo})
                 </p>
                 <p className="text-xs text-slate-500 italic">
-                  "{w.diagnosisSummary}"
+                  &ldquo;{w.diagnosisSummary}&rdquo;
                 </p>
                 <div className="flex items-center justify-between text-xs text-slate-400 pt-1 border-t border-slate-200">
                   <span>Admitted: {w.startDate} to {w.endDate}</span>

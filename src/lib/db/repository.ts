@@ -920,7 +920,7 @@ class CustechDatabase {
     staffAttendance?: StaffAttendance[];
     medicalWaivers?: MedicalWaiver[];
     notifications?: AppNotification[];
-    courseReps?: typeof this.courseReps;
+    courseReps?: typeof initialCourseReps;
     deviceCollisionAlerts?: DeviceCollisionAlert[];
     systemSettings?: SystemSettings;
     auditLogs?: AuditLog[];
