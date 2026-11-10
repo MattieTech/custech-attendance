@@ -1003,7 +1003,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
                   {bulkResult.errors?.length > 0 && (
                     <div className="space-y-1 text-[11px] text-rose-700 bg-white p-2.5 rounded-xl border border-rose-200">
                       <strong>Notices:</strong>
-                      {bulkResult.errors.map((e: any, i: number) => (
+                      {bulkResult.errors.map((e, i: number) => (
                         <div key={i}>• {e.code}: {e.error}</div>
                       ))}
                     </div>
