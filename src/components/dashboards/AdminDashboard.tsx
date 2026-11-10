@@ -13,6 +13,11 @@ import {
   assignUserRoleAction,
   bulkImportStudentsAction,
 } from '@/actions/academic';
+import {
+  getEnrolledFaceStudentIdsAction,
+  resetStudentFaceAction,
+  getBiometricPolicyAction,
+} from '@/actions/biometric';
 import { formatTime } from '@/lib/utils';
 import { storeSession } from '@/lib/auth/auth-service';
 import {
@@ -47,6 +52,7 @@ import {
   BookOpen,
   Calendar,
   ShieldAlert,
+  ScanFace,
 } from 'lucide-react';
 import { CourseManagementTab } from '@/components/admin/CourseManagementTab';
 import { TimetableManagementTab } from '@/components/admin/TimetableManagementTab';
@@ -64,6 +70,28 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   const [settings, setSettings] = React.useState<SystemSettings>(custechDb.getSystemSettings());
   const [isSaving, setIsSaving] = React.useState(false);
   const [saveSuccess, setSaveSuccess] = React.useState(false);
+  const [enrolledFaceIds, setEnrolledFaceIds] = React.useState<string[]>([]);
+
+  const loadBiometricAdminState = React.useCallback(async () => {
+    try {
+      const [ids, policy] = await Promise.all([
+        getEnrolledFaceStudentIdsAction(),
+        getBiometricPolicyAction(),
+      ]);
+      setEnrolledFaceIds(ids);
+      setSettings((prev) => ({
+        ...prev,
+        requireFacialVerification: policy.requireFacialVerification,
+        facialMatchThreshold: policy.facialMatchThreshold,
+      }));
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  React.useEffect(() => {
+    loadBiometricAdminState();
+  }, [loadBiometricAdminState]);
 
   // Student Registry State
   const [students, setStudents] = React.useState(custechDb.getAllStudentsDetailed());
@@ -535,6 +563,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
           minimumAttendanceWarningThreshold: Number(settings.minimumAttendanceWarningThreshold),
           qrRotationSeconds: Number(settings.qrRotationSeconds),
           lateThresholdMinutes: Number(settings.lateThresholdMinutes),
+          requireFacialVerification: settings.requireFacialVerification !== false,
+          facialMatchThreshold: Number(settings.facialMatchThreshold ?? 0.50),
         },
         user.id
       );
@@ -544,6 +574,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       alert('Failed to save settings');
     } finally {
       setIsSaving(false);
+    }
+  };
+
+  const handleResetStudentFace = async (studentId: string, matric: string) => {
+    if (!confirm(`Reset Face ID biometric template for ${matric}? The student will be required to re-enroll on next attendance.`)) {
+      return;
+    }
+    const res = await resetStudentFaceAction(studentId, user.id);
+    if (res.success) {
+      await loadBiometricAdminState();
+    } else {
+      alert(res.error || 'Could not reset Face ID');
     }
   };
 
@@ -842,6 +884,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     <th className="pb-3 pt-1">Faculty</th>
                     <th className="pb-3 pt-1">Level</th>
                     <th className="pb-3 pt-1">Courses</th>
+                    <th className="pb-3 pt-1">Face ID</th>
                     <th className="pb-3 pt-1">Status</th>
                     <th className="pb-3 pt-1 text-right">Actions</th>
                   </tr>
@@ -849,7 +892,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 <tbody className="divide-y divide-slate-100">
                   {paginatedStudents.length === 0 ? (
                     <tr>
-                      <td colSpan={8} className="py-12 text-center text-xs text-slate-400">
+                      <td colSpan={9} className="py-12 text-center text-xs text-slate-400">
                         No students match the search filter. Click "+ Add New Student" to enroll one.
                       </td>
                     </tr>
@@ -857,6 +900,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                     paginatedStudents.map((st) => {
                       const p = st.profile;
                       const isActive = p?.isActive !== false;
+                      const hasFaceId = enrolledFaceIds.includes(st.id);
                       return (
                         <tr key={st.id} className="hover:bg-slate-50 transition group">
                           {/* Matric */}
@@ -908,6 +952,20 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                             </span>
                           </td>
 
+                          {/* Face ID */}
+                          <td className="py-3">
+                            {hasFaceId ? (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-bold bg-emerald-50 text-emerald-800 border border-emerald-200">
+                                <ScanFace className="w-3 h-3 text-emerald-600" />
+                                <span>Enrolled</span>
+                              </span>
+                            ) : (
+                              <span className="inline-flex items-center gap-1 px-2.5 py-0.5 rounded-full text-[11px] font-semibold bg-amber-50 text-amber-800 border border-amber-200">
+                                <span>Not Enrolled</span>
+                              </span>
+                            )}
+                          </td>
+
                           {/* Status */}
                           <td className="py-3">
                             {isActive ? (
@@ -934,6 +992,17 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                               >
                                 <Edit className="w-3.5 h-3.5" />
                               </button>
+
+                              {/* Reset Face ID */}
+                              {hasFaceId && (
+                                <button
+                                  onClick={() => handleResetStudentFace(st.id, st.matricNumber)}
+                                  className="p-1.5 rounded-lg text-slate-400 hover:text-[#8d4a27] hover:bg-[#fbf5ef] transition"
+                                  title="Reset Student Face ID"
+                                >
+                                  <ScanFace className="w-3.5 h-3.5" />
+                                </button>
+                              )}
 
                               {/* Toggle Archive / Deactivate */}
                               <button
@@ -1330,6 +1399,46 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-hidden transition"
               />
               <p className="text-xs text-slate-400 mt-1">Classes after this are marked LATE (default 15m)</p>
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-2 p-3.5 rounded-xl bg-[#fbf5ef] border border-[#ecdacb] flex items-center justify-between gap-3">
+              <div>
+                <p className="text-xs font-bold text-slate-900 flex items-center gap-1.5">
+                  <ScanFace className="w-4 h-4 text-[#8d4a27]" />
+                  <span>Mandatory Student Facial Verification Scan</span>
+                </p>
+                <p className="text-[11px] text-slate-500 mt-0.5">
+                  Requires live camera face + liveness scan on every QR/code check-in to stop proxy attendance.
+                </p>
+              </div>
+              <input
+                type="checkbox"
+                checked={settings.requireFacialVerification !== false}
+                onChange={(e) =>
+                  setSettings({ ...settings, requireFacialVerification: e.target.checked })
+                }
+                className="w-5 h-5 accent-[#8d4a27] rounded cursor-pointer shrink-0"
+              />
+            </div>
+
+            <div className="sm:col-span-2 lg:col-span-2">
+              <label className="block text-xs font-bold text-slate-700 mb-1">
+                Biometric Facial Match Strictness
+              </label>
+              <select
+                value={String(settings.facialMatchThreshold ?? 0.50)}
+                onChange={(e) =>
+                  setSettings({ ...settings, facialMatchThreshold: Number(e.target.value) })
+                }
+                className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-semibold focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-hidden transition"
+              >
+                <option value="0.44">High Strictness (0.44 — Maximum Anti-Lookalike)</option>
+                <option value="0.5">Standard Strictness (0.50 — Recommended)</option>
+                <option value="0.56">Balanced Tolerance (0.56 — Low-Light Halls)</option>
+              </select>
+              <p className="text-xs text-slate-400 mt-1">
+                Euclidean 128-D distance threshold for facial verification
+              </p>
             </div>
 
             <div className="sm:col-span-2 lg:col-span-4 flex justify-end pt-2">

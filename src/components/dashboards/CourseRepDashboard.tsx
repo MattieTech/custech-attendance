@@ -4,7 +4,8 @@ import React from 'react';
 import { custechDb } from '@/lib/db/repository';
 import { UserProfile } from '@/types';
 import { KioskTerminal } from '../attendance/KioskTerminal';
-import { Users, PhoneOff, Calendar, ShieldCheck, CheckCircle2, Search, UserCheck } from 'lucide-react';
+import { getDatabaseSnapshotAction } from '@/actions/academic';
+import { PhoneOff, ShieldCheck, CheckCircle2, Search, UserCheck } from 'lucide-react';
 
 interface CourseRepDashboardProps {
   user: UserProfile;
@@ -17,8 +18,24 @@ export const CourseRepDashboard: React.FC<CourseRepDashboardProps> = ({ user }) 
   const [searchQuery, setSearchQuery] = React.useState('');
   const [assistTargetMatric, setAssistTargetMatric] = React.useState<string | undefined>(undefined);
 
-  const activeSession = custechDb.getSessionById('sess-today-csc');
-  const enrolledStudents = custechDb.getEnrolledStudentsForOffering('offering-csc201');
+  const syncFromServer = React.useCallback(async () => {
+    try {
+      const snapshot = await getDatabaseSnapshotAction();
+      if (snapshot) {
+        custechDb.syncClientSnapshot(snapshot);
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    } catch {
+      // Offline fallback uses local custechDb
+    }
+  }, []);
+
+  void refreshTrigger;
+  const activeSession =
+    custechDb.getSessions().find((s) => s.status === 'ACTIVE') ||
+    custechDb.getSessionById('sess-today-csc');
+  const activeOfferingId = activeSession?.courseOfferingId || 'offering-csc201';
+  const enrolledStudents = custechDb.getEnrolledStudentsForOffering(activeOfferingId);
   const records = activeSession ? custechDb.getRecordsForSession(activeSession.id) : [];
 
   const filteredStudents = enrolledStudents.filter((st) => {

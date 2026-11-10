@@ -401,6 +401,7 @@ export interface DeviceCollisionAlert {
   browser?: string;
   os?: string;
   attemptCount: number;
+  alertType?: 'DEVICE_COLLISION' | 'BIOMETRIC_PROXY_ATTEMPT' | 'BIOMETRIC_MISMATCH';
   riskLevel?: 'LOW' | 'MEDIUM' | 'HIGH';
   riskReason?: string;
   isReviewed: boolean;
@@ -450,5 +451,36 @@ export interface ExamDocket {
   courses: ExamDocketCourse[];
   overallEligible: boolean;
   verificationToken: string; // Cryptographic verification string
+}
+
+// Student Facial Biometric Enrollment Profile
+export interface BiometricFaceProfile {
+  id: string;
+  studentId: string;
+  matricNumber: string;
+  descriptor: number[]; // 128-dimensional face embedding
+  sampleCount: number;
+  enrolledAt: string;
+  enrolledBy: string; // profileId
+  isLocked: boolean;
+  thumbnailDataUrl?: string;
+}
+
+// Live Facial Verification Payload submitted during attendance marking
+export interface FaceVerificationSubmission {
+  descriptor: number[]; // 128-dimensional live embedding
+  livenessPassed: boolean;
+  livenessChallenge: 'BLINK' | 'HEAD_TURN' | 'MULTI_FRAME_MOTION';
+  blinkDetected?: boolean;
+  motionScore?: number;
+  capturedAt: string;
+}
+
+export interface SessionLiveDescriptor {
+  sessionId: string;
+  studentId: string;
+  matricNumber: string;
+  descriptor: number[];
+  recordedAt: string;
 }
 

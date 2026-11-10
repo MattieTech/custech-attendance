@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { custechDb } from '@/lib/db/repository';
-import { Course, Department, UserProfile } from '@/types';
+import { Course, Department, Faculty, UserProfile } from '@/types';
 import {
   createCourseAction,
   updateCourseAction,
@@ -10,6 +10,11 @@ import {
   deleteCourseAction,
   bulkImportCoursesAction,
   getCoursesDetailedAction,
+  getFacultiesAndDepartmentsAction,
+  getLecturersAction,
+  getCourseOfferingsAction,
+  assignLecturerToCourseAction,
+  ensureDepartmentAction,
 } from '@/actions/academic';
 import {
   Plus,
@@ -38,11 +43,13 @@ interface CourseManagementTabProps {
 export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorId, adminUserId }) => {
   const effectiveActorId = actorId || adminUserId || 'admin';
   const [courses, setCourses] = React.useState(custechDb.getCoursesWithDetails());
-  const departments = custechDb.getDepartments();
-  const lecturers = custechDb.getLecturers();
+  const [faculties, setFaculties] = React.useState<Faculty[]>(custechDb.getFaculties());
+  const [departments, setDepartments] = React.useState<Department[]>(custechDb.getDepartments());
+  const [lecturers, setLecturers] = React.useState<any[]>(custechDb.getLecturers());
 
   // Filters
   const [searchQuery, setSearchQuery] = React.useState('');
+  const [selectedFaculty, setSelectedFaculty] = React.useState('ALL');
   const [selectedDept, setSelectedDept] = React.useState('ALL');
   const [selectedLevel, setSelectedLevel] = React.useState('ALL');
   const [selectedStatus, setSelectedStatus] = React.useState<'ALL' | 'ACTIVE' | 'INACTIVE'>('ALL');
@@ -57,8 +64,11 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
   const [addTitle, setAddTitle] = React.useState('');
   const [addUnits, setAddUnits] = React.useState<number>(2);
   const [addDeptId, setAddDeptId] = React.useState(departments[0]?.id || 'dept-csc');
+  const [useCustomAddDept, setUseCustomAddDept] = React.useState(false);
+  const [addCustomDeptName, setAddCustomDeptName] = React.useState('');
+  const [addCustomFacultyId, setAddCustomFacultyId] = React.useState(faculties[0]?.id || 'fac-comp');
   const [addLevel, setAddLevel] = React.useState<100 | 200 | 300 | 400 | 500>(100);
-  const [addLecturerId, setAddLecturerId] = React.useState(lecturers[0]?.id || 'user-lec-csc1');
+  const [addLecturerId, setAddLecturerId] = React.useState(lecturers[0]?.id || 'user-lecturer-1');
   const [addDescription, setAddDescription] = React.useState('');
   const [formError, setFormError] = React.useState<string | null>(null);
   const [formSuccess, setFormSuccess] = React.useState<string | null>(null);
@@ -79,19 +89,37 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
   const [bulkErrors, setBulkErrors] = React.useState<string[]>([]);
   const [bulkResult, setBulkResult] = React.useState<any | null>(null);
 
-  const refreshCourses = () => {
-    setCourses(custechDb.getCoursesWithDetails());
+  const refreshCourses = async () => {
+    try {
+      const [latestCourses, facDept, latestLecturers] = await Promise.all([
+        getCoursesDetailedAction(),
+        getFacultiesAndDepartmentsAction(),
+        getLecturersAction(),
+      ]);
+      setCourses(latestCourses);
+      setFaculties(facDept.faculties);
+      setDepartments(facDept.departments);
+      setLecturers(latestLecturers);
+    } catch {
+      setCourses(custechDb.getCoursesWithDetails());
+    }
   };
 
+  React.useEffect(() => {
+    refreshCourses();
+  }, []);
+
   // Filter courses
-  const filteredCourses = courses.filter((c) => {
+  const filteredCourses = courses.filter((c: any) => {
     const q = searchQuery.toLowerCase().trim();
     const matchesSearch =
       !q ||
       c.code.toLowerCase().includes(q) ||
       c.title.toLowerCase().includes(q) ||
-      c.departmentName?.toLowerCase().includes(q);
+      c.departmentName?.toLowerCase().includes(q) ||
+      c.facultyName?.toLowerCase().includes(q);
 
+    const matchesFaculty = selectedFaculty === 'ALL' || c.facultyId === selectedFaculty;
     const matchesDept = selectedDept === 'ALL' || c.departmentId === selectedDept;
     const matchesLevel = selectedLevel === 'ALL' || c.level.toString() === selectedLevel;
     const matchesStatus =
@@ -99,8 +127,23 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
       (selectedStatus === 'ACTIVE' && c.isActive !== false) ||
       (selectedStatus === 'INACTIVE' && c.isActive === false);
 
-    return matchesSearch && matchesDept && matchesLevel && matchesStatus;
+    return matchesSearch && matchesFaculty && matchesDept && matchesLevel && matchesStatus;
   });
+
+  const renderGroupedDepartmentOptions = () =>
+    faculties.map((fac) => {
+      const facDepts = departments.filter((d) => d.facultyId === fac.id);
+      if (facDepts.length === 0) return null;
+      return (
+        <optgroup key={fac.id} label={`${fac.name} (${fac.code})`}>
+          {facDepts.map((d) => (
+            <option key={d.id} value={d.id}>
+              {d.name} ({d.code})
+            </option>
+          ))}
+        </optgroup>
+      );
+    });
 
   // Handle Add Course
   const handleAddCourse = async (e: React.FormEvent) => {
@@ -109,12 +152,26 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
     setIsSubmitting(true);
 
     try {
+      let targetDeptId = addDeptId;
+      if (useCustomAddDept && addCustomDeptName.trim()) {
+        const deptRes = await ensureDepartmentAction({
+          name: addCustomDeptName.trim(),
+          facultyId: addCustomFacultyId,
+        });
+        if (!deptRes.success || !deptRes.department) {
+          setFormError(deptRes.error || 'Failed to create custom department.');
+          setIsSubmitting(false);
+          return;
+        }
+        targetDeptId = deptRes.department.id;
+      }
+
       const res = await createCourseAction(
         {
           code: addCode.trim().toUpperCase(),
           title: addTitle.trim(),
           creditUnits: Number(addUnits),
-          departmentId: addDeptId,
+          departmentId: targetDeptId,
           level: addLevel,
           description: addDescription.trim(),
         },
@@ -123,16 +180,19 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({ actorI
 
       if (res.success && res.course) {
         if (addLecturerId) {
-          const off = custechDb.getCourseOfferings().find((o) => o.courseId === res.course!.id);
+          const serverOfferings = await getCourseOfferingsAction();
+          const off = serverOfferings.find((o: any) => o.courseId === res.course!.id);
           if (off) {
-            custechDb.assignLecturerToCourseOffering(off.id, addLecturerId, effectiveActorId);
+            await assignLecturerToCourseAction(off.id, addLecturerId, effectiveActorId);
           }
         }
-        refreshCourses();
+        await refreshCourses();
         setIsAddModalOpen(false);
         setAddCode('');
         setAddTitle('');
         setAddDescription('');
+        setUseCustomAddDept(false);
+        setAddCustomDeptName('');
         setFormSuccess(`Course ${res.course.code} successfully registered in catalogue.`);
         setTimeout(() => setFormSuccess(null), 3500);
       } else {

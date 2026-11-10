@@ -32,8 +32,8 @@ export const DEMO_PIN_HASH = '$2b$10$mocXvAT3LHjIoWCl6CVMEOmZkKdgtNSysQ9Ap88ah2M
 export const initialFaculties: Faculty[] = [
   {
     id: 'fac-comp',
-    code: 'FCMS',
-    name: 'Faculty of Computing and Mathematical Sciences',
+    code: 'FCI',
+    name: 'Faculty of Computing and Informatics',
     deanId: 'user-dean',
   },
   {
@@ -46,45 +46,194 @@ export const initialFaculties: Faculty[] = [
     code: 'FSCI',
     name: 'Faculty of Science',
   },
+  {
+    id: 'fac-med',
+    code: 'FBMHS',
+    name: 'Faculty of Basic Medical and Health Sciences',
+  },
+  {
+    id: 'fac-env',
+    code: 'FENV',
+    name: 'Faculty of Environmental Science',
+  },
+  {
+    id: 'fac-mgt',
+    code: 'FMGS',
+    name: 'Faculty of Management Science',
+  },
+  {
+    id: 'fac-agr',
+    code: 'FAGR',
+    name: 'Faculty of Agriculture',
+  },
+  {
+    id: 'fac-law',
+    code: 'FLAW',
+    name: 'Faculty of Law',
+  },
+  {
+    id: 'fac-edu',
+    code: 'FSTE',
+    name: 'Faculty of Science and Technology Education',
+  },
 ];
 
 export const initialDepartments: Department[] = [
-  {
-    id: 'dept-csc',
-    facultyId: 'fac-comp',
-    code: 'CSC',
-    name: 'Computer Science',
-    hodId: 'user-hod',
-  },
-  {
-    id: 'dept-sen',
-    facultyId: 'fac-comp',
-    code: 'SEN',
-    name: 'Software Engineering',
-  },
-  {
-    id: 'dept-cys',
-    facultyId: 'fac-comp',
-    code: 'CYS',
-    name: 'Cybersecurity',
-  },
+  // 1. Faculty of Computing and Informatics (fac-comp)
+  { id: 'dept-csc', facultyId: 'fac-comp', code: 'CSC', name: 'Computer Science', hodId: 'user-hod' },
+  { id: 'dept-sen', facultyId: 'fac-comp', code: 'SEN', name: 'Software Engineering' },
+  { id: 'dept-cys', facultyId: 'fac-comp', code: 'CYS', name: 'Cyber Security' },
+  { id: 'dept-ift', facultyId: 'fac-comp', code: 'IFT', name: 'Information Technology' },
+  { id: 'dept-dsc', facultyId: 'fac-comp', code: 'DSC', name: 'Data Science' },
+  { id: 'dept-air', facultyId: 'fac-comp', code: 'AIR', name: 'Artificial Intelligence and Robotics' },
+
+  // 2. Faculty of Engineering (fac-eng)
+  { id: 'dept-age', facultyId: 'fac-eng', code: 'AGE', name: 'Agricultural Engineering' },
+  { id: 'dept-che', facultyId: 'fac-eng', code: 'CHE', name: 'Chemical Engineering' },
+  { id: 'dept-civil-engineering', facultyId: 'fac-eng', code: 'CVE', name: 'Civil Engineering' },
+  { id: 'dept-cpe', facultyId: 'fac-eng', code: 'CPE', name: 'Computer Engineering' },
+  { id: 'dept-eee', facultyId: 'fac-eng', code: 'EEE', name: 'Electrical/Electronics Engineering' },
+  { id: 'dept-mechanical-engineering', facultyId: 'fac-eng', code: 'MEE', name: 'Mechanical Engineering' },
+  { id: 'dept-mct', facultyId: 'fac-eng', code: 'MCT', name: 'Mechatronics Engineering' },
+  { id: 'dept-mme', facultyId: 'fac-eng', code: 'MME', name: 'Metallurgical and Materials Engineering' },
+  { id: 'dept-mne', facultyId: 'fac-eng', code: 'MNE', name: 'Mining Engineering' },
+  { id: 'dept-pge', facultyId: 'fac-eng', code: 'PGE', name: 'Petroleum and Gas Engineering' },
+  { id: 'dept-mre', facultyId: 'fac-eng', code: 'MRE', name: 'Marine Engineering' },
+
+  // 3. Faculty of Science (fac-sci)
+  { id: 'dept-bch', facultyId: 'fac-sci', code: 'BCH', name: 'Biochemistry' },
+  { id: 'dept-bio', facultyId: 'fac-sci', code: 'BIO', name: 'Biology' },
+  { id: 'dept-btc', facultyId: 'fac-sci', code: 'BTC', name: 'Biotechnology' },
+  { id: 'dept-chm', facultyId: 'fac-sci', code: 'CHM', name: 'Chemistry' },
+  { id: 'dept-gly', facultyId: 'fac-sci', code: 'GLY', name: 'Geology' },
+  { id: 'dept-gph', facultyId: 'fac-sci', code: 'GPH', name: 'Applied Geophysics' },
+  { id: 'dept-mth', facultyId: 'fac-sci', code: 'MTH', name: 'Mathematics' },
+  { id: 'dept-mcb', facultyId: 'fac-sci', code: 'MCB', name: 'Microbiology' },
+  { id: 'dept-phy', facultyId: 'fac-sci', code: 'PHY', name: 'Physics' },
+  { id: 'dept-sta', facultyId: 'fac-sci', code: 'STA', name: 'Statistics' },
+
+  // 4. Faculty of Basic Medical and Health Sciences (fac-med)
+  { id: 'dept-ana', facultyId: 'fac-med', code: 'ANA', name: 'Anatomy' },
+  { id: 'dept-phs', facultyId: 'fac-med', code: 'PHS', name: 'Physiology' },
+  { id: 'dept-mbs', facultyId: 'fac-med', code: 'MBS', name: 'Medicine and Surgery' },
+  { id: 'dept-nsc', facultyId: 'fac-med', code: 'NSC', name: 'Nursing Science' },
+  { id: 'dept-mls', facultyId: 'fac-med', code: 'MLS', name: 'Medical Laboratory Science' },
+  { id: 'dept-rad', facultyId: 'fac-med', code: 'RAD', name: 'Radiography' },
+  { id: 'dept-pht', facultyId: 'fac-med', code: 'PHT', name: 'Physiotherapy' },
+
+  // 5. Faculty of Environmental Science (fac-env)
+  { id: 'dept-arc', facultyId: 'fac-env', code: 'ARC', name: 'Architecture' },
+  { id: 'dept-bld', facultyId: 'fac-env', code: 'BLD', name: 'Building' },
+  { id: 'dept-svg', facultyId: 'fac-env', code: 'SVG', name: 'Surveying and Geo-Informatics' },
+  { id: 'dept-urp', facultyId: 'fac-env', code: 'URP', name: 'Urban and Regional Planning' },
+  { id: 'dept-qsv', facultyId: 'fac-env', code: 'QSV', name: 'Quantity Surveying' },
+  { id: 'dept-est', facultyId: 'fac-env', code: 'EST', name: 'Estate Management' },
+
+  // 6. Faculty of Management Science (fac-mgt)
+  { id: 'dept-acc', facultyId: 'fac-mgt', code: 'ACC', name: 'Accounting' },
+  { id: 'dept-act', facultyId: 'fac-mgt', code: 'ACT', name: 'Actuarial Science' },
+  { id: 'dept-bus', facultyId: 'fac-mgt', code: 'BUS', name: 'Business Administration' },
+  { id: 'dept-ecn', facultyId: 'fac-mgt', code: 'ECN', name: 'Economics' },
+  { id: 'dept-hrm', facultyId: 'fac-mgt', code: 'HRM', name: 'Human Resources Management' },
+  { id: 'dept-tlm', facultyId: 'fac-mgt', code: 'TLM', name: 'Transport and Logistics Management' },
+
+  // 7. Faculty of Agriculture (fac-agr)
+  { id: 'dept-agr', facultyId: 'fac-agr', code: 'AGR', name: 'Agriculture' },
+  { id: 'dept-aee', facultyId: 'fac-agr', code: 'AEE', name: 'Agricultural Economics and Extension' },
+  { id: 'dept-faq', facultyId: 'fac-agr', code: 'FAQ', name: 'Fisheries and Aquaculture' },
+  { id: 'dept-fwl', facultyId: 'fac-agr', code: 'FWL', name: 'Forestry and Wildlife' },
+
+  // 8. Faculty of Law (fac-law)
+  { id: 'dept-cil', facultyId: 'fac-law', code: 'CIL', name: 'Common and Islamic Law' },
+  { id: 'dept-ppl', facultyId: 'fac-law', code: 'PPL', name: 'Private and Property Law' },
+  { id: 'dept-pil', facultyId: 'fac-law', code: 'PIL', name: 'Public and International Law' },
+
+  // 9. Faculty of Science and Technology Education (fac-edu)
+  { id: 'dept-lis', facultyId: 'fac-edu', code: 'LIS', name: 'Library and Information Science' },
+  { id: 'dept-edb', facultyId: 'fac-edu', code: 'EDB', name: 'Education and Biology' },
+  { id: 'dept-edc', facultyId: 'fac-edu', code: 'EDC', name: 'Education and Chemistry' },
+  { id: 'dept-edcs', facultyId: 'fac-edu', code: 'EDCS', name: 'Education and Computer Science' },
+  { id: 'dept-edg', facultyId: 'fac-edu', code: 'EDG', name: 'Education and Geography' },
+  { id: 'dept-edm', facultyId: 'fac-edu', code: 'EDM', name: 'Education and Mathematics' },
+  { id: 'dept-edp', facultyId: 'fac-edu', code: 'EDP', name: 'Education and Physics' },
+  { id: 'dept-bte', facultyId: 'fac-edu', code: 'BTE', name: 'Building Technology Education' },
+  { id: 'dept-ete', facultyId: 'fac-edu', code: 'ETE', name: 'Electrical/Electronics Technology Education' },
+  { id: 'dept-mte', facultyId: 'fac-edu', code: 'MTE', name: 'Mechanical Technology Education' },
 ];
 
 export const initialPrograms: Program[] = [
-  {
-    id: 'prog-csc',
-    departmentId: 'dept-csc',
-    code: 'B.Sc. CSC',
-    name: 'Computer Science',
-    durationYears: 4,
-  },
-  {
-    id: 'prog-sen',
-    departmentId: 'dept-sen',
-    code: 'B.Eng. SEN',
-    name: 'Software Engineering',
-    durationYears: 5,
-  },
+  // Computing & Informatics
+  { id: 'prog-csc', departmentId: 'dept-csc', code: 'B.Sc. CSC', name: 'Computer Science', durationYears: 4 },
+  { id: 'prog-sen', departmentId: 'dept-sen', code: 'B.Sc. SEN', name: 'Software Engineering', durationYears: 4 },
+  { id: 'prog-cys', departmentId: 'dept-cys', code: 'B.Sc. CYS', name: 'Cyber Security', durationYears: 4 },
+  { id: 'prog-ift', departmentId: 'dept-ift', code: 'B.Sc. IFT', name: 'Information Technology', durationYears: 4 },
+  { id: 'prog-dsc', departmentId: 'dept-dsc', code: 'B.Sc. DSC', name: 'Data Science', durationYears: 4 },
+  { id: 'prog-air', departmentId: 'dept-air', code: 'B.Sc. AIR', name: 'Artificial Intelligence and Robotics', durationYears: 4 },
+  // Engineering
+  { id: 'prog-age', departmentId: 'dept-age', code: 'B.Eng. AGE', name: 'Agricultural Engineering', durationYears: 5 },
+  { id: 'prog-che', departmentId: 'dept-che', code: 'B.Eng. CHE', name: 'Chemical Engineering', durationYears: 5 },
+  { id: 'prog-cve', departmentId: 'dept-civil-engineering', code: 'B.Eng. CVE', name: 'Civil Engineering', durationYears: 5 },
+  { id: 'prog-cpe', departmentId: 'dept-cpe', code: 'B.Eng. CPE', name: 'Computer Engineering', durationYears: 5 },
+  { id: 'prog-eee', departmentId: 'dept-eee', code: 'B.Eng. EEE', name: 'Electrical/Electronics Engineering', durationYears: 5 },
+  { id: 'prog-mee', departmentId: 'dept-mechanical-engineering', code: 'B.Eng. MEE', name: 'Mechanical Engineering', durationYears: 5 },
+  { id: 'prog-mct', departmentId: 'dept-mct', code: 'B.Eng. MCT', name: 'Mechatronics Engineering', durationYears: 5 },
+  { id: 'prog-mme', departmentId: 'dept-mme', code: 'B.Eng. MME', name: 'Metallurgical and Materials Engineering', durationYears: 5 },
+  { id: 'prog-mne', departmentId: 'dept-mne', code: 'B.Eng. MNE', name: 'Mining Engineering', durationYears: 5 },
+  { id: 'prog-pge', departmentId: 'dept-pge', code: 'B.Eng. PGE', name: 'Petroleum and Gas Engineering', durationYears: 5 },
+  { id: 'prog-mre', departmentId: 'dept-mre', code: 'B.Eng. MRE', name: 'Marine Engineering', durationYears: 5 },
+  // Science
+  { id: 'prog-bch', departmentId: 'dept-bch', code: 'B.Sc. BCH', name: 'Biochemistry', durationYears: 4 },
+  { id: 'prog-bio', departmentId: 'dept-bio', code: 'B.Sc. BIO', name: 'Biology', durationYears: 4 },
+  { id: 'prog-btc', departmentId: 'dept-btc', code: 'B.Sc. BTC', name: 'Biotechnology', durationYears: 4 },
+  { id: 'prog-chm', departmentId: 'dept-chm', code: 'B.Sc. CHM', name: 'Chemistry', durationYears: 4 },
+  { id: 'prog-gly', departmentId: 'dept-gly', code: 'B.Sc. GLY', name: 'Geology', durationYears: 4 },
+  { id: 'prog-gph', departmentId: 'dept-gph', code: 'B.Sc. GPH', name: 'Applied Geophysics', durationYears: 4 },
+  { id: 'prog-mth', departmentId: 'dept-mth', code: 'B.Sc. MTH', name: 'Mathematics', durationYears: 4 },
+  { id: 'prog-mcb', departmentId: 'dept-mcb', code: 'B.Sc. MCB', name: 'Microbiology', durationYears: 4 },
+  { id: 'prog-phy', departmentId: 'dept-phy', code: 'B.Sc. PHY', name: 'Physics', durationYears: 4 },
+  { id: 'prog-sta', departmentId: 'dept-sta', code: 'B.Sc. STA', name: 'Statistics', durationYears: 4 },
+  // Basic Medical & Health Sciences
+  { id: 'prog-ana', departmentId: 'dept-ana', code: 'B.Sc. ANA', name: 'Anatomy', durationYears: 4 },
+  { id: 'prog-phs', departmentId: 'dept-phs', code: 'B.Sc. PHS', name: 'Physiology', durationYears: 4 },
+  { id: 'prog-mbs', departmentId: 'dept-mbs', code: 'MBBS', name: 'Medicine and Surgery', durationYears: 6 },
+  { id: 'prog-nsc', departmentId: 'dept-nsc', code: 'B.NSc. NSC', name: 'Nursing Science', durationYears: 5 },
+  { id: 'prog-mls', departmentId: 'dept-mls', code: 'B.MLS', name: 'Medical Laboratory Science', durationYears: 5 },
+  { id: 'prog-rad', departmentId: 'dept-rad', code: 'B.Rad.', name: 'Radiography', durationYears: 5 },
+  { id: 'prog-pht', departmentId: 'dept-pht', code: 'DPT', name: 'Doctor of Physiotherapy', durationYears: 6 },
+  // Environmental Science
+  { id: 'prog-arc', departmentId: 'dept-arc', code: 'B.Sc. ARC', name: 'Architecture', durationYears: 4 },
+  { id: 'prog-bld', departmentId: 'dept-bld', code: 'B.Sc. BLD', name: 'Building', durationYears: 5 },
+  { id: 'prog-svg', departmentId: 'dept-svg', code: 'B.Sc. SVG', name: 'Surveying and Geo-Informatics', durationYears: 5 },
+  { id: 'prog-urp', departmentId: 'dept-urp', code: 'B.Sc. URP', name: 'Urban and Regional Planning', durationYears: 5 },
+  { id: 'prog-qsv', departmentId: 'dept-qsv', code: 'B.Sc. QSV', name: 'Quantity Surveying', durationYears: 5 },
+  { id: 'prog-est', departmentId: 'dept-est', code: 'B.Sc. EST', name: 'Estate Management', durationYears: 5 },
+  // Management Science
+  { id: 'prog-acc', departmentId: 'dept-acc', code: 'B.Sc. ACC', name: 'Accounting', durationYears: 4 },
+  { id: 'prog-act', departmentId: 'dept-act', code: 'B.Sc. ACT', name: 'Actuarial Science', durationYears: 4 },
+  { id: 'prog-bus', departmentId: 'dept-bus', code: 'B.Sc. BUS', name: 'Business Administration', durationYears: 4 },
+  { id: 'prog-ecn', departmentId: 'dept-ecn', code: 'B.Sc. ECN', name: 'Economics', durationYears: 4 },
+  { id: 'prog-hrm', departmentId: 'dept-hrm', code: 'B.Sc. HRM', name: 'Human Resources Management', durationYears: 4 },
+  { id: 'prog-tlm', departmentId: 'dept-tlm', code: 'B.Sc. TLM', name: 'Transport and Logistics Management', durationYears: 4 },
+  // Agriculture
+  { id: 'prog-agr', departmentId: 'dept-agr', code: 'B.Agric.', name: 'Agriculture', durationYears: 5 },
+  { id: 'prog-aee', departmentId: 'dept-aee', code: 'B.Agric. AEE', name: 'Agricultural Economics and Extension', durationYears: 5 },
+  { id: 'prog-faq', departmentId: 'dept-faq', code: 'B.Sc. FAQ', name: 'Fisheries and Aquaculture', durationYears: 5 },
+  { id: 'prog-fwl', departmentId: 'dept-fwl', code: 'B.Sc. FWL', name: 'Forestry and Wildlife', durationYears: 5 },
+  // Law
+  { id: 'prog-cil', departmentId: 'dept-cil', code: 'LL.B. CIL', name: 'Common and Islamic Law', durationYears: 5 },
+  { id: 'prog-ppl', departmentId: 'dept-ppl', code: 'LL.B. PPL', name: 'Private and Property Law', durationYears: 5 },
+  { id: 'prog-pil', departmentId: 'dept-pil', code: 'LL.B. PIL', name: 'Public and International Law', durationYears: 5 },
+  // Science & Technology Education
+  { id: 'prog-lis', departmentId: 'dept-lis', code: 'B.LIS', name: 'Library and Information Science', durationYears: 4 },
+  { id: 'prog-edb', departmentId: 'dept-edb', code: 'B.Sc.(Ed) BIO', name: 'Education and Biology', durationYears: 4 },
+  { id: 'prog-edc', departmentId: 'dept-edc', code: 'B.Sc.(Ed) CHM', name: 'Education and Chemistry', durationYears: 4 },
+  { id: 'prog-edcs', departmentId: 'dept-edcs', code: 'B.Sc.(Ed) CSC', name: 'Education and Computer Science', durationYears: 4 },
+  { id: 'prog-edg', departmentId: 'dept-edg', code: 'B.Sc.(Ed) GEO', name: 'Education and Geography', durationYears: 4 },
+  { id: 'prog-edm', departmentId: 'dept-edm', code: 'B.Sc.(Ed) MTH', name: 'Education and Mathematics', durationYears: 4 },
+  { id: 'prog-edp', departmentId: 'dept-edp', code: 'B.Sc.(Ed) PHY', name: 'Education and Physics', durationYears: 4 },
+  { id: 'prog-bte', departmentId: 'dept-bte', code: 'B.Tech.(Ed) BLD', name: 'Building Technology Education', durationYears: 4 },
+  { id: 'prog-ete', departmentId: 'dept-ete', code: 'B.Tech.(Ed) EEE', name: 'Electrical/Electronics Technology Education', durationYears: 4 },
+  { id: 'prog-mte', departmentId: 'dept-mte', code: 'B.Tech.(Ed) MEE', name: 'Mechanical Technology Education', durationYears: 4 },
 ];
 
 export const initialAcademicSessions: AcademicSession[] = [
@@ -416,59 +565,90 @@ export const initialClassrooms: Classroom[] = [
 ];
 
 export const initialCourses: Course[] = [
-  {
-    id: 'course-csc201',
-    departmentId: 'dept-csc',
-    code: 'CSC 201',
-    title: 'Data Structures and Algorithms',
-    creditUnits: 3,
-    level: 200,
-  },
-  {
-    id: 'course-sen201',
-    departmentId: 'dept-sen',
-    code: 'SEN 201',
-    title: 'Software Engineering Fundamentals',
-    creditUnits: 2,
-    level: 200,
-  },
-  {
-    id: 'course-mth201',
-    departmentId: 'dept-csc',
-    code: 'MTH 201',
-    title: 'Mathematical Methods I',
-    creditUnits: 3,
-    level: 200,
-  },
-  {
-    id: 'course-phy201',
-    departmentId: 'dept-csc',
-    code: 'PHY 201',
-    title: 'General Physics for Engineers',
-    creditUnits: 2,
-    level: 200,
-  },
+  // Existing Core Courses
+  { id: 'course-csc201', departmentId: 'dept-csc', code: 'CSC 201', title: 'Data Structures and Algorithms', creditUnits: 3, level: 200 },
+  { id: 'course-sen201', departmentId: 'dept-sen', code: 'SEN 201', title: 'Software Engineering Fundamentals', creditUnits: 2, level: 200 },
+  { id: 'course-mth201', departmentId: 'dept-mth', code: 'MTH 201', title: 'Mathematical Methods I', creditUnits: 3, level: 200 },
+  { id: 'course-phy201', departmentId: 'dept-phy', code: 'PHY 201', title: 'General Physics for Engineers', creditUnits: 2, level: 200 },
+
+  // Faculty of Computing and Informatics
+  { id: 'course-csc101', departmentId: 'dept-csc', code: 'CSC 101', title: 'Introduction to Computing Sciences', creditUnits: 3, level: 100 },
+  { id: 'course-csc301', departmentId: 'dept-csc', code: 'CSC 301', title: 'Structured Programming & Compiler Design', creditUnits: 3, level: 300 },
+  { id: 'course-cys201', departmentId: 'dept-cys', code: 'CYB 201', title: 'Introduction to Cyber Security', creditUnits: 2, level: 200 },
+  { id: 'course-ift201', departmentId: 'dept-ift', code: 'IFT 201', title: 'Database Systems & Cloud Infrastructure', creditUnits: 3, level: 200 },
+
+  // Faculty of Engineering
+  { id: 'course-get101', departmentId: 'dept-civil-engineering', code: 'GET 101', title: 'Engineering Drawing & Graphics', creditUnits: 2, level: 100 },
+  { id: 'course-cve201', departmentId: 'dept-civil-engineering', code: 'CVE 201', title: 'Strength of Materials I', creditUnits: 3, level: 200 },
+  { id: 'course-mee201', departmentId: 'dept-mechanical-engineering', code: 'MEE 201', title: 'Applied Thermodynamics & Fluid Mechanics', creditUnits: 3, level: 200 },
+  { id: 'course-eee201', departmentId: 'dept-eee', code: 'EEE 201', title: 'Applied Electricity & Circuit Theory', creditUnits: 3, level: 200 },
+  { id: 'course-cpe201', departmentId: 'dept-cpe', code: 'CPE 201', title: 'Digital Logic Design', creditUnits: 3, level: 200 },
+
+  // Faculty of Science
+  { id: 'course-mth101', departmentId: 'dept-mth', code: 'MTH 101', title: 'Elementary Mathematics I (Algebra & Trigonometry)', creditUnits: 3, level: 100 },
+  { id: 'course-chm101', departmentId: 'dept-chm', code: 'CHM 101', title: 'General Chemistry I', creditUnits: 3, level: 100 },
+  { id: 'course-bio101', departmentId: 'dept-bio', code: 'BIO 101', title: 'General Biology I', creditUnits: 3, level: 100 },
+  { id: 'course-bch201', departmentId: 'dept-bch', code: 'BCH 201', title: 'General Biochemistry I', creditUnits: 3, level: 200 },
+  { id: 'course-mcb201', departmentId: 'dept-mcb', code: 'MCB 201', title: 'General Microbiology', creditUnits: 3, level: 200 },
+
+  // Faculty of Basic Medical & Health Sciences
+  { id: 'course-ana201', departmentId: 'dept-ana', code: 'ANA 201', title: 'Gross Anatomy of Upper & Lower Limbs', creditUnits: 3, level: 200 },
+  { id: 'course-phs201', departmentId: 'dept-phs', code: 'PHS 201', title: 'Introductory Human Physiology', creditUnits: 3, level: 200 },
+  { id: 'course-nsc201', departmentId: 'dept-nsc', code: 'NSC 201', title: 'Foundations of Nursing Science', creditUnits: 3, level: 200 },
+
+  // Faculty of Environmental Science
+  { id: 'course-arc101', departmentId: 'dept-arc', code: 'ARC 101', title: 'Architectural Graphics & Freehand Sketching', creditUnits: 3, level: 100 },
+  { id: 'course-bld201', departmentId: 'dept-bld', code: 'BLD 201', title: 'Building Construction & Materials', creditUnits: 3, level: 200 },
+
+  // Faculty of Management Science
+  { id: 'course-acc101', departmentId: 'dept-acc', code: 'ACC 101', title: 'Introduction to Financial Accounting', creditUnits: 3, level: 100 },
+  { id: 'course-bus101', departmentId: 'dept-bus', code: 'BUS 101', title: 'Introduction to Business Management', creditUnits: 2, level: 100 },
+  { id: 'course-ecn101', departmentId: 'dept-ecn', code: 'ECN 101', title: 'Principles of Economics I', creditUnits: 3, level: 100 },
+
+  // Faculty of Agriculture
+  { id: 'course-agr101', departmentId: 'dept-agr', code: 'AGR 101', title: 'Introduction to Agriculture & Food Production', creditUnits: 2, level: 100 },
+
+  // Faculty of Law
+  { id: 'course-law101', departmentId: 'dept-cil', code: 'LAW 101', title: 'Legal Methods I', creditUnits: 4, level: 100 },
+
+  // Faculty of Science & Technology Education
+  { id: 'course-edu101', departmentId: 'dept-edcs', code: 'EDU 101', title: 'Introduction to Teaching & Foundations of Education', creditUnits: 2, level: 100 },
+
+  // General Studies (University-wide)
+  { id: 'course-gst111', departmentId: 'dept-csc', code: 'GST 111', title: 'Communication in English & Use of Library', creditUnits: 2, level: 100 },
 ];
 
 export const initialCourseOfferings: CourseOffering[] = [
-  {
-    id: 'offering-csc201',
-    courseId: 'course-csc201',
-    semesterId: 'sem-2026-1',
-    primaryLecturerId: 'user-lecturer-1',
-  },
-  {
-    id: 'offering-sen201',
-    courseId: 'course-sen201',
-    semesterId: 'sem-2026-1',
-    primaryLecturerId: 'user-lecturer-2',
-  },
-  {
-    id: 'offering-mth201',
-    courseId: 'course-mth201',
-    semesterId: 'sem-2026-1',
-    primaryLecturerId: 'user-hod', // Dr. Adeleke (HOD) teaches MTH 201
-  },
+  { id: 'offering-csc201', courseId: 'course-csc201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-sen201', courseId: 'course-sen201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-mth201', courseId: 'course-mth201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-hod' },
+  { id: 'offering-phy201', courseId: 'course-phy201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-csc101', courseId: 'course-csc101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-csc301', courseId: 'course-csc301', semesterId: 'sem-2026-1', primaryLecturerId: 'user-hod' },
+  { id: 'offering-cys201', courseId: 'course-cys201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-ift201', courseId: 'course-ift201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-get101', courseId: 'course-get101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-cve201', courseId: 'course-cve201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-mee201', courseId: 'course-mee201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-eee201', courseId: 'course-eee201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-cpe201', courseId: 'course-cpe201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-mth101', courseId: 'course-mth101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-hod' },
+  { id: 'offering-chm101', courseId: 'course-chm101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-bio101', courseId: 'course-bio101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-bch201', courseId: 'course-bch201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-mcb201', courseId: 'course-mcb201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-ana201', courseId: 'course-ana201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-phs201', courseId: 'course-phs201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-nsc201', courseId: 'course-nsc201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-arc101', courseId: 'course-arc101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-bld201', courseId: 'course-bld201', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-acc101', courseId: 'course-acc101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-bus101', courseId: 'course-bus101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-ecn101', courseId: 'course-ecn101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-agr101', courseId: 'course-agr101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-law101', courseId: 'course-law101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-2' },
+  { id: 'offering-edu101', courseId: 'course-edu101', semesterId: 'sem-2026-1', primaryLecturerId: 'user-lecturer-1' },
+  { id: 'offering-gst111', courseId: 'course-gst111', semesterId: 'sem-2026-1', primaryLecturerId: 'user-dean' },
 ];
 
 export const initialTimetable: TimetableEntry[] = [
@@ -771,6 +951,8 @@ export const initialSystemSettings: SystemSettings = {
   staffWorkStartTime: '08:00',
   staffWorkEndTime: '16:00',
   staffLateGraceMinutes: 15,
+  requireFacialVerification: true,
+  facialMatchThreshold: 0.50,
 };
 
 export const initialAuditLogs: AuditLog[] = [

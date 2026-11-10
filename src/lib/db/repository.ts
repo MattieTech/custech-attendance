@@ -25,6 +25,9 @@ import {
   AppNotification,
   ExamDocket,
   ExamDocketCourse,
+  BiometricFaceProfile,
+  FaceVerificationSubmission,
+  SessionLiveDescriptor,
 } from '@/types';
 import {
   initialProfiles,
@@ -54,6 +57,13 @@ import {
   initialNotifications,
 } from './initial-data';
 import { generateTemporaryCode, verifyAttendancePin } from '../crypto';
+import {
+  computeEuclideanDistance,
+  distanceToConfidencePercent,
+  isValidFaceDescriptor,
+  DEFAULT_FACIAL_MATCH_THRESHOLD,
+  DUPLICATE_FACE_COLLISION_THRESHOLD,
+} from '../biometrics';
 import bcrypt from 'bcryptjs';
 
 class CustechDatabase {
@@ -82,6 +92,8 @@ class CustechDatabase {
   private medicalWaivers = [...initialMedicalWaivers];
   private deviceCollisionAlerts = [...initialDeviceCollisionAlerts];
   private notifications = [...initialNotifications];
+  private faceProfiles: BiometricFaceProfile[] = [];
+  private sessionLiveDescriptors: SessionLiveDescriptor[] = [];
 
   constructor() {
     this.loadPersistentData();
@@ -101,76 +113,137 @@ class CustechDatabase {
     }
   }
 
+  private applyPersistedPayload(parsed: Record<string, unknown>): void {
+    const mergeById = <T extends { id: string }>(target: T[], items: unknown, prepend = false) => {
+      if (!Array.isArray(items)) return;
+      (items as T[]).forEach((item) => {
+        const idx = target.findIndex((existing) => existing.id === item.id);
+        if (idx >= 0) target[idx] = item;
+        else if (prepend) target.unshift(item);
+        else target.push(item);
+      });
+    };
+
+    if (Array.isArray(parsed.profiles)) this.profiles = parsed.profiles as UserProfile[];
+    else mergeById(this.profiles, parsed.customProfiles, true);
+
+    if (Array.isArray(parsed.students)) this.students = parsed.students as Student[];
+    else mergeById(this.students, parsed.customStudents, true);
+
+    if (Array.isArray(parsed.enrollments)) this.enrollments = parsed.enrollments as Enrollment[];
+    else mergeById(this.enrollments, parsed.customEnrollments);
+
+    const mergeOfficialCatalog = <T extends { id: string }>(official: T[], persisted: unknown) => {
+      if (!Array.isArray(persisted)) return;
+      (persisted as T[]).forEach((item) => {
+        const idx = official.findIndex((o) => o.id === item.id);
+        if (idx >= 0) {
+          // Keep official initial structure intact unless adding custom properties
+          official[idx] = { ...item, ...official[idx] };
+        } else {
+          official.push(item);
+        }
+      });
+    };
+
+    if (Array.isArray(parsed.faculties)) {
+      this.faculties = [...initialFaculties];
+      mergeOfficialCatalog(this.faculties, parsed.faculties);
+    }
+
+    const persistedDepts = Array.isArray(parsed.departments)
+      ? (parsed.departments as Department[])
+      : Array.isArray(parsed.customDepartments)
+      ? (parsed.customDepartments as Department[])
+      : [];
+    persistedDepts.forEach((d) => {
+      const byIdIdx = this.departments.findIndex((ed) => ed.id === d.id);
+      const byName = this.departments.find((ed) => ed.name.toLowerCase() === d.name.toLowerCase());
+      if (byIdIdx >= 0) {
+        // Retain official faculty mapping if official exists
+        return;
+      } else if (!byName) {
+        this.departments.push(d);
+      }
+    });
+
+    if (Array.isArray(parsed.courses)) {
+      this.courses = parsed.courses as Course[];
+      // Ensure any newly seeded university courses are available
+      initialCourses.forEach((ic) => {
+        if (!this.courses.some((c) => c.id === ic.id || c.code.toUpperCase() === ic.code.toUpperCase())) {
+          this.courses.push(ic);
+        }
+      });
+    } else {
+      mergeById(this.courses, parsed.customCourses, true);
+    }
+
+    if (Array.isArray(parsed.courseOfferings)) {
+      this.courseOfferings = parsed.courseOfferings as CourseOffering[];
+      initialCourseOfferings.forEach((io) => {
+        if (!this.courseOfferings.some((o) => o.id === io.id || o.courseId === io.courseId)) {
+          this.courseOfferings.push(io);
+        }
+      });
+    } else {
+      mergeById(this.courseOfferings, parsed.customCourseOfferings);
+    }
+
+    if (Array.isArray(parsed.timetables)) this.timetables = parsed.timetables as TimetableEntry[];
+    else mergeById(this.timetables, parsed.customTimetables);
+
+    if (Array.isArray(parsed.sessions)) this.sessions = parsed.sessions as AttendanceSession[];
+    else mergeById(this.sessions, parsed.customSessions, true);
+
+    if (Array.isArray(parsed.attendanceRecords)) this.attendanceRecords = parsed.attendanceRecords as AttendanceRecord[];
+    else mergeById(this.attendanceRecords, parsed.customAttendanceRecords);
+
+    if (Array.isArray(parsed.corrections)) this.corrections = parsed.corrections as AttendanceCorrection[];
+    if (Array.isArray(parsed.syllabusTopics)) this.syllabusTopics = parsed.syllabusTopics as SyllabusTopic[];
+    if (Array.isArray(parsed.staffAttendance)) this.staffAttendance = parsed.staffAttendance as StaffAttendance[];
+    if (Array.isArray(parsed.medicalWaivers)) this.medicalWaivers = parsed.medicalWaivers as MedicalWaiver[];
+    if (Array.isArray(parsed.notifications)) this.notifications = parsed.notifications as AppNotification[];
+    if (Array.isArray(parsed.courseReps)) this.courseReps = parsed.courseReps as typeof this.courseReps;
+
+    if (Array.isArray(parsed.deviceCollisionAlerts)) {
+      this.deviceCollisionAlerts = parsed.deviceCollisionAlerts as DeviceCollisionAlert[];
+    } else {
+      mergeById(this.deviceCollisionAlerts, parsed.customDeviceCollisionAlerts, true);
+    }
+
+    if (parsed.systemSettings && typeof parsed.systemSettings === 'object') {
+      this.systemSettings = { ...this.systemSettings, ...(parsed.systemSettings as Partial<SystemSettings>) };
+    }
+
+    if (Array.isArray(parsed.faceProfiles)) {
+      (parsed.faceProfiles as BiometricFaceProfile[]).forEach((fp) => {
+        const existingIdx = this.faceProfiles.findIndex((ef) => ef.studentId === fp.studentId);
+        if (existingIdx >= 0) this.faceProfiles[existingIdx] = fp;
+        else this.faceProfiles.push(fp);
+      });
+    }
+
+    if (Array.isArray(parsed.sessionLiveDescriptors)) {
+      (parsed.sessionLiveDescriptors as SessionLiveDescriptor[]).forEach((sd) => {
+        if (!this.sessionLiveDescriptors.some((es) => es.sessionId === sd.sessionId && es.studentId === sd.studentId)) {
+          this.sessionLiveDescriptors.push(sd);
+        }
+      });
+    }
+
+    if (Array.isArray(parsed.auditLogs)) {
+      mergeById(this.auditLogs, parsed.auditLogs, true);
+    }
+  }
+
   private loadPersistentData(): void {
     // 1. Client-side browser persistence
     if (typeof window !== 'undefined') {
       try {
         const raw = localStorage.getItem('custech_persisted_store_v1');
         if (raw) {
-          const parsed = JSON.parse(raw);
-          if (Array.isArray(parsed.customProfiles)) {
-            parsed.customProfiles.forEach((p: UserProfile) => {
-              if (!this.profiles.some((ep) => ep.id === p.id)) this.profiles.unshift(p);
-            });
-          }
-          if (Array.isArray(parsed.customStudents)) {
-            parsed.customStudents.forEach((s: Student) => {
-              if (!this.students.some((es) => es.id === s.id)) this.students.unshift(s);
-            });
-          }
-          if (Array.isArray(parsed.customEnrollments)) {
-            parsed.customEnrollments.forEach((e: Enrollment) => {
-              if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
-            });
-          }
-          if (Array.isArray(parsed.customDepartments)) {
-            parsed.customDepartments.forEach((d: Department) => {
-              if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
-            });
-          }
-          if (Array.isArray(parsed.customCourses)) {
-            parsed.customCourses.forEach((c: Course) => {
-              const existingIdx = this.courses.findIndex((ec) => ec.id === c.id);
-              if (existingIdx >= 0) this.courses[existingIdx] = c;
-              else this.courses.unshift(c);
-            });
-          }
-          if (Array.isArray(parsed.customCourseOfferings)) {
-            parsed.customCourseOfferings.forEach((co: CourseOffering) => {
-              const existingIdx = this.courseOfferings.findIndex((eco) => eco.id === co.id);
-              if (existingIdx >= 0) this.courseOfferings[existingIdx] = co;
-              else this.courseOfferings.push(co);
-            });
-          }
-          if (Array.isArray(parsed.customTimetables)) {
-            parsed.customTimetables.forEach((t: TimetableEntry) => {
-              const existingIdx = this.timetables.findIndex((et) => et.id === t.id);
-              if (existingIdx >= 0) this.timetables[existingIdx] = t;
-              else this.timetables.push(t);
-            });
-          }
-          if (Array.isArray(parsed.customSessions)) {
-            parsed.customSessions.forEach((s: AttendanceSession) => {
-              const existingIdx = this.sessions.findIndex((es) => es.id === s.id);
-              if (existingIdx >= 0) this.sessions[existingIdx] = s;
-              else this.sessions.unshift(s);
-            });
-          }
-          if (Array.isArray(parsed.customAttendanceRecords)) {
-            parsed.customAttendanceRecords.forEach((r: AttendanceRecord) => {
-              if (!this.attendanceRecords.some((er) => er.id === r.id)) this.attendanceRecords.push(r);
-            });
-          }
-          if (Array.isArray(parsed.customDeviceCollisionAlerts)) {
-            parsed.customDeviceCollisionAlerts.forEach((a: DeviceCollisionAlert) => {
-              const existingIdx = this.deviceCollisionAlerts.findIndex((ea) => ea.id === a.id);
-              if (existingIdx >= 0) this.deviceCollisionAlerts[existingIdx] = a;
-              else this.deviceCollisionAlerts.unshift(a);
-            });
-          }
-          if (parsed.systemSettings) {
-            this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
-          }
+          this.applyPersistedPayload(JSON.parse(raw));
         }
       } catch (err) {
         console.warn('Failed to load localStorage custech_store:', err);
@@ -185,75 +258,7 @@ class CustechDatabase {
       const storeFile = this.getStorageFilePath();
       if (storeFile && fs.existsSync(storeFile)) {
         const fileContent = fs.readFileSync(storeFile, 'utf8');
-        const parsed = JSON.parse(fileContent);
-        if (Array.isArray(parsed.customProfiles)) {
-          parsed.customProfiles.forEach((p: UserProfile) => {
-            if (!this.profiles.some((ep) => ep.id === p.id)) this.profiles.unshift(p);
-          });
-        }
-        if (Array.isArray(parsed.customStudents)) {
-          parsed.customStudents.forEach((s: Student) => {
-            if (!this.students.some((es) => es.id === s.id)) this.students.unshift(s);
-          });
-        }
-        if (Array.isArray(parsed.customEnrollments)) {
-          parsed.customEnrollments.forEach((e: Enrollment) => {
-            if (!this.enrollments.some((ee) => ee.id === e.id)) this.enrollments.push(e);
-          });
-        }
-        if (Array.isArray(parsed.customDepartments)) {
-          parsed.customDepartments.forEach((d: Department) => {
-            if (!this.departments.some((ed) => ed.id === d.id)) this.departments.push(d);
-          });
-        }
-        if (Array.isArray(parsed.customCourses)) {
-          parsed.customCourses.forEach((c: Course) => {
-            const existingIdx = this.courses.findIndex((ec) => ec.id === c.id);
-            if (existingIdx >= 0) this.courses[existingIdx] = c;
-            else this.courses.unshift(c);
-          });
-        }
-        if (Array.isArray(parsed.customCourseOfferings)) {
-          parsed.customCourseOfferings.forEach((co: CourseOffering) => {
-            const existingIdx = this.courseOfferings.findIndex((eco) => eco.id === co.id);
-            if (existingIdx >= 0) this.courseOfferings[existingIdx] = co;
-            else this.courseOfferings.push(co);
-          });
-        }
-        if (Array.isArray(parsed.customTimetables)) {
-          parsed.customTimetables.forEach((t: TimetableEntry) => {
-            const existingIdx = this.timetables.findIndex((et) => et.id === t.id);
-            if (existingIdx >= 0) this.timetables[existingIdx] = t;
-            else this.timetables.push(t);
-          });
-        }
-        if (Array.isArray(parsed.customSessions)) {
-          parsed.customSessions.forEach((s: AttendanceSession) => {
-            const existingIdx = this.sessions.findIndex((es) => es.id === s.id);
-            if (existingIdx >= 0) this.sessions[existingIdx] = s;
-            else this.sessions.unshift(s);
-          });
-        }
-        if (Array.isArray(parsed.customAttendanceRecords)) {
-          parsed.customAttendanceRecords.forEach((r: AttendanceRecord) => {
-            if (!this.attendanceRecords.some((er) => er.id === r.id)) this.attendanceRecords.push(r);
-          });
-        }
-        if (Array.isArray(parsed.customDeviceCollisionAlerts)) {
-          parsed.customDeviceCollisionAlerts.forEach((a: DeviceCollisionAlert) => {
-            const existingIdx = this.deviceCollisionAlerts.findIndex((ea) => ea.id === a.id);
-            if (existingIdx >= 0) this.deviceCollisionAlerts[existingIdx] = a;
-            else this.deviceCollisionAlerts.unshift(a);
-          });
-        }
-        if (parsed.systemSettings) {
-          this.systemSettings = { ...this.systemSettings, ...parsed.systemSettings };
-        }
-        if (Array.isArray(parsed.auditLogs)) {
-          parsed.auditLogs.forEach((a: AuditLog) => {
-            if (!this.auditLogs.some((ea) => ea.id === a.id)) this.auditLogs.unshift(a);
-          });
-        }
+        this.applyPersistedPayload(JSON.parse(fileContent));
       }
     } catch (err) {
       console.warn('Failed to load filesystem custech_store:', err);
@@ -268,32 +273,40 @@ class CustechDatabase {
     const initialCourseIds = new Set(initialCourses.map((c) => c.id));
     const initialOfferingIds = new Set(initialCourseOfferings.map((o) => o.id));
     const initialTimetableIds = new Set(initialTimetable.map((t) => t.id));
-    const initialSessionIds = new Set(initialSessions.map((s) => s.id));
     const initialRecordIds = new Set(initialAttendanceRecords.map((r) => r.id));
-    const initialAlertIds = new Set(initialDeviceCollisionAlerts.map((a) => a.id));
-
-    const customProfiles = this.profiles.filter((p) => !initialProfileIds.has(p.id));
-    const customStudents = this.students.filter((s) => !initialStudentIds.has(s.id));
-    const customEnrollments = this.enrollments.filter((e) => !initialEnrollmentIds.has(e.id));
-    const customDepartments = this.departments.filter((d) => !initialDeptIds.has(d.id));
-    const customCourses = this.courses.filter((c) => !initialCourseIds.has(c.id));
-    const customCourseOfferings = this.courseOfferings.filter((o) => !initialOfferingIds.has(o.id));
-    const customTimetables = this.timetables.filter((t) => !initialTimetableIds.has(t.id));
-    const customSessions = this.sessions;
-    const customAttendanceRecords = this.attendanceRecords.filter((r) => !initialRecordIds.has(r.id));
-    const customDeviceCollisionAlerts = this.deviceCollisionAlerts;
 
     const payload = {
-      customProfiles,
-      customStudents,
-      customEnrollments,
-      customDepartments,
-      customCourses,
-      customCourseOfferings,
-      customTimetables,
-      customSessions,
-      customAttendanceRecords,
-      customDeviceCollisionAlerts,
+      // Full authoritative collections (preserves edits & deletions on all records)
+      profiles: this.profiles,
+      students: this.students,
+      enrollments: this.enrollments,
+      departments: this.departments,
+      faculties: this.faculties,
+      courses: this.courses,
+      courseOfferings: this.courseOfferings,
+      timetables: this.timetables,
+      sessions: this.sessions,
+      attendanceRecords: this.attendanceRecords,
+      corrections: this.corrections,
+      syllabusTopics: this.syllabusTopics,
+      staffAttendance: this.staffAttendance,
+      medicalWaivers: this.medicalWaivers,
+      notifications: this.notifications,
+      courseReps: this.courseReps,
+      deviceCollisionAlerts: this.deviceCollisionAlerts,
+      // Legacy custom* keys retained for backward compatibility with older scripts
+      customProfiles: this.profiles.filter((p) => !initialProfileIds.has(p.id)),
+      customStudents: this.students.filter((s) => !initialStudentIds.has(s.id)),
+      customEnrollments: this.enrollments.filter((e) => !initialEnrollmentIds.has(e.id)),
+      customDepartments: this.departments.filter((d) => !initialDeptIds.has(d.id)),
+      customCourses: this.courses.filter((c) => !initialCourseIds.has(c.id)),
+      customCourseOfferings: this.courseOfferings.filter((o) => !initialOfferingIds.has(o.id)),
+      customTimetables: this.timetables.filter((t) => !initialTimetableIds.has(t.id)),
+      customSessions: this.sessions,
+      customAttendanceRecords: this.attendanceRecords.filter((r) => !initialRecordIds.has(r.id)),
+      customDeviceCollisionAlerts: this.deviceCollisionAlerts,
+      faceProfiles: this.faceProfiles,
+      sessionLiveDescriptors: this.sessionLiveDescriptors.slice(-500),
       systemSettings: this.systemSettings,
       auditLogs: this.auditLogs.slice(0, 100),
       updatedAt: new Date().toISOString(),
@@ -857,33 +870,86 @@ class CustechDatabase {
     this.savePersistentData();
   }
 
+  getFullSnapshot() {
+    return {
+      profiles: this.profiles,
+      students: this.getAllStudentsDetailed(),
+      departments: this.departments,
+      faculties: this.faculties,
+      courses: this.courses,
+      courseOfferings: this.courseOfferings,
+      timetables: this.timetables,
+      enrollments: this.enrollments,
+      sessions: this.sessions,
+      attendanceRecords: this.attendanceRecords,
+      corrections: this.corrections,
+      syllabusTopics: this.syllabusTopics,
+      staffAttendance: this.staffAttendance,
+      medicalWaivers: this.medicalWaivers,
+      notifications: this.notifications,
+      courseReps: this.courseReps,
+      deviceCollisionAlerts: this.deviceCollisionAlerts,
+      systemSettings: this.systemSettings,
+      auditLogs: this.auditLogs.slice(0, 100),
+    };
+  }
+
+  upsertClientSession(session: AttendanceSession): void {
+    const idx = this.sessions.findIndex((s) => s.id === session.id);
+    if (idx >= 0) {
+      this.sessions[idx] = { ...this.sessions[idx], ...session };
+    } else {
+      this.sessions.unshift(session);
+    }
+    this.savePersistentData();
+  }
+
   syncClientSnapshot(data: {
     profiles?: UserProfile[];
     students?: Student[];
     departments?: Department[];
+    faculties?: Faculty[];
+    courses?: Course[];
+    courseOfferings?: CourseOffering[];
+    timetables?: TimetableEntry[];
+    enrollments?: Enrollment[];
+    sessions?: AttendanceSession[];
+    attendanceRecords?: AttendanceRecord[];
+    corrections?: AttendanceCorrection[];
+    syllabusTopics?: SyllabusTopic[];
+    staffAttendance?: StaffAttendance[];
+    medicalWaivers?: MedicalWaiver[];
+    notifications?: AppNotification[];
+    courseReps?: typeof this.courseReps;
+    deviceCollisionAlerts?: DeviceCollisionAlert[];
+    systemSettings?: SystemSettings;
+    auditLogs?: AuditLog[];
   }): void {
-    if (Array.isArray(data.profiles)) {
-      data.profiles.forEach((p) => {
-        if (!this.profiles.some((ep) => ep.id === p.id || (p.matricNumber && ep.matricNumber === p.matricNumber))) {
-          this.profiles.unshift(p);
-        }
-      });
-    }
-    if (Array.isArray(data.students)) {
-      data.students.forEach((s) => {
-        if (!this.students.some((es) => es.id === s.id || es.matricNumber === s.matricNumber)) {
-          this.students.unshift(s);
-        }
-      });
-    }
-    if (Array.isArray(data.departments)) {
-      data.departments.forEach((d) => {
-        if (!this.departments.some((ed) => ed.id === d.id)) {
-          this.departments.push(d);
-        }
-      });
-    }
+    if (Array.isArray(data.profiles)) this.profiles = data.profiles;
+    if (Array.isArray(data.students)) this.students = data.students;
+    if (Array.isArray(data.departments)) this.departments = data.departments;
+    if (Array.isArray(data.faculties)) this.faculties = data.faculties;
+    if (Array.isArray(data.courses)) this.courses = data.courses;
+    if (Array.isArray(data.courseOfferings)) this.courseOfferings = data.courseOfferings;
+    if (Array.isArray(data.timetables)) this.timetables = data.timetables;
+    if (Array.isArray(data.enrollments)) this.enrollments = data.enrollments;
+    if (Array.isArray(data.sessions)) this.sessions = data.sessions;
+    if (Array.isArray(data.attendanceRecords)) this.attendanceRecords = data.attendanceRecords;
+    if (Array.isArray(data.corrections)) this.corrections = data.corrections;
+    if (Array.isArray(data.syllabusTopics)) this.syllabusTopics = data.syllabusTopics;
+    if (Array.isArray(data.staffAttendance)) this.staffAttendance = data.staffAttendance;
+    if (Array.isArray(data.medicalWaivers)) this.medicalWaivers = data.medicalWaivers;
+    if (Array.isArray(data.notifications)) this.notifications = data.notifications;
+    if (Array.isArray(data.courseReps)) this.courseReps = data.courseReps;
+    if (Array.isArray(data.deviceCollisionAlerts)) this.deviceCollisionAlerts = data.deviceCollisionAlerts;
+    if (data.systemSettings) this.systemSettings = { ...this.systemSettings, ...data.systemSettings };
+    if (Array.isArray(data.auditLogs)) this.auditLogs = data.auditLogs;
+
     this.savePersistentData();
+
+    if (typeof window !== 'undefined') {
+      window.dispatchEvent(new CustomEvent('custech-db-synced'));
+    }
   }
 
   getEnrolledStudentsForOffering(courseOfferingId: string): (Student & { profile?: UserProfile })[] {
@@ -895,7 +961,7 @@ class CustechDatabase {
       .map((s) => ({ ...s, profile: this.getProfileById(s.profileId) }));
   }
 
-  enrollStudentInCourse(studentId: string, courseOfferingId: string, actorId?: string): Enrollment {
+  enrollStudentInCourse(studentId: string, courseOfferingId: string, _actorId?: string): Enrollment {
     const existing = this.enrollments.find(
       (e) => e.studentId === studentId && e.courseOfferingId === courseOfferingId
     );
@@ -1258,6 +1324,11 @@ class CustechDatabase {
     os?: string;
     latitude?: number;
     longitude?: number;
+    facialVerified?: boolean;
+    facialConfidence?: number;
+    facialDistance?: number;
+    livenessVerified?: boolean;
+    liveDescriptor?: number[];
   }): { record: AttendanceRecord; isDuplicate: boolean; message: string } {
     const session = this.sessions.find((s) => s.id === params.sessionId);
     if (!session) {
@@ -1390,6 +1461,7 @@ class CustechDatabase {
             sessionCode: courseCode,
             courseCode: courseCode,
             attemptCount: totalDistinctAccounts,
+            alertType: 'DEVICE_COLLISION',
             userAgent: params.userAgent,
             deviceType: params.deviceType || 'Mobile Device',
             browser: params.browser || 'Browser',
@@ -1417,10 +1489,25 @@ class CustechDatabase {
       longitude: params.longitude,
       isFlaggedSuspicious,
       flagReason,
+      facialVerified: params.facialVerified,
+      facialConfidence: params.facialConfidence,
+      facialDistance: params.facialDistance,
+      livenessVerified: params.livenessVerified,
       recordedAt: new Date().toISOString(),
     };
 
     this.attendanceRecords.push(newRecord);
+
+    if (params.facialVerified && isValidFaceDescriptor(params.liveDescriptor)) {
+      const stu = this.getStudentById(params.studentId);
+      this.sessionLiveDescriptors.push({
+        sessionId: params.sessionId,
+        studentId: params.studentId,
+        matricNumber: stu?.matricNumber || params.studentId,
+        descriptor: params.liveDescriptor,
+        recordedAt: newRecord.recordedAt,
+      });
+    }
 
     this.logAudit({
       actorId: params.recordedBy,
@@ -1434,6 +1521,8 @@ class CustechDatabase {
         method: params.method,
         isFlaggedSuspicious,
         flagReason,
+        facialVerified: params.facialVerified,
+        facialConfidence: params.facialConfidence,
       },
     });
 
@@ -1457,7 +1546,10 @@ class CustechDatabase {
     operatorProfileId: string;
     clientEventId?: string;
   }): Promise<{ success: boolean; message: string; record?: AttendanceRecord; studentName?: string }> {
-    const student = this.getStudentByMatric(params.matricNumber);
+    const student =
+      this.getStudentByMatric(params.matricNumber) ||
+      this.getStudentByProfileId(params.matricNumber) ||
+      this.getStudentById(params.matricNumber);
     if (!student) {
       return { success: false, message: 'Matriculation number not recognized in CUSTECH registry.' };
     }
@@ -1548,6 +1640,7 @@ class CustechDatabase {
       details: { sessionId: params.sessionId, reason: params.reason },
     });
 
+    this.savePersistentData();
     return newCorrection;
   }
 
@@ -1595,6 +1688,7 @@ class CustechDatabase {
       details: { notes: params.reviewNotes },
     });
 
+    this.savePersistentData();
     return correction;
   }
 
@@ -1618,6 +1712,7 @@ class CustechDatabase {
       details: { isCompleted },
     });
 
+    this.savePersistentData();
     return topic;
   }
 
@@ -1660,6 +1755,7 @@ class CustechDatabase {
       details: { date: today, time: checkInTime },
     });
 
+    this.savePersistentData();
     return record;
   }
 
@@ -1686,6 +1782,7 @@ class CustechDatabase {
       details: { workingMinutes: record.workingMinutes },
     });
 
+    this.savePersistentData();
     return record;
   }
 
@@ -1744,6 +1841,7 @@ class CustechDatabase {
       entityType: 'system_settings',
       details: settings,
     });
+    this.savePersistentData();
     return this.systemSettings;
   }
 
@@ -1776,6 +1874,7 @@ class CustechDatabase {
       details: { matchedMatrics: alert.matchedMatricNumbers, action },
     });
 
+    this.savePersistentData();
     return alert;
   }
 
@@ -1865,6 +1964,7 @@ class CustechDatabase {
       details: { studentId: params.studentId, startDate: params.startDate, endDate: params.endDate },
     });
 
+    this.savePersistentData();
     return newWaiver;
   }
 
@@ -1877,7 +1977,10 @@ class CustechDatabase {
 
   markNotificationAsRead(notificationId: string): void {
     const n = this.notifications.find((notif) => notif.id === notificationId);
-    if (n) n.isRead = true;
+    if (n) {
+      n.isRead = true;
+      this.savePersistentData();
+    }
   }
 
   sendAppNotification(
@@ -1889,6 +1992,7 @@ class CustechDatabase {
       createdAt: new Date().toISOString(),
     };
     this.notifications.unshift(newNotif);
+    this.savePersistentData();
     return newNotif;
   }
 
@@ -2060,7 +2164,8 @@ class CustechDatabase {
   // ==========================================
   getCoursesWithDetails() {
     return this.courses.map((course) => {
-      const dept = this.departments.find((d) => d.id === course.departmentId);
+      const normalizedDeptId = course.departmentId === 'dept-se' ? 'dept-sen' : course.departmentId;
+      const dept = this.departments.find((d) => d.id === normalizedDeptId || d.id === course.departmentId);
       const fac = this.faculties.find((f) => f.id === dept?.facultyId);
       const offerings = this.courseOfferings.filter((o) => o.courseId === course.id);
       const assignedLecturers = offerings.map((o) => {
@@ -2070,8 +2175,10 @@ class CustechDatabase {
 
       return {
         ...course,
+        departmentId: dept?.id || course.departmentId,
+        facultyId: fac?.id || dept?.facultyId || 'fac-comp',
         departmentName: dept?.name || 'General Studies',
-        facultyName: fac?.name || 'Computing & Applied Sciences',
+        facultyName: fac?.name || 'Faculty of Computing and Informatics',
         offeringsCount: offerings.length,
         assignedLecturers: Array.from(new Set(assignedLecturers)),
         primaryOffering: offerings[0],
@@ -2496,6 +2603,140 @@ class CustechDatabase {
     return offering;
   }
 
+  ensureDepartment(params: { name: string; facultyId?: string; code?: string }): Department {
+    const cleanName = params.name.trim();
+    if (!cleanName) throw new Error('Department name cannot be empty.');
+
+    const existing = this.departments.find(
+      (d) =>
+        d.name.toLowerCase() === cleanName.toLowerCase() ||
+        (params.code && d.code.toLowerCase() === params.code.trim().toLowerCase())
+    );
+    if (existing) return existing;
+
+    const slug = cleanName
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '');
+    const codeGuess =
+      params.code?.trim().toUpperCase() ||
+      cleanName
+        .split(/\s+/)
+        .map((w) => w[0])
+        .join('')
+        .toUpperCase()
+        .slice(0, 4) ||
+      'DEPT';
+
+    const newDept: Department = {
+      id: `dept-${slug}`,
+      facultyId: params.facultyId || 'fac-comp',
+      code: codeGuess,
+      name: cleanName,
+    };
+    this.departments.push(newDept);
+    this.savePersistentData();
+    return newDept;
+  }
+
+  assignCourseManuallyToLecturer(
+    params: {
+      lecturerId: string;
+      courseCode: string;
+      courseTitle?: string;
+      creditUnits?: number;
+      departmentId?: string;
+      departmentName?: string;
+      facultyId?: string;
+      level?: 100 | 200 | 300 | 400 | 500;
+    },
+    actorId: string
+  ): { course: Course; offering: CourseOffering; createdNewCourse: boolean } {
+    const lecturer = this.profiles.find((p) => p.id === params.lecturerId);
+    if (!lecturer) throw new Error('Lecturer profile not found');
+
+    const rawCode = params.courseCode.trim().toUpperCase();
+    if (!rawCode) throw new Error('Course code is required');
+
+    // Normalize e.g. "CSC201" -> "CSC 201" if no space between letters and digits
+    const normalizedCode = rawCode.replace(/^([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)$/, '$1 $2');
+    const stripped = normalizedCode.replace(/\s+/g, '');
+
+    let course = this.courses.find(
+      (c) => c.code.trim().toUpperCase().replace(/\s+/g, '') === stripped
+    );
+    let createdNewCourse = false;
+
+    if (!course) {
+      const cleanTitle = params.courseTitle?.trim();
+      if (!cleanTitle) {
+        throw new Error(`Course "${normalizedCode}" does not exist yet. Please enter a course title to create and assign it.`);
+      }
+
+      let resolvedDeptId = params.departmentId;
+      if (params.departmentName?.trim()) {
+        const dept = this.ensureDepartment({
+          name: params.departmentName,
+          facultyId: params.facultyId || lecturer.facultyId || 'fac-comp',
+        });
+        resolvedDeptId = dept.id;
+      }
+      if (!resolvedDeptId) {
+        resolvedDeptId = lecturer.departmentId || 'dept-csc';
+      }
+
+      course = this.createCourse(
+        {
+          code: normalizedCode,
+          title: cleanTitle,
+          creditUnits: Number(params.creditUnits) || 2,
+          departmentId: resolvedDeptId,
+          level: (params.level || 100) as 100 | 200 | 300 | 400 | 500,
+        },
+        actorId
+      );
+      createdNewCourse = true;
+    }
+
+    let offering = this.courseOfferings.find((o) => o.courseId === course!.id);
+    if (!offering) {
+      offering = {
+        id: `offering-${course.code.toLowerCase().replace(/[^a-z0-9]/g, '')}-${Date.now()}`,
+        courseId: course.id,
+        academicSessionId: 'sess-2026-first',
+        semesterId: 'sem-2026-1',
+        primaryLecturerId: params.lecturerId,
+        assignedLecturerIds: [params.lecturerId],
+        isActive: true,
+      };
+      this.courseOfferings.push(offering);
+    } else {
+      offering.primaryLecturerId = params.lecturerId;
+      if (!offering.assignedLecturerIds) offering.assignedLecturerIds = [];
+      if (!offering.assignedLecturerIds.includes(params.lecturerId)) {
+        offering.assignedLecturerIds.push(params.lecturerId);
+      }
+    }
+
+    this.logAudit({
+      actorId,
+      actorRole: 'SUPER_ADMIN',
+      action: 'ASSIGNED_COURSE_MANUALLY_TO_LECTURER',
+      entityType: 'course_offerings',
+      entityId: offering.id,
+      details: {
+        courseCode: course.code,
+        courseTitle: course.title,
+        createdNewCourse,
+        lecturerId: params.lecturerId,
+        lecturerName: `${lecturer.firstName} ${lecturer.lastName}`,
+      },
+    });
+
+    this.savePersistentData();
+    return { course, offering, createdNewCourse };
+  }
+
   // ==========================================
   // TIMETABLE MANAGEMENT
   // ==========================================
@@ -2623,6 +2864,8 @@ class CustechDatabase {
       level: number;
       email: string;
       isActive: boolean;
+      faceEnrolled: boolean;
+      faceEnrolledAt?: string;
     };
     error?: string;
   } {
@@ -2648,6 +2891,7 @@ class CustechDatabase {
 
     const dept = this.departments.find((d) => d.id === student.profile?.departmentId);
     const fac = this.faculties.find((f) => f.id === student.profile?.facultyId || f.id === dept?.facultyId);
+    const faceProfile = this.faceProfiles.find((fp) => fp.studentId === student.id);
 
     return {
       found: true,
@@ -2664,7 +2908,407 @@ class CustechDatabase {
         level: student.currentLevel,
         email: student.profile.email,
         isActive: student.profile.isActive,
+        faceEnrolled: Boolean(faceProfile),
+        faceEnrolledAt: faceProfile?.enrolledAt,
       },
+    };
+  }
+
+  // ==========================================
+  // FACIAL BIOMETRIC ENROLLMENT & VERIFICATION
+  // ==========================================
+  getFaceProfileStatus(studentIdOrProfileId: string): {
+    enrolled: boolean;
+    enrolledAt?: string;
+    isLocked?: boolean;
+    sampleCount?: number;
+    thumbnailDataUrl?: string;
+  } {
+    const student =
+      this.getStudentById(studentIdOrProfileId) ||
+      this.getStudentByProfileId(studentIdOrProfileId);
+    if (!student) return { enrolled: false };
+    const fp = this.faceProfiles.find((f) => f.studentId === student.id);
+    if (!fp) return { enrolled: false };
+    return {
+      enrolled: true,
+      enrolledAt: fp.enrolledAt,
+      isLocked: fp.isLocked,
+      sampleCount: fp.sampleCount,
+      thumbnailDataUrl: fp.thumbnailDataUrl,
+    };
+  }
+
+  getEnrolledFaceStudentIds(): string[] {
+    return this.faceProfiles.map((fp) => fp.studentId);
+  }
+
+  private recordBiometricFraudAlert(params: {
+    sessionId?: string;
+    alertType: 'BIOMETRIC_PROXY_ATTEMPT' | 'BIOMETRIC_MISMATCH';
+    matchedMatricNumbers: string[];
+    matchedStudentNames: string[];
+    riskReason: string;
+    courseCode?: string;
+  }): void {
+    const session = params.sessionId ? this.getSessionById(params.sessionId) : undefined;
+    const offering = session ? this.getOfferingById(session.courseOfferingId) : undefined;
+    const courseCode = params.courseCode || offering?.course?.code || 'BIOMETRIC';
+
+    this.deviceCollisionAlerts.unshift({
+      id: `alert_bio_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      sessionId: params.sessionId || 'biometric-integrity',
+      deviceFingerprintHash: `bio_guard_${Date.now().toString(36)}`,
+      matchedMatricNumbers: Array.from(new Set(params.matchedMatricNumbers)),
+      matchedStudentNames: Array.from(new Set(params.matchedStudentNames)),
+      sessionCode: courseCode,
+      courseCode,
+      attemptCount: 1,
+      alertType: params.alertType,
+      deviceType: 'Biometric Camera',
+      browser: 'Face Verification Guard',
+      os: 'Integrity Engine',
+      riskLevel: 'HIGH',
+      riskReason: params.riskReason,
+      isReviewed: false,
+      createdAt: new Date().toISOString(),
+    });
+  }
+
+  async enrollStudentFace(params: {
+    studentIdOrProfileId: string;
+    descriptor: number[];
+    sampleCount?: number;
+    actorProfileId: string;
+    thumbnailDataUrl?: string;
+    attendancePin?: string;
+    requirePinVerification?: boolean;
+  }): Promise<{
+    success: boolean;
+    message: string;
+    enrolledAt?: string;
+  }> {
+    if (!isValidFaceDescriptor(params.descriptor)) {
+      return {
+        success: false,
+        message: 'Invalid facial biometric descriptor captured. Please rescan clearly facing the camera.',
+      };
+    }
+
+    const student =
+      this.getStudentById(params.studentIdOrProfileId) ||
+      this.getStudentByProfileId(params.studentIdOrProfileId) ||
+      this.getStudentByMatric(params.studentIdOrProfileId);
+
+    if (!student || !student.profile) {
+      return { success: false, message: 'Student profile not found in CUSTECH registry.' };
+    }
+
+    // Check if already enrolled & locked
+    const existing = this.faceProfiles.find((fp) => fp.studentId === student.id);
+    if (existing && existing.isLocked) {
+      return {
+        success: false,
+        message:
+          'Face ID is already registered and locked for this student. Contact the ICT Administrator or HOD to authorize a biometric reset.',
+      };
+    }
+
+    // Optional PIN check for unauthenticated QR check-in initial enrollment
+    if (params.requirePinVerification) {
+      const cleanPin = (params.attendancePin || '').trim();
+      if (cleanPin.length !== 4) {
+        return {
+          success: false,
+          message: 'Please enter your confidential 4-digit Attendance PIN to authorize initial Face ID enrollment.',
+        };
+      }
+      const isPinValid = await verifyAttendancePin(cleanPin, student.attendancePinHash);
+      if (!isPinValid) {
+        this.logAudit({
+          actorId: student.profileId,
+          action: 'FAILED_PIN_FOR_FACE_ENROLLMENT',
+          entityType: 'biometric_face_profiles',
+          entityId: student.id,
+          details: { matricNumber: student.matricNumber },
+        });
+        this.savePersistentData();
+        return {
+          success: false,
+          message: 'Invalid 4-digit Attendance PIN. Face ID enrollment was not authorized.',
+        };
+      }
+    }
+
+    // Anti-Proxy Check: Prevent the same person from enrolling their face onto another student's matric number
+    for (const other of this.faceProfiles) {
+      if (other.studentId === student.id) continue;
+      const dist = computeEuclideanDistance(other.descriptor, params.descriptor);
+      if (dist < DUPLICATE_FACE_COLLISION_THRESHOLD) {
+        const otherStudent = this.getStudentById(other.studentId);
+        const otherName = otherStudent?.profile
+          ? `${otherStudent.profile.firstName} ${otherStudent.profile.lastName}`
+          : other.matricNumber;
+        const targetName = `${student.profile.firstName} ${student.profile.lastName}`;
+
+        this.recordBiometricFraudAlert({
+          alertType: 'BIOMETRIC_PROXY_ATTEMPT',
+          matchedMatricNumbers: [student.matricNumber, other.matricNumber],
+          matchedStudentNames: [targetName, otherName],
+          riskReason: `Duplicate facial biometric enrollment blocked: Face captured for ${student.matricNumber} matches already registered student ${other.matricNumber} (distance ${dist.toFixed(3)}).`,
+        });
+
+        this.logAudit({
+          actorId: params.actorProfileId,
+          action: 'BIOMETRIC_DUPLICATE_ENROLLMENT_BLOCKED',
+          entityType: 'biometric_face_profiles',
+          entityId: student.id,
+          details: {
+            targetMatric: student.matricNumber,
+            conflictingMatric: other.matricNumber,
+            distance: Number(dist.toFixed(4)),
+          },
+        });
+        this.savePersistentData();
+
+        return {
+          success: false,
+          message: `Biometric integrity violation: This face is already registered to another student (${other.matricNumber}). One face cannot be linked to multiple matriculation numbers.`,
+        };
+      }
+    }
+
+    const nowIso = new Date().toISOString();
+    const profileRecord: BiometricFaceProfile = {
+      id: existing?.id || `face_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      studentId: student.id,
+      matricNumber: student.matricNumber,
+      descriptor: params.descriptor,
+      sampleCount: params.sampleCount || 3,
+      enrolledAt: nowIso,
+      enrolledBy: params.actorProfileId,
+      isLocked: true,
+      thumbnailDataUrl: params.thumbnailDataUrl,
+    };
+
+    if (existing) {
+      const idx = this.faceProfiles.findIndex((fp) => fp.studentId === student.id);
+      this.faceProfiles[idx] = profileRecord;
+    } else {
+      this.faceProfiles.push(profileRecord);
+    }
+
+    this.logAudit({
+      actorId: params.actorProfileId,
+      action: 'FACE_ID_ENROLLED',
+      entityType: 'biometric_face_profiles',
+      entityId: profileRecord.id,
+      details: {
+        studentId: student.id,
+        matricNumber: student.matricNumber,
+        sampleCount: profileRecord.sampleCount,
+      },
+    });
+
+    this.savePersistentData();
+    return {
+      success: true,
+      message: `Face ID successfully enrolled and locked for ${student.profile.firstName} ${student.profile.lastName} (${student.matricNumber}).`,
+      enrolledAt: nowIso,
+    };
+  }
+
+  resetStudentFace(studentId: string, actorId: string): boolean {
+    const idx = this.faceProfiles.findIndex((fp) => fp.studentId === studentId);
+    const student = this.getStudentById(studentId);
+    if (idx === -1) return false;
+
+    const removed = this.faceProfiles[idx];
+    this.faceProfiles.splice(idx, 1);
+
+    this.logAudit({
+      actorId,
+      action: 'FACE_ID_RESET_BY_ADMIN',
+      entityType: 'biometric_face_profiles',
+      entityId: removed.id,
+      details: {
+        studentId,
+        matricNumber: student?.matricNumber || removed.matricNumber,
+      },
+    });
+
+    this.savePersistentData();
+    return true;
+  }
+
+  verifyStudentFaceForAttendance(params: {
+    studentId: string;
+    sessionId?: string;
+    faceVerification?: FaceVerificationSubmission;
+  }): {
+    verified: boolean;
+    skipped?: boolean;
+    code?: 'FACE_NOT_ENROLLED' | 'FACE_MISMATCH' | 'LIVENESS_FAILED' | 'BIOMETRIC_PROXY_COLLISION' | 'MISSING_SCAN';
+    confidence?: number;
+    distance?: number;
+    message: string;
+  } {
+    if (this.systemSettings.requireFacialVerification === false) {
+      return {
+        verified: false,
+        skipped: true,
+        message: 'Facial verification disabled by institutional policy.',
+      };
+    }
+
+    const student = this.getStudentById(params.studentId);
+    if (!student || !student.profile) {
+      return {
+        verified: false,
+        code: 'MISSING_SCAN',
+        message: 'Student record not found for facial verification.',
+      };
+    }
+
+    const enrolled = this.faceProfiles.find((fp) => fp.studentId === student.id);
+    if (!enrolled) {
+      return {
+        verified: false,
+        code: 'FACE_NOT_ENROLLED',
+        message: `Face ID is not enrolled for ${student.matricNumber}. Please complete your Face ID registration before marking attendance.`,
+      };
+    }
+
+    const fv = params.faceVerification;
+    if (!fv || !isValidFaceDescriptor(fv.descriptor)) {
+      return {
+        verified: false,
+        code: 'MISSING_SCAN',
+        message: 'Live facial verification scan is required to mark attendance.',
+      };
+    }
+
+    if (!fv.livenessPassed) {
+      return {
+        verified: false,
+        code: 'LIVENESS_FAILED',
+        message: 'Liveness check did not pass. Please blink naturally or move slightly in front of a live camera (photos/screenshots are rejected).',
+      };
+    }
+
+    // 1. Check same-session cross-student face reuse BEFORE confirming match
+    if (params.sessionId) {
+      const sessionMatch = this.sessionLiveDescriptors.find(
+        (sd) =>
+          sd.sessionId === params.sessionId &&
+          sd.studentId !== student.id &&
+          computeEuclideanDistance(sd.descriptor, fv.descriptor) < DUPLICATE_FACE_COLLISION_THRESHOLD
+      );
+
+      if (sessionMatch) {
+        const otherStudent = this.getStudentById(sessionMatch.studentId);
+        const targetName = `${student.profile.firstName} ${student.profile.lastName}`;
+        const otherName = otherStudent?.profile
+          ? `${otherStudent.profile.firstName} ${otherStudent.profile.lastName}`
+          : sessionMatch.matricNumber;
+
+        this.recordBiometricFraudAlert({
+          sessionId: params.sessionId,
+          alertType: 'BIOMETRIC_PROXY_ATTEMPT',
+          matchedMatricNumbers: [student.matricNumber, sessionMatch.matricNumber],
+          matchedStudentNames: [targetName, otherName],
+          riskReason: `Same live face already marked attendance for ${sessionMatch.matricNumber} in this session and attempted to mark for ${student.matricNumber}. Blocked for academic integrity.`,
+        });
+        this.logAudit({
+          actorId: student.profileId,
+          action: 'BIOMETRIC_PROXY_BLOCKED_SAME_SESSION',
+          entityType: 'attendance_records',
+          entityId: params.sessionId,
+          details: {
+            attemptedMatric: student.matricNumber,
+            alreadyMarkedMatric: sessionMatch.matricNumber,
+          },
+        });
+        this.savePersistentData();
+
+        return {
+          verified: false,
+          code: 'BIOMETRIC_PROXY_COLLISION',
+          message: `Academic Integrity Alert: This face was already used to mark attendance for ${sessionMatch.matricNumber} in this lecture session. Proxy attendance has been blocked and logged.`,
+        };
+      }
+    }
+
+    // 2. Compare live descriptor against student's enrolled descriptor
+    const threshold = this.systemSettings.facialMatchThreshold ?? DEFAULT_FACIAL_MATCH_THRESHOLD;
+    const distance = computeEuclideanDistance(enrolled.descriptor, fv.descriptor);
+    const confidence = distanceToConfidencePercent(distance);
+
+    if (distance > threshold) {
+      // Check if the live face actually belongs to another enrolled student (impersonation / friend marking)
+      let matchedOther: { matric: string; name: string; dist: number } | null = null;
+      for (const other of this.faceProfiles) {
+        if (other.studentId === student.id) continue;
+        const d = computeEuclideanDistance(other.descriptor, fv.descriptor);
+        if (d < threshold && (!matchedOther || d < matchedOther.dist)) {
+          const os = this.getStudentById(other.studentId);
+          matchedOther = {
+            matric: other.matricNumber,
+            name: os?.profile ? `${os.profile.firstName} ${os.profile.lastName}` : other.matricNumber,
+            dist: d,
+          };
+        }
+      }
+
+      const targetName = `${student.profile.firstName} ${student.profile.lastName}`;
+      if (matchedOther) {
+        this.recordBiometricFraudAlert({
+          sessionId: params.sessionId,
+          alertType: 'BIOMETRIC_PROXY_ATTEMPT',
+          matchedMatricNumbers: [student.matricNumber, matchedOther.matric],
+          matchedStudentNames: [targetName, matchedOther.name],
+          riskReason: `Proxy attempt detected: ${matchedOther.name} (${matchedOther.matric}) tried to verify attendance for ${targetName} (${student.matricNumber}).`,
+        });
+      } else {
+        this.recordBiometricFraudAlert({
+          sessionId: params.sessionId,
+          alertType: 'BIOMETRIC_MISMATCH',
+          matchedMatricNumbers: [student.matricNumber],
+          matchedStudentNames: [targetName],
+          riskReason: `Facial verification failed for ${student.matricNumber} (${confidence}% match, distance ${distance.toFixed(3)} > ${threshold}).`,
+        });
+      }
+
+      this.logAudit({
+        actorId: student.profileId,
+        action: 'FACIAL_VERIFICATION_REJECTED',
+        entityType: 'attendance_records',
+        entityId: params.sessionId || student.id,
+        details: {
+          matricNumber: student.matricNumber,
+          distance: Number(distance.toFixed(4)),
+          confidence,
+          matchedOtherMatric: matchedOther?.matric,
+        },
+      });
+      this.savePersistentData();
+
+      return {
+        verified: false,
+        code: 'FACE_MISMATCH',
+        distance,
+        confidence,
+        message: matchedOther
+          ? `Facial verification failed: The face scanned belongs to ${matchedOther.matric}, not ${student.matricNumber}. Marking attendance for another student is prohibited and has been logged.`
+          : `Facial verification failed (${confidence}% match). Your face does not match the registered student profile for ${student.matricNumber}. Ensure good lighting and face the camera directly.`,
+      };
+    }
+
+    return {
+      verified: true,
+      distance,
+      confidence,
+      message: `Face verified (${confidence}% match).`,
     };
   }
 
@@ -2706,5 +3350,9 @@ class CustechDatabase {
   }
 }
 
-// Global Singleton Database Instance
-export const custechDb = new CustechDatabase();
+// Global Singleton Database Instance (preserved across Next.js server bundles via globalThis)
+const globalForDb = globalThis as typeof globalThis & { __custechDb?: CustechDatabase };
+export const custechDb: CustechDatabase =
+  typeof window === 'undefined'
+    ? (globalForDb.__custechDb ??= new CustechDatabase())
+    : new CustechDatabase();

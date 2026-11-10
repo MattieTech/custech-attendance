@@ -12,29 +12,21 @@ import {
   startNewLectureSessionAction,
   reviewAttendanceCorrection,
 } from '@/actions/attendance';
-import { toggleSyllabusStatus } from '@/actions/academic';
+import { toggleSyllabusStatus, getDatabaseSnapshotAction } from '@/actions/academic';
 import {
   Calendar,
   Clock,
   MapPin,
   Play,
-  Users,
   BookOpen,
   CheckCircle2,
-  XCircle,
   AlertCircle,
-  FileSpreadsheet,
-  ArrowRight,
   ShieldCheck,
   ShieldAlert,
   HeartPulse,
   History,
   X,
-  ChevronRight,
   ChevronDown,
-  Layers,
-  GraduationCap,
-  Award,
 } from 'lucide-react';
 
 interface LecturerDashboardProps {
@@ -43,30 +35,57 @@ interface LecturerDashboardProps {
 
 export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) => {
   const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+  const [selectedSessionId, setSelectedSessionId] = React.useState<string | null>(null);
 
-  // Offerings assigned to this lecturer
-  const offerings = React.useMemo(() => {
+  const syncFromServer = React.useCallback(async () => {
+    try {
+      const snapshot = await getDatabaseSnapshotAction();
+      if (snapshot) {
+        custechDb.syncClientSnapshot(snapshot);
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    } catch {
+      // Offline fallback uses local custechDb
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handleSynced = () => setRefreshTrigger((prev) => prev + 1);
+    window.addEventListener('custech-db-synced', handleSynced);
+    return () => window.removeEventListener('custech-db-synced', handleSynced);
+  }, []);
+
+  // Refresh live attendance count & session state every 5s so mobile scans appear automatically
+  React.useEffect(() => {
+    const interval = setInterval(() => {
+      void syncFromServer();
+    }, 5000);
+    return () => clearInterval(interval);
+  }, [syncFromServer]);
+
+  // Offerings assigned to this lecturer (recomputed when refreshTrigger increments)
+  const offerings = (() => {
+    void refreshTrigger;
     const list = custechDb.getLecturerOfferings(user.id);
     if (list.length > 0) return list;
-    // Fallback: all offerings if none explicitly linked to user id (for testing flexibility)
     return custechDb.getCourseOfferings();
-  }, [user.id, refreshTrigger]);
+  })();
 
-  const timetableEntries = React.useMemo(() => {
-    return custechDb.getTimetableEntries().filter((tt) =>
-      offerings.some((o) => o.id === tt.courseOfferingId)
-    );
-  }, [offerings, refreshTrigger]);
-
-  // Active session detection (dynamic, not hardcoded!)
-  const activeSessions = custechDb.getSessions().filter((s) => s.status === 'ACTIVE');
-  const lecturerActiveSession = activeSessions.find(
-    (s) => s.lecturerId === user.id || offerings.some((o) => o.id === s.courseOfferingId)
-  ) || activeSessions[0];
-
-  const [activeSession, setActiveSession] = React.useState<AttendanceSession | undefined>(
-    lecturerActiveSession
+  const timetableEntries = custechDb.getTimetableEntries().filter((tt) =>
+    offerings.some((o) => o.id === tt.courseOfferingId)
   );
+
+  // Active session detection (always read fresh from custechDb, never frozen in stale useState)
+  const allSessions = custechDb.getSessions();
+  const activeSessions = allSessions.filter((s) => s.status === 'ACTIVE');
+  const lecturerActiveSession =
+    activeSessions.find(
+      (s) => s.lecturerId === user.id || offerings.some((o) => o.id === s.courseOfferingId)
+    ) || activeSessions[0];
+
+  const activeSession: AttendanceSession | undefined =
+    (selectedSessionId ? allSessions.find((s) => s.id === selectedSessionId) : undefined) ||
+    lecturerActiveSession;
 
   // Modals state
   const [isKioskOpen, setIsKioskOpen] = React.useState(false);
@@ -91,18 +110,19 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
   } | null>(null);
   const [expandedSessionId, setExpandedSessionId] = React.useState<string | null>(null);
 
-  // Anti-Proxy Alerts & Corrections
-  const corrections = custechDb.getCorrections().filter((c) => c.status === 'PENDING');
-  const syllabusTopics = custechDb.getSyllabusForCourse('course-csc201');
-  const collisionAlerts = custechDb.getDeviceCollisionAlerts();
-  const unreviewedAlertsCount = collisionAlerts.filter((a) => !a.isReviewed).length;
-
   // Active Session Details
   const activeOffering = activeSession
     ? custechDb.getOfferingById(activeSession.courseOfferingId)
     : undefined;
   const activeCourse = activeOffering?.course;
   const activeDept = custechDb.getDepartments().find((d) => d.id === activeCourse?.departmentId);
+
+  // Anti-Proxy Alerts & Corrections
+  const corrections = custechDb.getCorrections().filter((c) => c.status === 'PENDING');
+  const courseSyllabus = activeCourse ? custechDb.getSyllabusForCourse(activeCourse.id) : [];
+  const syllabusTopics = courseSyllabus.length > 0 ? courseSyllabus : custechDb.getSyllabusForCourse('course-csc201');
+  const collisionAlerts = custechDb.getDeviceCollisionAlerts();
+  const unreviewedAlertsCount = collisionAlerts.filter((a) => !a.isReviewed).length;
 
   const enrolledStudents = activeSession
     ? custechDb.getEnrolledStudentsForOffering(activeSession.courseOfferingId)
@@ -140,11 +160,13 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
       });
 
       if (res.success && res.session) {
-        setActiveSession(res.session);
+        custechDb.upsertClientSession(res.session);
+        setSelectedSessionId(res.session.id);
         setRefreshTrigger((prev) => prev + 1);
         setStartModalOffering(null);
         setActionSuccessMsg(`Week ${startWeekNumber} attendance session started for ${startModalOffering.offering.course?.code}.`);
         setTimeout(() => setActionSuccessMsg(null), 4000);
+        void syncFromServer();
       } else {
         alert(res.error || 'Failed to start lecture session');
       }
@@ -158,7 +180,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
   const handleResolveCorrection = async (correctionId: string, status: 'APPROVED' | 'REJECTED') => {
     try {
       await reviewAttendanceCorrection(correctionId, user.id, status, 'Reviewed by lecturer');
-      setRefreshTrigger((prev) => prev + 1);
+      await syncFromServer();
       setActionSuccessMsg(`Correction request ${status.toLowerCase()}.`);
       setTimeout(() => setActionSuccessMsg(null), 3000);
     } catch {
@@ -169,11 +191,150 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
   const handleToggleSyllabus = async (topicId: string, currentVal: boolean) => {
     try {
       await toggleSyllabusStatus(topicId, !currentVal, user.id);
-      setRefreshTrigger((prev) => prev + 1);
+      await syncFromServer();
     } catch {
       alert('Error updating syllabus progress');
     }
   };
+
+  const assignedCoursesSection = (
+    <div>
+      <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center gap-2">
+          <Calendar className="w-4 h-4 text-[#8d4a27]" />
+          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+            Assigned Courses & Weekly Lecture Schedules
+          </h3>
+        </div>
+        <span className="text-xs text-slate-500 font-medium">
+          {offerings.length} Course{offerings.length !== 1 ? 's' : ''} Assigned
+        </span>
+      </div>
+
+      <div
+        className={`grid gap-4 ${
+          activeSession
+            ? 'grid-cols-1 md:grid-cols-2 lg:grid-cols-1 xl:grid-cols-2'
+            : 'grid-cols-1 md:grid-cols-2 lg:grid-cols-3'
+        }`}
+      >
+        {offerings.map((offering) => {
+          const course = offering.course;
+          const tt = timetableEntries.find((t) => t.courseOfferingId === offering.id);
+          const dept = custechDb.getDepartments().find((d) => d.id === course?.departmentId);
+          const offeringLiveSession = activeSessions.find((s) => s.courseOfferingId === offering.id);
+          const isSessionLive = Boolean(offeringLiveSession);
+          const isCurrentlyViewed = offeringLiveSession?.id === activeSession?.id;
+          const pastSessions = custechDb.getSessionsForOffering(offering.id);
+
+          const dayNames = ['Sun', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sat'];
+          const scheduleDisplay = tt ? `Every ${dayNames[tt.dayOfWeek]}, ${tt.startTime} – ${tt.endTime}` : 'Schedule TBD';
+          const venueDisplay = tt?.venue || tt?.classroom?.code || 'Lecture Hall';
+
+          return (
+            <div
+              key={offering.id}
+              className={`bg-white border rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between ${
+                isSessionLive
+                  ? 'border-amber-400 ring-2 ring-amber-400/20'
+                  : 'border-slate-200 hover:border-slate-300'
+              }`}
+            >
+              <div>
+                {/* Course Header */}
+                <div className="flex items-start justify-between gap-2">
+                  <div>
+                    <div className="flex items-center gap-2">
+                      <span className="text-lg font-black text-slate-900 tracking-tight">
+                        {course?.code}
+                      </span>
+                      <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
+                        {course?.creditUnits || 2} Units
+                      </span>
+                    </div>
+                    <h4 className="text-xs font-bold text-slate-800 mt-1 line-clamp-1">
+                      {course?.title}
+                    </h4>
+                  </div>
+
+                  {isSessionLive ? (
+                    <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200 animate-pulse shrink-0">
+                      ● LIVE NOW
+                    </span>
+                  ) : (
+                    <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
+                      {course?.level || 200}L
+                    </span>
+                  )}
+                </div>
+
+                {/* Course Attributes (Phase 4 Spec) */}
+                <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Department:</span>
+                    <span className="font-semibold text-slate-700 truncate max-w-[170px]">
+                      {dept?.name || 'Computer Science'}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Weekly Schedule:</span>
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <Clock className="w-3 h-3 text-slate-400" />
+                      <span>{scheduleDisplay}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Lecture Venue:</span>
+                    <span className="font-semibold text-slate-700 flex items-center gap-1">
+                      <MapPin className="w-3 h-3 text-slate-400" />
+                      <span>{venueDisplay}</span>
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between">
+                    <span className="text-slate-400">Sessions Held:</span>
+                    <span className="font-semibold text-slate-700">
+                      {pastSessions.length} Weekly Session{pastSessions.length !== 1 ? 's' : ''}
+                    </span>
+                  </div>
+                </div>
+              </div>
+
+              {/* Actions Bar */}
+              <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
+                {isSessionLive && offeringLiveSession ? (
+                  <button
+                    onClick={() => setSelectedSessionId(offeringLiveSession.id)}
+                    className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition shadow-xs"
+                  >
+                    <span>{isCurrentlyViewed ? 'Viewing Live Session' : 'View Live Session'}</span>
+                  </button>
+                ) : (
+                  <button
+                    onClick={() => handleOpenStartModal(offering)}
+                    className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition shadow-xs"
+                  >
+                    <Play className="w-3 h-3 fill-current" />
+                    <span>Start Attendance</span>
+                  </button>
+                )}
+
+                <button
+                  onClick={() => setHistoryModalOffering({ offering })}
+                  title="View weekly lecture attendance history"
+                  className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition"
+                >
+                  <History className="w-4 h-4" />
+                </button>
+              </div>
+            </div>
+          );
+        })}
+      </div>
+    </div>
+  );
 
   return (
     <div className="space-y-6">
@@ -236,7 +397,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
       )}
 
       {/* ACTIVE ATTENDANCE CONSOLE (DYNAMIC QR & LIVE ROSTER MONITORING) */}
-      {activeSession && (
+      {activeSession ? (
         <div className="space-y-3">
           <div className="flex items-center justify-between">
             <div className="flex items-center gap-2">
@@ -265,148 +426,26 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
               lecturerId={user.id}
               onOpenKiosk={() => setIsKioskOpen(true)}
               onSessionUpdate={(updated) => {
-                setActiveSession(updated);
+                custechDb.upsertClientSession(updated);
+                setSelectedSessionId(updated.id);
                 setRefreshTrigger((prev) => prev + 1);
+                void syncFromServer();
               }}
             />
 
-            <LiveCounter
-              records={sessionRecords}
-              totalEnrolled={enrolledStudents.length || 4}
-            />
+            <div className="space-y-6">
+              <LiveCounter
+                records={sessionRecords}
+                totalEnrolled={enrolledStudents.length || 4}
+              />
+
+              {assignedCoursesSection}
+            </div>
           </div>
         </div>
+      ) : (
+        assignedCoursesSection
       )}
-
-      {/* PHASE 4: ASSIGNED COURSES & WEEKLY TIMETABLE CARDS */}
-      <div>
-        <div className="flex items-center justify-between mb-3">
-          <div className="flex items-center gap-2">
-            <Calendar className="w-4 h-4 text-[#8d4a27]" />
-            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-              Assigned Courses & Weekly Lecture Schedules
-            </h3>
-          </div>
-          <span className="text-xs text-slate-500 font-medium">
-            {offerings.length} Course{offerings.length !== 1 ? 's' : ''} Assigned
-          </span>
-        </div>
-
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          {offerings.map((offering) => {
-            const course = offering.course;
-            const tt = timetableEntries.find((t) => t.courseOfferingId === offering.id);
-            const dept = custechDb.getDepartments().find((d) => d.id === course?.departmentId);
-            const isSessionLive = activeSession?.courseOfferingId === offering.id && activeSession?.status === 'ACTIVE';
-            const pastSessions = custechDb.getSessionsForOffering(offering.id);
-
-            const dayNames = ['Sun', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sat'];
-            const scheduleDisplay = tt ? `Every ${dayNames[tt.dayOfWeek]}, ${tt.startTime} – ${tt.endTime}` : 'Schedule TBD';
-            const venueDisplay = tt?.venue || tt?.classroom?.code || 'Lecture Hall';
-
-            return (
-              <div
-                key={offering.id}
-                className={`bg-white border rounded-2xl p-5 shadow-sm hover:shadow-md transition flex flex-col justify-between ${
-                  isSessionLive
-                    ? 'border-amber-400 ring-2 ring-amber-400/20'
-                    : 'border-slate-200 hover:border-slate-300'
-                }`}
-              >
-                <div>
-                  {/* Course Header */}
-                  <div className="flex items-start justify-between gap-2">
-                    <div>
-                      <div className="flex items-center gap-2">
-                        <span className="text-lg font-black text-slate-900 tracking-tight">
-                          {course?.code}
-                        </span>
-                        <span className="px-2 py-0.5 rounded-md text-[10px] font-bold bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]">
-                          {course?.creditUnits || 2} Units
-                        </span>
-                      </div>
-                      <h4 className="text-xs font-bold text-slate-800 mt-1 line-clamp-1">
-                        {course?.title}
-                      </h4>
-                    </div>
-
-                    {isSessionLive ? (
-                      <span className="px-2.5 py-0.5 rounded-full text-[10px] font-black bg-amber-50 text-amber-800 border border-amber-200 animate-pulse shrink-0">
-                        ● LIVE NOW
-                      </span>
-                    ) : (
-                      <span className="px-2 py-0.5 rounded-full text-[10px] font-bold bg-slate-100 text-slate-600 shrink-0">
-                        {course?.level || 200}L
-                      </span>
-                    )}
-                  </div>
-
-                  {/* Course Attributes (Phase 4 Spec) */}
-                  <div className="space-y-1.5 mt-3 pt-3 border-t border-slate-100 text-xs text-slate-600">
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Department:</span>
-                      <span className="font-semibold text-slate-700 truncate max-w-[170px]">
-                        {dept?.name || 'Computer Science'}
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Weekly Schedule:</span>
-                      <span className="font-semibold text-slate-700 flex items-center gap-1">
-                        <Clock className="w-3 h-3 text-slate-400" />
-                        <span>{scheduleDisplay}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Lecture Venue:</span>
-                      <span className="font-semibold text-slate-700 flex items-center gap-1">
-                        <MapPin className="w-3 h-3 text-slate-400" />
-                        <span>{venueDisplay}</span>
-                      </span>
-                    </div>
-
-                    <div className="flex items-center justify-between">
-                      <span className="text-slate-400">Sessions Held:</span>
-                      <span className="font-semibold text-slate-700">
-                        {pastSessions.length} Weekly Session{pastSessions.length !== 1 ? 's' : ''}
-                      </span>
-                    </div>
-                  </div>
-                </div>
-
-                {/* Actions Bar */}
-                <div className="mt-4 pt-3 border-t border-slate-100 flex items-center gap-2">
-                  {isSessionLive ? (
-                    <button
-                      onClick={() => setActiveSession(activeSession)}
-                      className="w-full flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-amber-500 hover:bg-amber-600 text-white text-xs font-bold transition shadow-xs"
-                    >
-                      <span>Viewing Live Session</span>
-                    </button>
-                  ) : (
-                    <button
-                      onClick={() => handleOpenStartModal(offering)}
-                      className="flex-1 flex items-center justify-center gap-1.5 py-2 px-3 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition shadow-xs"
-                    >
-                      <Play className="w-3 h-3 fill-current" />
-                      <span>Start Attendance</span>
-                    </button>
-                  )}
-
-                  <button
-                    onClick={() => setHistoryModalOffering({ offering })}
-                    title="View weekly lecture attendance history"
-                    className="p-2 rounded-xl border border-slate-200 hover:bg-slate-50 text-slate-600 transition"
-                  >
-                    <History className="w-4 h-4" />
-                  </button>
-                </div>
-              </div>
-            );
-          })}
-        </div>
-      </div>
 
       {/* KIOSK MODAL FOR LECTURER / REP */}
       {isKioskOpen && activeSession && (
@@ -420,7 +459,9 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
               operatorName={`Dr. ${user.firstName} ${user.lastName}`}
               operatorRoleTitle="Course Lecturer"
               onClose={() => setIsKioskOpen(false)}
-              onSuccess={() => setRefreshTrigger((prev) => prev + 1)}
+              onSuccess={() => {
+                void syncFromServer();
+              }}
             />
           </div>
         </div>
@@ -504,11 +545,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                         {s?.matricNumber} • {s?.profile?.firstName} {s?.profile?.lastName}
                       </span>
                       <span className="text-[10px] text-slate-400">
-                        {new Date(c.createdAt || (c as any).submittedAt).toLocaleDateString()}
+                        {c.createdAt ? new Date(c.createdAt).toLocaleDateString() : ''}
                       </span>
                     </div>
                     <p className="text-xs text-slate-600 bg-white p-2 rounded border border-slate-200">
-                      "{c.reason}"
+                      &ldquo;{c.reason}&rdquo;
                     </p>
                     <div className="flex items-center justify-end gap-2 pt-1">
                       <button
@@ -813,14 +854,18 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
           alerts={custechDb.getDeviceCollisionAlerts()}
           reviewerId={user.id}
           onClose={() => setIsFraudOpen(false)}
-          onUpdate={() => {}}
+          onUpdate={() => {
+            void syncFromServer();
+          }}
         />
       )}
       {isMedicalOpen && (
         <MedicalWaiverModal
           reviewerProfileId={user.id}
           onClose={() => setIsMedicalOpen(false)}
-          onSuccess={() => {}}
+          onSuccess={() => {
+            void syncFromServer();
+          }}
         />
       )}
     </div>

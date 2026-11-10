@@ -11,7 +11,7 @@ import {
   deactivateSessionCodeAction,
   reactivateSessionCodeAction,
 } from '@/actions/attendance';
-import { AttendanceSession, RotatingQrPayload } from '@/types';
+import { AttendanceSession } from '@/types';
 import {
   Pause,
   Play,
@@ -22,20 +22,12 @@ import {
   RefreshCw,
   Copy,
   Check,
-  ExternalLink,
   Maximize2,
   Minimize2,
   Monitor,
   RotateCcw,
   Power,
   PowerOff,
-  Building,
-  User,
-  GraduationCap,
-  Calendar,
-  Clock,
-  MapPin,
-  BookOpen,
 } from 'lucide-react';
 
 interface DynamicQrDisplayProps {
@@ -55,7 +47,7 @@ interface DynamicQrDisplayProps {
 }
 
 export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
-  session: initialSession,
+  session,
   courseCode,
   courseTitle,
   creditUnits = 2,
@@ -69,15 +61,14 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   onOpenKiosk,
   onSessionUpdate,
 }) => {
-  const [session, setSession] = React.useState<AttendanceSession>(initialSession);
   const [qrSvg, setQrSvg] = React.useState<string>('');
-  const [currentPayload, setCurrentPayload] = React.useState<RotatingQrPayload | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(initialSession.qrRotationSeconds || 60);
+  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(session.qrRotationSeconds || 60);
   const [isLoading, setIsLoading] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
   const [copiedLink, setCopiedLink] = React.useState(false);
   const [isProjectorMode, setIsProjectorMode] = React.useState(false);
+  const [tokenRefreshNonce, setTokenRefreshNonce] = React.useState(0);
 
   // Keyboard shortcut listener for Esc key to exit projector mode
   React.useEffect(() => {
@@ -90,68 +81,66 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     return () => window.removeEventListener('keydown', handleKeyDown);
   }, [isProjectorMode]);
 
-  // Sync state if initialSession changes
-  React.useEffect(() => {
-    setSession(initialSession);
-  }, [initialSession]);
-
-  // Fetch or rotate QR token
-  const fetchNewToken = React.useCallback(async () => {
-    if (session.status !== 'ACTIVE') return;
-    try {
-      const res = await getRotatingQrToken(session.id);
-      if ('error' in res) {
-        setActionError(res.error);
-        return;
-      }
-      setCurrentPayload(res);
-
-      // Generate Direct Mobile Camera Redirect URL
-      const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000';
-      const attendUrl = `${origin}/attend?sessionId=${encodeURIComponent(session.id)}&course=${encodeURIComponent(courseCode)}&tw=${res.timestampWindow}&nonce=${encodeURIComponent(res.nonce)}&sig=${encodeURIComponent(res.signature)}&code=${encodeURIComponent(session.currentTempCode)}`;
-
-      // Generate SVG string from the direct URL
-      const svg = await QRCode.toString(attendUrl, {
-        type: 'svg',
-        margin: 1,
-        color: {
-          dark: '#743c22', // CUSTECH official brown
-          light: '#ffffff',
-        },
-      });
-      setQrSvg(svg);
-      setSecondsRemaining(session.qrRotationSeconds || 60);
-      setActionError(null);
-    } catch {
-      setActionError('Error generating dynamic token');
-    }
-  }, [session.id, session.status, session.qrRotationSeconds, session.currentTempCode, courseCode]);
-
   // Timer interval for countdown and token rotation
   React.useEffect(() => {
     if (session.status !== 'ACTIVE') return;
 
-    fetchNewToken();
+    let cancelled = false;
+
+    const loadToken = async () => {
+      try {
+        const res = await getRotatingQrToken(session.id);
+        if (cancelled) return;
+        if ('error' in res) {
+          setActionError(res.error);
+          return;
+        }
+
+        const origin = typeof window !== 'undefined' ? window.location.origin : 'http://localhost:4000';
+        const attendUrl = `${origin}/attend?sessionId=${encodeURIComponent(session.id)}&course=${encodeURIComponent(courseCode)}&tw=${res.timestampWindow}&nonce=${encodeURIComponent(res.nonce)}&sig=${encodeURIComponent(res.signature)}&code=${encodeURIComponent(session.currentTempCode)}`;
+
+        const svg = await QRCode.toString(attendUrl, {
+          type: 'svg',
+          margin: 1,
+          color: {
+            dark: '#743c22', // CUSTECH official brown
+            light: '#ffffff',
+          },
+        });
+        if (cancelled) return;
+        setQrSvg(svg);
+        setSecondsRemaining(session.qrRotationSeconds || 60);
+        setActionError(null);
+      } catch {
+        if (!cancelled) {
+          setActionError('Error generating dynamic token');
+        }
+      }
+    };
+
+    void loadToken();
 
     const interval = setInterval(() => {
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
-          fetchNewToken();
+          void loadToken();
           return session.qrRotationSeconds || 60;
         }
         return prev - 1;
       });
     }, 1000);
 
-    return () => clearInterval(interval);
-  }, [session.status, session.qrRotationSeconds, fetchNewToken]);
+    return () => {
+      cancelled = true;
+      clearInterval(interval);
+    };
+  }, [session.id, session.status, session.qrRotationSeconds, session.currentTempCode, courseCode, tokenRefreshNonce]);
 
   // Session Lifecycle handlers
   const handlePause = async () => {
     try {
       setIsLoading(true);
       const updated = await pauseSession(session.id, lecturerId);
-      setSession(updated);
       onSessionUpdate?.(updated);
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Failed to pause session');
@@ -164,9 +153,8 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     try {
       setIsLoading(true);
       const updated = await resumeSession(session.id, lecturerId);
-      setSession(updated);
       onSessionUpdate?.(updated);
-      fetchNewToken();
+      setTokenRefreshNonce((n) => n + 1);
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Failed to resume session');
     } finally {
@@ -181,7 +169,6 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     try {
       setIsLoading(true);
       const updated = await closeSession(session.id, lecturerId);
-      setSession(updated);
       onSessionUpdate?.(updated);
     } catch (err: unknown) {
       setActionError(err instanceof Error ? err.message : 'Failed to close session');
@@ -199,18 +186,17 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       setIsLoading(true);
       const res = await regenerateSessionCodeAction(session.id, lecturerId);
       if (res.success && res.newCode) {
-        const updated = {
+        const updated: AttendanceSession = {
           ...session,
           currentTempCode: res.newCode,
           isCodeActive: true,
           tempCodeExpiresAt: res.expiresAt || session.tempCodeExpiresAt,
           previousCodes: [...(session.previousCodes || []), session.currentTempCode],
         };
-        setSession(updated);
         onSessionUpdate?.(updated);
         setActionSuccess(`New Code Generated: ${res.newCode}. Previous codes immediately invalidated.`);
         setTimeout(() => setActionSuccess(null), 4000);
-        fetchNewToken();
+        setTokenRefreshNonce((n) => n + 1);
       } else {
         setActionError(res.error || 'Failed to regenerate attendance code');
       }
@@ -228,13 +214,11 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       if (isCurrentlyActive) {
         await deactivateSessionCodeAction(session.id, lecturerId);
         const updated = { ...session, isCodeActive: false };
-        setSession(updated);
         onSessionUpdate?.(updated);
         setActionSuccess('Attendance code deactivated. Submissions using code are now blocked.');
       } else {
         await reactivateSessionCodeAction(session.id, lecturerId);
         const updated = { ...session, isCodeActive: true };
-        setSession(updated);
         onSessionUpdate?.(updated);
         setActionSuccess('Attendance code reactivated. Students can now submit again.');
       }

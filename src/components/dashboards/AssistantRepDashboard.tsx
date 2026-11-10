@@ -2,15 +2,13 @@
 
 import React from 'react';
 import { UserProfile } from '@/types';
-import { initialCourses, initialProfiles, initialStudents } from '@/lib/db/initial-data';
+import { custechDb } from '@/lib/db/repository';
 import { KioskTerminal } from '../attendance/KioskTerminal';
 import {
   Users,
   ShieldCheck,
   QrCode,
   CheckCircle2,
-  Calendar,
-  Layers,
 } from 'lucide-react';
 
 interface AssistantRepDashboardProps {
@@ -20,7 +18,13 @@ interface AssistantRepDashboardProps {
 export const AssistantRepDashboard: React.FC<AssistantRepDashboardProps> = ({ user }) => {
   const [showKiosk, setShowKiosk] = React.useState(false);
   const [coSignedSessions, setCoSignedSessions] = React.useState<string[]>([]);
-  const cscCourse = initialCourses.find((c) => c.code === 'CSC 201');
+  const activeSession =
+    custechDb.getSessions().find((s) => s.status === 'ACTIVE') ||
+    custechDb.getSessionById('sess-today-csc');
+  const activeCourse = activeSession
+    ? custechDb.getOfferingById(activeSession.courseOfferingId)?.course
+    : custechDb.getCourses().find((c) => c.code === 'CSC 201');
+  const allStudents = custechDb.getAllStudentsDetailed();
 
   const handleCoSign = (sessionId: string) => {
     if (!coSignedSessions.includes(sessionId)) {

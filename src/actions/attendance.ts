@@ -7,7 +7,74 @@ import {
   KioskAttendanceDTO,
   AttendanceSession,
   AttendanceRecord,
+  AttendanceMethod,
+  FaceVerificationSubmission,
 } from '@/types';
+
+/**
+ * Shared server-side helper to enforce biometric facial verification
+ * before recording student attendance.
+ */
+function verifyAndRecordWithFace(params: {
+  sessionId: string;
+  studentId: string;
+  method: AttendanceMethod;
+  recordedBy: string;
+  clientEventId?: string;
+  faceVerification?: FaceVerificationSubmission;
+  telemetry?: { deviceFingerprintHash?: string; userAgent?: string; browser?: string; os?: string };
+}): {
+  success: boolean;
+  isDuplicate?: boolean;
+  message: string;
+  record?: AttendanceRecord;
+  biometricErrorCode?: string;
+} {
+  const faceCheck = custechDb.verifyStudentFaceForAttendance({
+    studentId: params.studentId,
+    sessionId: params.sessionId,
+    faceVerification: params.faceVerification,
+  });
+
+  if (!faceCheck.skipped && !faceCheck.verified) {
+    return {
+      success: false,
+      message: faceCheck.message,
+      biometricErrorCode: faceCheck.code,
+    };
+  }
+
+  try {
+    const result = custechDb.recordAttendance({
+      sessionId: params.sessionId,
+      studentId: params.studentId,
+      method: params.method,
+      recordedBy: params.recordedBy,
+      clientEventId: params.clientEventId,
+      deviceFingerprintHash: params.telemetry?.deviceFingerprintHash,
+      userAgent: params.telemetry?.userAgent,
+      browser: params.telemetry?.browser,
+      os: params.telemetry?.os,
+      facialVerified: faceCheck.verified,
+      facialConfidence: faceCheck.confidence,
+      facialDistance: faceCheck.distance,
+      livenessVerified: params.faceVerification?.livenessPassed,
+      liveDescriptor: faceCheck.verified ? params.faceVerification?.descriptor : undefined,
+    });
+
+    return {
+      success: !result.isDuplicate,
+      isDuplicate: result.isDuplicate,
+      message: result.message,
+      record: result.record,
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      message: err instanceof Error ? err.message : 'Error recording attendance',
+    };
+  }
+}
 
 /**
  * Fetch current state of an attendance session
@@ -48,8 +115,9 @@ export async function getRotatingQrToken(sessionId: string): Promise<RotatingQrP
 export async function submitQrAttendance(
   payload: RotatingQrPayload,
   studentProfileId: string,
-  clientEventId?: string
-): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> {
+  clientEventId?: string,
+  faceVerification?: FaceVerificationSubmission
+): Promise<{ success: boolean; message: string; record?: AttendanceRecord; biometricErrorCode?: string }> {
   // 1. Verify Cryptographic Signature & Window
   const session = custechDb.getSessionById(payload.sessionId);
   if (!session) {
@@ -67,27 +135,22 @@ export async function submitQrAttendance(
     return { success: false, message: 'Student profile not found in CUSTECH registry.' };
   }
 
-  // 3. Record Attendance with Strict Deduplication
-  try {
-    const result = custechDb.recordAttendance({
-      sessionId: session.id,
-      studentId: student.id,
-      method: 'DYNAMIC_QR',
-      recordedBy: studentProfileId,
-      clientEventId,
-    });
+  // 3. Enforce Facial Verification & Record Attendance
+  const res = verifyAndRecordWithFace({
+    sessionId: session.id,
+    studentId: student.id,
+    method: 'DYNAMIC_QR',
+    recordedBy: studentProfileId,
+    clientEventId,
+    faceVerification,
+  });
 
-    return {
-      success: true,
-      message: result.message,
-      record: result.record,
-    };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Error recording attendance',
-    };
-  }
+  return {
+    success: res.success || Boolean(res.isDuplicate),
+    message: res.message,
+    record: res.record,
+    biometricErrorCode: res.biometricErrorCode,
+  };
 }
 
 /**
@@ -98,8 +161,9 @@ export async function submitCodeAttendance(
   code: string,
   studentProfileId: string,
   clientEventId?: string,
-  telemetry?: { deviceFingerprintHash?: string; userAgent?: string; browser?: string; os?: string }
-): Promise<{ success: boolean; message: string; record?: AttendanceRecord }> {
+  telemetry?: { deviceFingerprintHash?: string; userAgent?: string; browser?: string; os?: string },
+  faceVerification?: FaceVerificationSubmission
+): Promise<{ success: boolean; message: string; record?: AttendanceRecord; biometricErrorCode?: string }> {
   const session = custechDb.getSessionById(sessionId);
   if (!session) {
     return { success: false, message: 'Session not found.' };
@@ -130,30 +194,22 @@ export async function submitCodeAttendance(
     return { success: false, message: 'Student profile not found.' };
   }
 
-  try {
-    const result = custechDb.recordAttendance({
-      sessionId: session.id,
-      studentId: student.id,
-      method: 'TEMP_CODE',
-      recordedBy: studentProfileId,
-      clientEventId,
-      deviceFingerprintHash: telemetry?.deviceFingerprintHash,
-      userAgent: telemetry?.userAgent,
-      browser: telemetry?.browser,
-      os: telemetry?.os,
-    });
+  const res = verifyAndRecordWithFace({
+    sessionId: session.id,
+    studentId: student.id,
+    method: 'TEMP_CODE',
+    recordedBy: studentProfileId,
+    clientEventId,
+    telemetry,
+    faceVerification,
+  });
 
-    return {
-      success: true,
-      message: result.message,
-      record: result.record,
-    };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Error recording attendance',
-    };
-  }
+  return {
+    success: res.success || Boolean(res.isDuplicate),
+    message: res.message,
+    record: res.record,
+    biometricErrorCode: res.biometricErrorCode,
+  };
 }
 
 /**
@@ -164,8 +220,15 @@ export async function submitAttendanceByCourseAndCode(
   code: string,
   studentProfileId: string,
   clientEventId?: string,
-  telemetry?: { deviceFingerprintHash?: string; userAgent?: string; browser?: string; os?: string }
-): Promise<{ success: boolean; message: string; record?: AttendanceRecord; courseTitle?: string }> {
+  telemetry?: { deviceFingerprintHash?: string; userAgent?: string; browser?: string; os?: string },
+  faceVerification?: FaceVerificationSubmission
+): Promise<{
+  success: boolean;
+  message: string;
+  record?: AttendanceRecord;
+  courseTitle?: string;
+  biometricErrorCode?: string;
+}> {
   const cleanCourse = courseCode.trim().toUpperCase().replace(/\s+/g, '');
   const cleanCode = code.trim().toUpperCase();
 
@@ -226,31 +289,23 @@ export async function submitAttendanceByCourseAndCode(
     return { success: false, message: 'Student profile not found in CUSTECH registry.' };
   }
 
-  try {
-    const result = custechDb.recordAttendance({
-      sessionId: session.id,
-      studentId: student.id,
-      method: 'TEMP_CODE',
-      recordedBy: studentProfileId,
-      clientEventId,
-      deviceFingerprintHash: telemetry?.deviceFingerprintHash,
-      userAgent: telemetry?.userAgent,
-      browser: telemetry?.browser,
-      os: telemetry?.os,
-    });
+  const res = verifyAndRecordWithFace({
+    sessionId: session.id,
+    studentId: student.id,
+    method: 'TEMP_CODE',
+    recordedBy: studentProfileId,
+    clientEventId,
+    telemetry,
+    faceVerification,
+  });
 
-    return {
-      success: true,
-      message: result.message,
-      record: result.record,
-      courseTitle: session.courseOffering?.course?.title,
-    };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Error recording attendance',
-    };
-  }
+  return {
+    success: res.success || Boolean(res.isDuplicate),
+    message: res.message,
+    record: res.record,
+    courseTitle: session.courseOffering?.course?.title,
+    biometricErrorCode: res.biometricErrorCode,
+  };
 }
 
 /**
@@ -265,7 +320,14 @@ export async function submitAttendanceFromUrl(params: {
   code?: string;
   studentProfileId: string;
   clientEventId?: string;
-}): Promise<{ success: boolean; message: string; record?: AttendanceRecord; courseTitle?: string }> {
+  faceVerification?: FaceVerificationSubmission;
+}): Promise<{
+  success: boolean;
+  message: string;
+  record?: AttendanceRecord;
+  courseTitle?: string;
+  biometricErrorCode?: string;
+}> {
   const session = custechDb.getSessionById(params.sessionId);
   if (!session) {
     return { success: false, message: 'Attendance session not found or has expired.' };
@@ -307,7 +369,6 @@ export async function submitAttendanceFromUrl(params: {
     }
   }
 
-  // If session is active and opened directly via valid QR link, we accept verification
   if (!verified) {
     return {
       success: false,
@@ -315,36 +376,45 @@ export async function submitAttendanceFromUrl(params: {
     };
   }
 
-  try {
-    const result = custechDb.recordAttendance({
-      sessionId: session.id,
-      studentId: student.id,
-      method: 'DYNAMIC_QR',
-      recordedBy: params.studentProfileId,
-      clientEventId: params.clientEventId,
-    });
+  const res = verifyAndRecordWithFace({
+    sessionId: session.id,
+    studentId: student.id,
+    method: 'DYNAMIC_QR',
+    recordedBy: params.studentProfileId,
+    clientEventId: params.clientEventId,
+    faceVerification: params.faceVerification,
+  });
 
-    const offering = custechDb.getOfferingById(session.courseOfferingId);
-    return {
-      success: true,
-      message: result.message,
-      record: result.record,
-      courseTitle: offering?.course?.title,
-    };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Error recording attendance',
-    };
-  }
+  const offering = custechDb.getOfferingById(session.courseOfferingId);
+  return {
+    success: res.success || Boolean(res.isDuplicate),
+    message: res.message,
+    record: res.record,
+    courseTitle: offering?.course?.title,
+    biometricErrorCode: res.biometricErrorCode,
+  };
 }
 
 /**
- * Handles Kiosk Assisted Attendance (Matric Number + 4-digit PIN)
+ * Handles Kiosk Assisted Attendance (Matric Number + 4-digit PIN + optional biometric face scan)
  */
 export async function submitKioskAttendance(
-  dto: KioskAttendanceDTO
+  dto: KioskAttendanceDTO & { faceVerification?: FaceVerificationSubmission }
 ): Promise<{ success: boolean; message: string; record?: AttendanceRecord; studentName?: string }> {
+  if (dto.faceVerification) {
+    const student = custechDb.getStudentByMatric(dto.matricNumber);
+    if (student) {
+      const faceCheck = custechDb.verifyStudentFaceForAttendance({
+        studentId: student.id,
+        sessionId: dto.sessionId,
+        faceVerification: dto.faceVerification,
+      });
+      if (!faceCheck.skipped && !faceCheck.verified && faceCheck.code !== 'FACE_NOT_ENROLLED') {
+        return { success: false, message: faceCheck.message };
+      }
+    }
+  }
+
   return await custechDb.verifyAndRecordKiosk({
     sessionId: dto.sessionId,
     matricNumber: dto.matricNumber,
@@ -516,10 +586,12 @@ export async function submitStudentAttendanceWithMatric(params: {
   browser?: string;
   os?: string;
   clientEventId?: string;
+  faceVerification?: FaceVerificationSubmission;
 }): Promise<{
   success: boolean;
   message: string;
   isDuplicate?: boolean;
+  biometricErrorCode?: string;
   student?: {
     matricNumber: string;
     fullName: string;
@@ -613,60 +685,47 @@ export async function submitStudentAttendanceWithMatric(params: {
     }
   }
 
-  // 4. Record attendance with device telemetry and deduplication
+  // 4. Enforce Facial Verification & Record attendance with device telemetry and deduplication
   const offering = custechDb.getOfferingById(targetSession.courseOfferingId);
   const course = offering?.course;
   const lecturer = offering?.primaryLecturer;
 
-  try {
-    const result = custechDb.recordAttendance({
-      sessionId: targetSession.id,
-      studentId: student.id,
-      method: params.method === 'DYNAMIC_QR' ? 'DYNAMIC_QR' : 'TEMP_CODE',
-      recordedBy: student.profileId,
-      clientEventId: params.clientEventId,
+  const studentSummary = {
+    matricNumber: student.matricNumber,
+    fullName: student.fullName,
+    departmentName: student.departmentName,
+    level: student.level,
+  };
+  const courseSummary = {
+    code: course?.code || 'COURSE',
+    title: course?.title || 'Lecture Session',
+    venue: targetSession.venue || 'Lecture Hall',
+    lecturerName: lecturer ? `${lecturer.firstName} ${lecturer.lastName}` : 'Course Lecturer',
+    weekNumber: targetSession.weekNumber,
+  };
+
+  const result = verifyAndRecordWithFace({
+    sessionId: targetSession.id,
+    studentId: student.id,
+    method: params.method === 'DYNAMIC_QR' ? 'DYNAMIC_QR' : 'TEMP_CODE',
+    recordedBy: student.profileId,
+    clientEventId: params.clientEventId,
+    faceVerification: params.faceVerification,
+    telemetry: {
       deviceFingerprintHash: params.deviceFingerprintHash,
       userAgent: params.userAgent,
       browser: params.browser,
       os: params.os,
-    });
+    },
+  });
 
-    return {
-      success: !result.isDuplicate,
-      isDuplicate: result.isDuplicate,
-      message: result.message,
-      student: {
-        matricNumber: student.matricNumber,
-        fullName: student.fullName,
-        departmentName: student.departmentName,
-        level: student.level,
-      },
-      course: {
-        code: course?.code || 'COURSE',
-        title: course?.title || 'Lecture Session',
-        venue: targetSession.venue || 'Lecture Hall',
-        lecturerName: lecturer ? `${lecturer.firstName} ${lecturer.lastName}` : 'Course Lecturer',
-        weekNumber: targetSession.weekNumber,
-      },
-      record: result.record,
-    };
-  } catch (err: unknown) {
-    return {
-      success: false,
-      message: err instanceof Error ? err.message : 'Error recording attendance.',
-      student: {
-        matricNumber: student.matricNumber,
-        fullName: student.fullName,
-        departmentName: student.departmentName,
-        level: student.level,
-      },
-      course: {
-        code: course?.code || 'COURSE',
-        title: course?.title || 'Lecture Session',
-        venue: targetSession.venue || 'Lecture Hall',
-        lecturerName: lecturer ? `${lecturer.firstName} ${lecturer.lastName}` : 'Course Lecturer',
-        weekNumber: targetSession.weekNumber,
-      },
-    };
-  }
+  return {
+    success: result.success,
+    isDuplicate: result.isDuplicate,
+    biometricErrorCode: result.biometricErrorCode,
+    message: result.message,
+    student: studentSummary,
+    course: courseSummary,
+    record: result.record,
+  };
 }

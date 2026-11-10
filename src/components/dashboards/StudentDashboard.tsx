@@ -8,24 +8,77 @@ import { QrScannerModal } from '../attendance/QrScannerModal';
 import { ExamDocketModal } from '../docket/ExamDocketModal';
 import { AttendanceForecast } from '../analytics/AttendanceForecast';
 import { submitAttendanceCorrection } from '@/actions/attendance';
+import { getDatabaseSnapshotAction } from '@/actions/academic';
+import { getStudentFaceStatusAction, enrollStudentFaceAction } from '@/actions/biometric';
+import { FacialVerificationScanner } from '../attendance/FacialVerificationScanner';
 import { formatDate, formatTime, getStatusBadgeVariant } from '@/lib/utils';
 import { OfflineSyncBanner } from '../layout/OfflineSyncBanner';
-import { BookOpen, Calendar, Clock, AlertCircle, FileText, CheckCircle2, ChevronRight, MessageSquare, Award, HeartPulse, Radio, Key } from 'lucide-react';
+import { Clock, CheckCircle2, ChevronRight, MessageSquare, Award, HeartPulse, Radio, Key, ScanFace, ShieldCheck, X } from 'lucide-react';
 
 interface StudentDashboardProps {
   user: UserProfile;
 }
 
 export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
+  const [refreshTrigger, setRefreshTrigger] = React.useState(0);
+
+  const syncFromServer = React.useCallback(async () => {
+    try {
+      const snapshot = await getDatabaseSnapshotAction();
+      if (snapshot) {
+        custechDb.syncClientSnapshot(snapshot);
+        setRefreshTrigger((prev) => prev + 1);
+      }
+    } catch {
+      // Offline fallback uses local custechDb
+    }
+  }, []);
+
+  React.useEffect(() => {
+    const handleSynced = () => setRefreshTrigger((prev) => prev + 1);
+    window.addEventListener('custech-db-synced', handleSynced);
+    return () => window.removeEventListener('custech-db-synced', handleSynced);
+  }, []);
+
+  void refreshTrigger;
   const student = custechDb.getStudentByProfileId(user.id);
   const enrolledOfferings = student ? custechDb.getStudentOfferings(student.id) : [];
   const attendanceRecords = student ? custechDb.getRecordsForStudent(student.id) : [];
-  const activeSessions = custechDb.getSessions().filter((s) => s.status === 'ACTIVE');
+  const allSessions = custechDb.getSessions();
+  const activeSessions = allSessions.filter((s) => s.status === 'ACTIVE');
 
   const [selectedSessionForScan, setSelectedSessionForScan] = React.useState<AttendanceSession | null>(null);
   const [isManualEntryOpen, setIsManualEntryOpen] = React.useState(false);
   const [successToast, setSuccessToast] = React.useState<string | null>(null);
   const [docket, setDocket] = React.useState<ExamDocket | null>(null);
+
+  // Face ID Biometric Enrollment state
+  const [faceStatus, setFaceStatus] = React.useState<{
+    loaded: boolean;
+    enrolled: boolean;
+    enrolledAt?: string;
+    isLocked?: boolean;
+  }>({ loaded: false, enrolled: false });
+  const [isFaceEnrollOpen, setIsFaceEnrollOpen] = React.useState(false);
+
+  const loadFaceStatus = React.useCallback(async () => {
+    try {
+      const targetId = student?.id || user.id;
+      const res = await getStudentFaceStatusAction(targetId);
+      setFaceStatus({
+        loaded: true,
+        enrolled: res.enrolled,
+        enrolledAt: res.enrolledAt,
+        isLocked: res.isLocked,
+      });
+    } catch {
+      setFaceStatus((prev) => ({ ...prev, loaded: true }));
+    }
+  }, [student?.id, user.id]);
+
+  React.useEffect(() => {
+    void loadFaceStatus();
+  }, [loadFaceStatus]);
 
   // Correction Dispute Modal state
   const [isDisputeOpen, setIsDisputeOpen] = React.useState(false);
@@ -39,7 +92,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   // Overall Attendance KPI Calculation
   const presentCount = attendanceRecords.filter((r) => r.status === 'PRESENT').length;
   const lateCount = attendanceRecords.filter((r) => r.status === 'LATE').length;
-  const absentCount = 1; // From seed data (absent in session 2)
+  const enrolledOfferingIds = new Set(enrolledOfferings.map((o) => o.id));
+  const closedEnrolledSessions = allSessions.filter(
+    (s) => enrolledOfferingIds.has(s.courseOfferingId) && (s.status === 'CLOSED' || s.status === 'FINALIZED')
+  );
+  const attendedSessionIds = new Set(attendanceRecords.map((r) => r.sessionId));
+  const absentCount = closedEnrolledSessions.filter((s) => !attendedSessionIds.has(s.id)).length;
 
   const handleGenerateDocket = () => {
     if (!student) return;
@@ -52,6 +110,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
     if (!student || !disputeSessionId || !disputeReason) return;
     try {
       await submitAttendanceCorrection(disputeSessionId, student.id, disputeReason);
+      await syncFromServer();
       setDisputeFeedback('Attendance correction request submitted to Course Lecturer.');
       setTimeout(() => {
         setIsDisputeOpen(false);
@@ -90,7 +149,7 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
             <p className="text-xs text-slate-500 mt-0.5">
               Department of Computer Science • Faculty of Computing
             </p>
-            <div className="mt-2.5 flex items-center gap-2">
+            <div className="mt-2.5 flex flex-wrap items-center gap-2">
               <button
                 onClick={handleGenerateDocket}
                 className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-sm transition"
@@ -98,6 +157,24 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                 <Award className="w-3.5 h-3.5" />
                 <span>Exam Clearance Docket</span>
               </button>
+
+              {faceStatus.loaded && (
+                faceStatus.enrolled ? (
+                  <span className="inline-flex items-center gap-1.5 px-3 py-2 rounded-lg bg-emerald-50 text-emerald-800 border border-emerald-200 text-xs font-bold">
+                    <ShieldCheck className="w-3.5 h-3.5 text-emerald-600" />
+                    <span>Face ID Active &amp; Locked</span>
+                  </span>
+                ) : (
+                  <button
+                    type="button"
+                    onClick={() => setIsFaceEnrollOpen(true)}
+                    className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold shadow-sm transition"
+                  >
+                    <ScanFace className="w-3.5 h-3.5 text-amber-300" />
+                    <span>Enroll Face ID</span>
+                  </button>
+                )
+              )}
             </div>
           </div>
         </div>
@@ -119,6 +196,30 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
           </div>
         </div>
       </div>
+
+      {/* Face ID Enrollment Reminder Banner */}
+      {faceStatus.loaded && !faceStatus.enrolled && (
+        <div className="p-4 rounded-2xl bg-amber-50 border border-amber-200 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+          <div className="flex items-start gap-3">
+            <ScanFace className="w-5 h-5 text-[#8d4a27] shrink-0 mt-0.5" />
+            <div className="text-xs">
+              <h4 className="font-bold text-slate-900">
+                Biometric Face ID Required for Academic Integrity
+              </h4>
+              <p className="text-xs text-slate-600 mt-0.5">
+                Enroll your Face ID once to verify your identity during lecture check-ins and prevent proxy attendance.
+              </p>
+            </div>
+          </div>
+          <button
+            type="button"
+            onClick={() => setIsFaceEnrollOpen(true)}
+            className="px-4 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shrink-0 shadow-xs transition"
+          >
+            Register Face ID Now
+          </button>
+        </div>
+      )}
 
       {/* Medical Waiver Notice Banner (If Student Has Active Clinic Exemptions) */}
       {studentWaivers.length > 0 && (
@@ -165,7 +266,9 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
               <Key className="w-3.5 h-3.5" />
               <span>Type Course & Lecture Code</span>
             </button>
-            <span className="text-xs text-slate-400 font-medium">Thursday, 3 Sep 2026</span>
+            <span className="text-xs text-slate-400 font-medium">
+              {formatDate(new Date().toISOString())}
+            </span>
           </div>
         </div>
 
@@ -208,7 +311,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                       </h4>
                       <p className="text-xs text-slate-500 mt-1.5 flex items-center gap-1.5">
                         <Clock className="w-3.5 h-3.5 text-slate-400" />
-                        <span>10:00 AM – 12:00 PM • Room LH 101</span>
+                        <span>
+                          {sess.actualStart || sess.scheduledStart
+                            ? `${formatTime(sess.actualStart || sess.scheduledStart)} – ${formatTime(sess.scheduledEnd)}`
+                            : '10:00 AM – 12:00 PM'}{' '}
+                          • {sess.venue || 'Room LH 101'}
+                        </span>
                       </p>
                     </div>
 
@@ -310,6 +418,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                     </span>
                     <span className="text-slate-400">•</span>
                     <span className="text-slate-500">{formatDate(r.recordedAt)}</span>
+                    {r.facialVerified && (
+                      <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[10px] font-bold bg-emerald-50 text-emerald-700 border border-emerald-200">
+                        <ScanFace className="w-3 h-3" />
+                        <span>Face Verified{r.facialConfidence ? ` (${r.facialConfidence}%)` : ''}</span>
+                      </span>
+                    )}
                   </div>
                   <p className="text-xs text-slate-400 mt-0.5">
                     Method: {r.method.replace('_', ' ')} {r.assistedReason ? `(${r.assistedReason})` : ''}
@@ -342,16 +456,58 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
               : ''
           }
           studentProfileId={user.id}
+          studentName={`${user.firstName} ${user.lastName}`}
+          matricNumber={student?.matricNumber || user.matricNumber || ''}
           onClose={() => {
             setSelectedSessionForScan(null);
             setIsManualEntryOpen(false);
+            loadFaceStatus();
           }}
           onSuccess={(msg) => {
             setSuccessToast(msg);
             setSelectedSessionForScan(null);
             setIsManualEntryOpen(false);
+            void loadFaceStatus();
+            void syncFromServer();
           }}
         />
+      )}
+
+      {/* FACE ID BIOMETRIC ENROLLMENT MODAL */}
+      {isFaceEnrollOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md relative">
+            <button
+              type="button"
+              onClick={() => setIsFaceEnrollOpen(false)}
+              className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-500 hover:text-slate-800"
+              aria-label="Close Face ID Enrollment"
+            >
+              <X className="w-4 h-4" />
+            </button>
+            <FacialVerificationScanner
+              mode="ENROLL"
+              studentName={`${user.firstName} ${user.lastName}`}
+              matricNumber={student?.matricNumber || user.matricNumber || ''}
+              onEnrolled={async ({ descriptor, sampleCount, thumbnailDataUrl }) => {
+                const res = await enrollStudentFaceAction({
+                  studentIdOrProfileId: student?.id || user.id,
+                  descriptor,
+                  sampleCount,
+                  actorProfileId: user.id,
+                  thumbnailDataUrl,
+                });
+                if (res.success) {
+                  await loadFaceStatus();
+                  setSuccessToast(res.message);
+                  setTimeout(() => setIsFaceEnrollOpen(false), 1200);
+                }
+                return res;
+              }}
+              onCancel={() => setIsFaceEnrollOpen(false)}
+            />
+          </div>
+        </div>
       )}
 
       {/* CORRECTION / DISPUTE MODAL */}
@@ -383,8 +539,14 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
                   className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-slate-50 text-slate-900"
                 >
                   <option value="">Select Missed Session</option>
-                  <option value="sess-csc-2">CSC 201 - Thursday, 27 Aug 2026</option>
-                  <option value="sess-today-csc">CSC 201 - Thursday, 3 Sep 2026</option>
+                  {allSessions.map((sess) => {
+                    const code = sess.courseOffering?.course?.code || 'COURSE';
+                    return (
+                      <option key={sess.id} value={sess.id}>
+                        {code} (Week {sess.weekNumber || 1}) - {sess.date}
+                      </option>
+                    );
+                  })}
                 </select>
               </div>
 

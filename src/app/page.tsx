@@ -34,24 +34,35 @@ export default function Home() {
   }, []);
 
   React.useEffect(() => {
-    // 1. Fast local session recovery
-    refreshSession();
+    let mounted = true;
 
-    // 2. Hydrate client database with server persistent store
-    getDatabaseSnapshotAction()
-      .then((snapshot) => {
-        if (snapshot) {
+    const hydrateAndLoad = async () => {
+      try {
+        // Hydrate client database with authoritative server store (with 2.5s offline fallback)
+        const snapshot = await Promise.race([
+          getDatabaseSnapshotAction(),
+          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
+        ]);
+        if (mounted && snapshot) {
           custechDb.syncClientSnapshot(snapshot);
+        }
+      } catch {
+        // Offline / network fallback uses localStorage cache
+      } finally {
+        if (mounted) {
           refreshSession();
         }
-      })
-      .catch(() => {});
+      }
+    };
+
+    void hydrateAndLoad();
 
     const handleAuthChange = () => refreshSession();
     window.addEventListener('custech-auth-changed', handleAuthChange);
     window.addEventListener('storage', handleAuthChange);
 
     return () => {
+      mounted = false;
       window.removeEventListener('custech-auth-changed', handleAuthChange);
       window.removeEventListener('storage', handleAuthChange);
     };

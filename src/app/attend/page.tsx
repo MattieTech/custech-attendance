@@ -4,9 +4,14 @@ import React, { Suspense } from 'react';
 import { useSearchParams, useRouter } from 'next/navigation';
 import {
   submitStudentAttendanceWithMatric,
-  submitAttendanceFromUrl,
 } from '@/actions/attendance';
 import { verifyMatriculationNumberAction } from '@/actions/academic';
+import {
+  getBiometricPolicyAction,
+  enrollStudentFaceAction,
+} from '@/actions/biometric';
+import { FacialVerificationScanner } from '@/components/attendance/FacialVerificationScanner';
+import { FaceVerificationSubmission } from '@/types';
 import { getClientDeviceTelemetry } from '@/lib/device';
 import { OfflineSyncBanner } from '@/components/layout/OfflineSyncBanner';
 import { enqueueOfflineAttendance } from '@/lib/offline/dexie-db';
@@ -15,20 +20,14 @@ import {
   AlertCircle,
   QrCode,
   ShieldCheck,
-  BookOpen,
   User,
-  Key,
   ArrowRight,
   RefreshCw,
   School,
   WifiOff,
   Search,
   Check,
-  Calendar,
-  Clock,
-  MapPin,
-  GraduationCap,
-  Building,
+  ScanFace,
 } from 'lucide-react';
 
 interface VerifiedStudent {
@@ -41,6 +40,8 @@ interface VerifiedStudent {
   facultyName: string;
   level: number;
   email: string;
+  faceEnrolled?: boolean;
+  faceEnrolledAt?: string;
 }
 
 function AttendContent() {
@@ -51,9 +52,6 @@ function AttendContent() {
   const sessionId = searchParams.get('sessionId') || searchParams.get('session') || '';
   const initialCourse = searchParams.get('course') || searchParams.get('courseCode') || '';
   const initialCode = searchParams.get('code') || '';
-  const tw = searchParams.get('tw') || searchParams.get('timestampWindow') || '';
-  const nonce = searchParams.get('nonce') || '';
-  const sig = searchParams.get('sig') || searchParams.get('signature') || '';
 
   // Form State
   const [matricInput, setMatricInput] = React.useState('');
@@ -64,6 +62,10 @@ function AttendContent() {
   const [isLookingUpMatric, setIsLookingUpMatric] = React.useState(false);
   const [matricError, setMatricError] = React.useState<string | null>(null);
   const [verifiedStudent, setVerifiedStudent] = React.useState<VerifiedStudent | null>(null);
+
+  // Biometric Facial Verification State
+  const [requireFacialScan, setRequireFacialScan] = React.useState(true);
+  const [biometricMode, setBiometricMode] = React.useState<'NONE' | 'ENROLL' | 'VERIFY'>('NONE');
 
   // Submission State
   const [isSubmitting, setIsSubmitting] = React.useState(false);
@@ -78,26 +80,18 @@ function AttendContent() {
     courseTitle?: string;
     venue?: string;
     time?: string;
+    facialVerified?: boolean;
+    facialConfidence?: number;
   } | null>(null);
 
-  // Check remembered student on this device
   React.useEffect(() => {
-    try {
-      const stored = localStorage.getItem('custech_current_user');
-      if (stored) {
-        const parsed = JSON.parse(stored);
-        if (parsed?.matricNumber) {
-          setMatricInput(parsed.matricNumber);
-          handleVerifyMatric(parsed.matricNumber);
-        }
-      }
-    } catch {
-      // Ignored
-    }
+    getBiometricPolicyAction()
+      .then((policy) => setRequireFacialScan(policy.requireFacialVerification))
+      .catch(() => setRequireFacialScan(true));
   }, []);
 
   // Step 1: Matriculation Number Verification (Phase 7.1 & 7.2)
-  const handleVerifyMatric = async (matricToVerify?: string) => {
+  const handleVerifyMatric = React.useCallback(async (matricToVerify?: string) => {
     const cleanMatric = (matricToVerify || matricInput).trim().toUpperCase();
     if (!cleanMatric) {
       setMatricError('Please enter your Matriculation Number (e.g. 25L1SE0000).');
@@ -106,6 +100,7 @@ function AttendContent() {
 
     setIsLookingUpMatric(true);
     setMatricError(null);
+    setBiometricMode('NONE');
 
     try {
       const res = await verifyMatriculationNumberAction(cleanMatric);
@@ -128,18 +123,94 @@ function AttendContent() {
     } finally {
       setIsLookingUpMatric(false);
     }
-  };
+  }, [matricInput]);
 
-  // Step 2: Confirm Attendance Presence (Phase 7.4 & 7.5)
-  const handleConfirmAttendance = async () => {
+  // Check remembered student on this device once on mount
+  React.useEffect(() => {
+    let cancelled = false;
+    const loadRemembered = async () => {
+      try {
+        let rememberedMatric = '';
+        const sessionRaw = localStorage.getItem('custech_auth_session_v1');
+        if (sessionRaw) {
+          const parsed = JSON.parse(sessionRaw);
+          if (parsed?.user?.matricNumber) {
+            rememberedMatric = String(parsed.user.matricNumber).trim().toUpperCase();
+          }
+        }
+        if (!rememberedMatric) {
+          const legacyRaw = localStorage.getItem('custech_current_user');
+          if (legacyRaw) {
+            const parsed = JSON.parse(legacyRaw);
+            if (parsed?.matricNumber) {
+              rememberedMatric = String(parsed.matricNumber).trim().toUpperCase();
+            }
+          }
+        }
+        if (!rememberedMatric) {
+          rememberedMatric = (localStorage.getItem('custech_verified_matric') || '').trim().toUpperCase();
+        }
+        if (!rememberedMatric || cancelled) return;
+
+        setMatricInput(rememberedMatric);
+        const res = await verifyMatriculationNumberAction(rememberedMatric);
+        if (!cancelled && res.found && res.student) {
+          setVerifiedStudent(res.student);
+        }
+      } catch {
+        // Ignored
+      }
+    };
+    void loadRemembered();
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  // Step 2: Initiate Facial Scan or Submit Directly if Disabled
+  const handleStartAttendanceConfirmation = () => {
     if (!verifiedStudent) {
       setMatricError('Please verify your matriculation number first.');
       return;
     }
 
+    if (!sessionId && !courseInput.trim()) {
+      setStatus('ERROR');
+      setStatusMessage('Please enter the course code before proceeding.');
+      return;
+    }
+
+    if (!sessionId && !codeInput.trim()) {
+      setStatus('ERROR');
+      setStatusMessage('Please enter the 6-character lecture code shown on the screen.');
+      return;
+    }
+
+    if (!requireFacialScan) {
+      handleConfirmAttendance();
+      return;
+    }
+
+    setStatus('IDLE');
+    setStatusMessage('');
+    if (!verifiedStudent.faceEnrolled) {
+      setBiometricMode('ENROLL');
+    } else {
+      setBiometricMode('VERIFY');
+    }
+  };
+
+  // Step 3: Confirm Attendance Presence with Facial Verification Payload
+  const handleConfirmAttendance = async (faceVerification?: FaceVerificationSubmission) => {
+    if (!verifiedStudent) {
+      setMatricError('Please verify your matriculation number first.');
+      return;
+    }
+
+    setBiometricMode('NONE');
     setIsSubmitting(true);
     setStatus('LOADING');
-    setStatusMessage('Communicating with CUSTECH attendance registry...');
+    setStatusMessage('Verifying biometric identity & recording attendance...');
 
     const telemetry = getClientDeviceTelemetry();
     const cleanMatric = verifiedStudent.matricNumber;
@@ -155,6 +226,7 @@ function AttendContent() {
         userAgent: telemetry.userAgent,
         browser: telemetry.browser,
         os: telemetry.os,
+        faceVerification,
       });
 
       if (res.isDuplicate) {
@@ -182,8 +254,13 @@ function AttendContent() {
           courseTitle: res.course?.title || 'Academic Lecture',
           venue: res.course?.venue || 'Lecture Hall',
           time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+          facialVerified: res.record?.facialVerified,
+          facialConfidence: res.record?.facialConfidence,
         });
       } else {
+        if (res.biometricErrorCode === 'FACE_NOT_ENROLLED') {
+          setVerifiedStudent((prev) => (prev ? { ...prev, faceEnrolled: false } : prev));
+        }
         setStatus('ERROR');
         setStatusMessage(res.message);
       }
@@ -290,6 +367,15 @@ function AttendContent() {
                 <span className="inline-block px-3 py-1 rounded-full bg-emerald-100 text-emerald-800 text-xs font-extrabold uppercase tracking-wider mb-1">
                   Present Recorded
                 </span>
+                {successData.facialVerified && (
+                  <div className="mt-1 inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-[#fbf5ef] border border-[#ecdacb] text-[#8d4a27] text-[11px] font-bold ml-1.5">
+                    <ScanFace className="w-3.5 h-3.5" />
+                    <span>
+                      Biometric Verified
+                      {successData.facialConfidence ? ` (${successData.facialConfidence}% Match)` : ''}
+                    </span>
+                  </div>
+                )}
                 <h3 className="text-lg font-black text-slate-900">
                   Attendance Confirmed!
                 </h3>
@@ -481,9 +567,22 @@ function AttendContent() {
                 {/* AUTOMATIC STUDENT INFORMATION RETRIEVAL (Phase 7.2) */}
                 {verifiedStudent && (
                   <div className="mt-3 p-4 bg-emerald-50/60 border border-emerald-200 rounded-2xl animate-fadeIn text-xs space-y-2">
-                    <div className="flex items-center gap-2 text-emerald-800 font-extrabold">
-                      <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-                      <span>Student Verification Successful</span>
+                    <div className="flex items-center justify-between gap-2">
+                      <div className="flex items-center gap-2 text-emerald-800 font-extrabold">
+                        <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+                        <span>Student Verification Successful</span>
+                      </div>
+                      {requireFacialScan && (
+                        <span
+                          className={`px-2 py-0.5 rounded-full text-[10px] font-bold border ${
+                            verifiedStudent.faceEnrolled
+                              ? 'bg-white text-emerald-700 border-emerald-200'
+                              : 'bg-amber-50 text-amber-800 border-amber-200'
+                          }`}
+                        >
+                          {verifiedStudent.faceEnrolled ? 'Face ID Enrolled' : 'Face ID Setup Needed'}
+                        </span>
+                      )}
                     </div>
 
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 pt-1 text-slate-700">
@@ -561,29 +660,90 @@ function AttendContent() {
                 )}
               </div>
 
-              {/* STEP 3: CONFIRMATION BUTTON (Phase 7.4) */}
-              <button
-                type="button"
-                onClick={handleConfirmAttendance}
-                disabled={isSubmitting || !verifiedStudent}
-                className="w-full py-3.5 px-4 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
-              >
-                {isSubmitting ? (
-                  <>
-                    <RefreshCw className="w-4 h-4 animate-spin" />
-                    <span>Confirming Presence...</span>
-                  </>
-                ) : (
-                  <>
-                    <CheckCircle2 className="w-4 h-4" />
-                    <span>Confirm Attendance Presence</span>
-                  </>
-                )}
-              </button>
+              {/* STEP 3: BIOMETRIC FACIAL SCANNER OR CONFIRMATION BUTTON */}
+              {biometricMode === 'ENROLL' && verifiedStudent && (
+                <FacialVerificationScanner
+                  mode="ENROLL"
+                  requirePinForEnroll
+                  studentName={verifiedStudent.fullName}
+                  matricNumber={verifiedStudent.matricNumber}
+                  onEnrolled={async ({ descriptor, sampleCount, thumbnailDataUrl, attendancePin }) => {
+                    const res = await enrollStudentFaceAction({
+                      studentIdOrProfileId: verifiedStudent.id,
+                      descriptor,
+                      sampleCount,
+                      actorProfileId: verifiedStudent.profileId,
+                      thumbnailDataUrl,
+                      attendancePin,
+                      requirePinVerification: true,
+                    });
+                    if (res.success) {
+                      setVerifiedStudent((prev) => (prev ? { ...prev, faceEnrolled: true } : prev));
+                      setTimeout(() => setBiometricMode('VERIFY'), 900);
+                    }
+                    return res;
+                  }}
+                  onCancel={() => setBiometricMode('NONE')}
+                />
+              )}
+
+              {biometricMode === 'VERIFY' && verifiedStudent && (
+                <FacialVerificationScanner
+                  mode="VERIFY"
+                  studentName={verifiedStudent.fullName}
+                  matricNumber={verifiedStudent.matricNumber}
+                  onVerified={handleConfirmAttendance}
+                  onCancel={() => setBiometricMode('NONE')}
+                />
+              )}
+
+              {biometricMode === 'NONE' && (
+                <>
+                  {requireFacialScan && verifiedStudent && (
+                    <div className="p-3 rounded-xl bg-[#fbf5ef] border border-[#ecdacb] text-xs text-slate-700 flex items-start gap-2.5">
+                      <ScanFace className="w-4 h-4 text-[#8d4a27] shrink-0 mt-0.5" />
+                      <span>
+                        {verifiedStudent.faceEnrolled
+                          ? 'Facial verification scan is required to confirm you are marking your own attendance.'
+                          : 'First-time Face ID setup (with your 4-digit PIN) + live facial scan is required to prevent proxy attendance.'}
+                      </span>
+                    </div>
+                  )}
+
+                  <button
+                    type="button"
+                    onClick={handleStartAttendanceConfirmation}
+                    disabled={isSubmitting || !verifiedStudent}
+                    className="w-full py-3.5 px-4 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] disabled:bg-slate-300 text-white font-black text-xs uppercase tracking-wider transition shadow-md flex items-center justify-center gap-2 cursor-pointer disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? (
+                      <>
+                        <RefreshCw className="w-4 h-4 animate-spin" />
+                        <span>Confirming Presence...</span>
+                      </>
+                    ) : (
+                      <>
+                        {requireFacialScan ? (
+                          <ScanFace className="w-4 h-4" />
+                        ) : (
+                          <CheckCircle2 className="w-4 h-4" />
+                        )}
+                        <span>
+                          {requireFacialScan
+                            ? verifiedStudent?.faceEnrolled === false
+                              ? 'Register Face ID & Verify Attendance'
+                              : 'Scan Face & Confirm Attendance'
+                            : 'Confirm Attendance Presence'}
+                        </span>
+                      </>
+                    )}
+                  </button>
+                </>
+              )}
 
               {!verifiedStudent && (
                 <p className="text-[11px] text-slate-400 text-center">
-                  Enter and verify your Matriculation Number above to enable attendance confirmation.
+                  Enter and verify your Matriculation Number above to enable facial verification &amp; attendance confirmation.
                 </p>
               )}
             </div>

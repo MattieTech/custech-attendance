@@ -4,9 +4,18 @@ import React from 'react';
 import { UserProfile, UserRole } from '@/types';
 import { UserRoleContextSwitcher } from './UserRoleContextSwitcher';
 import { NotificationBell } from '../notifications/NotificationBell';
-import { getPendingOfflineCount, getPendingOfflineRecords } from '@/lib/offline/dexie-db';
+import { getPendingOfflineCount, getPendingOfflineRecords, markOfflineRecordsSynced } from '@/lib/offline/dexie-db';
 import { syncOfflineBatch } from '@/actions/attendance';
 import { ShieldCheck, Wifi, WifiOff, RefreshCw, LogOut } from 'lucide-react';
+
+const subscribeOnlineStatus = (callback: () => void) => {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+};
 
 interface NavbarProps {
   user: UserProfile;
@@ -21,44 +30,22 @@ export const Navbar: React.FC<NavbarProps> = ({
   onRoleSwitched,
   onLogout,
 }) => {
-  const [isOnline, setIsOnline] = React.useState(true);
+  const isOnline = React.useSyncExternalStore(
+    subscribeOnlineStatus,
+    () => navigator.onLine,
+    () => true
+  );
   const [pendingSyncCount, setPendingSyncCount] = React.useState(0);
   const [isSyncing, setIsSyncing] = React.useState(false);
   const [syncStatusMsg, setSyncStatusMsg] = React.useState<string | null>(null);
 
-  React.useEffect(() => {
-    setIsOnline(navigator.onLine);
-
-    const handleOnline = () => {
-      setIsOnline(true);
-      triggerSync();
-    };
-    const handleOffline = () => setIsOnline(false);
-
-    window.addEventListener('online', handleOnline);
-    window.addEventListener('offline', handleOffline);
-
-    // Poll Dexie count periodically
-    const checkPending = async () => {
-      const count = await getPendingOfflineCount();
-      setPendingSyncCount(count);
-    };
-    checkPending();
-    const interval = setInterval(checkPending, 5000);
-
-    return () => {
-      window.removeEventListener('online', handleOnline);
-      window.removeEventListener('offline', handleOffline);
-      clearInterval(interval);
-    };
-  }, []);
-
-  const triggerSync = async () => {
+  const triggerSync = React.useCallback(async () => {
     if (isSyncing) return;
     try {
       setIsSyncing(true);
       const pending = await getPendingOfflineRecords();
       if (pending.length === 0) {
+        setPendingSyncCount(0);
         setSyncStatusMsg('All offline records synchronized.');
         setTimeout(() => setSyncStatusMsg(null), 3000);
         return;
@@ -74,6 +61,7 @@ export const Navbar: React.FC<NavbarProps> = ({
       }));
 
       const res = await syncOfflineBatch(dtoArray);
+      await markOfflineRecordsSynced(pending.map((p) => p.clientEventId));
       setSyncStatusMsg(`Synced ${res.processed} records (${res.duplicates} duplicates resolved).`);
       setPendingSyncCount(await getPendingOfflineCount());
       setTimeout(() => setSyncStatusMsg(null), 4000);
@@ -82,7 +70,30 @@ export const Navbar: React.FC<NavbarProps> = ({
     } finally {
       setIsSyncing(false);
     }
-  };
+  }, [isSyncing]);
+
+  React.useEffect(() => {
+    const handleOnline = () => {
+      void triggerSync();
+    };
+
+    window.addEventListener('online', handleOnline);
+
+    // Poll Dexie count periodically
+    const checkPending = async () => {
+      const count = await getPendingOfflineCount();
+      setPendingSyncCount(count);
+    };
+    void checkPending();
+    const interval = setInterval(() => {
+      void checkPending();
+    }, 5000);
+
+    return () => {
+      window.removeEventListener('online', handleOnline);
+      clearInterval(interval);
+    };
+  }, [triggerSync]);
 
   const identifier = user.matricNumber || user.staffId || user.email;
 

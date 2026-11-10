@@ -5,8 +5,21 @@ import { getPendingOfflineCount, getPendingOfflineRecords, markOfflineRecordsSyn
 import { syncOfflineBatch } from '@/actions/attendance';
 import { WifiOff, Wifi, RefreshCw, CheckCircle2 } from 'lucide-react';
 
+const subscribeOnlineStatus = (callback: () => void) => {
+  window.addEventListener('online', callback);
+  window.addEventListener('offline', callback);
+  return () => {
+    window.removeEventListener('online', callback);
+    window.removeEventListener('offline', callback);
+  };
+};
+
 export const OfflineSyncBanner: React.FC = () => {
-  const [isOnline, setIsOnline] = React.useState<boolean>(true);
+  const isOnline = React.useSyncExternalStore(
+    subscribeOnlineStatus,
+    () => navigator.onLine,
+    () => true
+  );
   const [pendingCount, setPendingCount] = React.useState<number>(0);
   const [isSyncing, setIsSyncing] = React.useState<boolean>(false);
   const [syncFeedback, setSyncFeedback] = React.useState<string | null>(null);
@@ -58,24 +71,23 @@ export const OfflineSyncBanner: React.FC = () => {
   React.useEffect(() => {
     if (typeof window === 'undefined') return;
 
-    setIsOnline(navigator.onLine);
-    checkPending();
+    void checkPending();
 
     const handleOnline = () => {
-      setIsOnline(true);
-      triggerSync();
+      void triggerSync();
     };
 
     const handleOffline = () => {
-      setIsOnline(false);
-      checkPending();
+      void checkPending();
     };
 
     window.addEventListener('online', handleOnline);
     window.addEventListener('offline', handleOffline);
 
     // Periodically check pending count every 15s
-    const interval = setInterval(checkPending, 15000);
+    const interval = setInterval(() => {
+      void checkPending();
+    }, 15000);
 
     return () => {
       window.removeEventListener('online', handleOnline);

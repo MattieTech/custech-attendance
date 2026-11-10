@@ -13,6 +13,8 @@ export async function updateSystemSettingsAction(
     examEligibilityThreshold?: number;
     qrRotationSeconds?: number;
     lateThresholdMinutes?: number;
+    requireFacialVerification?: boolean;
+    facialMatchThreshold?: number;
   },
   actorId: string
 ) {
@@ -234,15 +236,11 @@ export async function loginStaffAction(identifier: string, _password?: string) {
 }
 
 /**
- * Returns latest snapshot of custom students, profiles, and departments
- * for client-side offline hydration.
+ * Returns latest authoritative snapshot of the CUSTECH database
+ * for client-side hydration and offline caching.
  */
 export async function getDatabaseSnapshotAction() {
-  return {
-    profiles: custechDb.getProfiles(),
-    students: custechDb.getAllStudentsDetailed(),
-    departments: custechDb.getDepartments(),
-  };
+  return custechDb.getFullSnapshot();
 }
 
 /**
@@ -552,4 +550,48 @@ export async function getSessionRecordsAction(sessionId: string) {
 export async function getCourseOfferingsAction() {
   return custechDb.getCourseOfferings();
 }
+
+export async function getFacultiesAndDepartmentsAction() {
+  return {
+    faculties: custechDb.getFaculties(),
+    departments: custechDb.getDepartments(),
+  };
+}
+
+export async function ensureDepartmentAction(data: { name: string; facultyId?: string; code?: string }) {
+  try {
+    const department = custechDb.ensureDepartment(data);
+    return { success: true, department };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to create department',
+    };
+  }
+}
+
+export async function assignCourseManuallyAction(
+  params: {
+    lecturerId: string;
+    courseCode: string;
+    courseTitle?: string;
+    creditUnits?: number;
+    departmentId?: string;
+    departmentName?: string;
+    facultyId?: string;
+    level?: 100 | 200 | 300 | 400 | 500;
+  },
+  actorId: string
+) {
+  try {
+    const result = custechDb.assignCourseManuallyToLecturer(params, actorId);
+    return { success: true, ...result };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to manually assign course',
+    };
+  }
+}
+
 
