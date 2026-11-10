@@ -27,7 +27,6 @@ import {
   Users,
   Building,
   GraduationCap,
-  Sparkles,
   Download,
 } from 'lucide-react';
 

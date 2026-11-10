@@ -19,7 +19,6 @@ import {
   User,
   Key,
   ArrowRight,
-  Sparkles,
   RefreshCw,
   School,
   WifiOff,
@@ -261,7 +260,7 @@ function AttendContent() {
             </div>
           </div>
           <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-white/20 text-white flex items-center gap-1">
-            <Sparkles className="w-3 h-3 text-amber-300" />
+            <ShieldCheck className="w-3 h-3 text-amber-300" />
             Verified
           </span>
         </div>

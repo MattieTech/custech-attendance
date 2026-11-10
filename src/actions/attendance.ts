@@ -18,7 +18,7 @@ export async function getSessionDetails(sessionId: string): Promise<AttendanceSe
 }
 
 /**
- * Generates an updated dynamic QR token with a 20-second validity window
+ * Generates an updated dynamic QR token with a 60-second validity window
  */
 export async function getRotatingQrToken(sessionId: string): Promise<RotatingQrPayload | { error: string }> {
   const session = custechDb.getSessionById(sessionId);
@@ -294,7 +294,7 @@ export async function submitAttendanceFromUrl(params: {
       signature: params.signature,
     };
 
-    const verification = verifyQrPayload(payload, session.qrRotationSeconds || 20, 4); // allow 4 windows for mobile redirect
+    const verification = verifyQrPayload(payload, session.qrRotationSeconds || 60, 4); // allow 4 windows for mobile redirect
     if (verification.isValid) {
       verified = true;
     }

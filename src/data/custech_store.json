@@ -1,49 +1,34 @@
 {
   "customProfiles": [
     {
-      "id": "user-stu-1794242079699",
-      "email": "25l1se0001@student.custech.edu.ng",
-      "firstName": "Zainab",
-      "lastName": "Ahmed",
-      "matricNumber": "25L1SE0001",
+      "id": "user-stu-1794149751800",
+      "email": "25l1cv8802@student.custech.edu.ng",
+      "firstName": "Halima",
+      "lastName": "Dikko",
+      "matricNumber": "25L1CV8802",
       "primaryRole": "STUDENT",
       "assignedRoles": [
         "STUDENT"
       ],
-      "departmentId": "dept-sen",
+      "departmentId": "dept-civil-engineering",
       "facultyId": "fac-comp",
       "isActive": true,
-      "createdAt": "2026-11-09T16:34:40.114Z"
+      "createdAt": "2026-11-08T14:55:52.254Z"
     },
     {
-      "id": "user-stu-1793368357128",
-      "email": "matthewaliu01@gmail.com",
-      "firstName": "Matthew",
-      "lastName": "Aliu",
-      "matricNumber": "25L1SE0000",
+      "id": "user-stu-1794149751377",
+      "email": "25l1me8801@student.custech.edu.ng",
+      "firstName": "Kabir",
+      "lastName": "Bello",
+      "matricNumber": "25L1ME8801",
       "primaryRole": "STUDENT",
       "assignedRoles": [
         "STUDENT"
       ],
-      "departmentId": "dept-sen",
+      "departmentId": "dept-mechanical-engineering",
       "facultyId": "fac-comp",
       "isActive": true,
-      "createdAt": "2026-10-30T13:52:37.321Z"
-    },
-    {
-      "id": "user-stu-1793368278372",
-      "email": "matthewaliu001@gmail.com",
-      "firstName": "Matthew",
-      "lastName": "Aliu",
-      "matricNumber": "25L1CS3653",
-      "primaryRole": "STUDENT",
-      "assignedRoles": [
-        "STUDENT"
-      ],
-      "departmentId": "dept-sen",
-      "facultyId": "fac-comp",
-      "isActive": true,
-      "createdAt": "2026-10-30T13:51:18.566Z"
+      "createdAt": "2026-11-08T14:55:51.786Z"
     },
     {
       "id": "user-stu-1794149751116",
@@ -62,104 +47,96 @@
       "createdAt": "2026-11-08T14:55:51.367Z"
     },
     {
-      "id": "user-stu-1794149751377",
-      "email": "25l1me8801@student.custech.edu.ng",
-      "firstName": "Kabir",
-      "lastName": "Bello",
-      "matricNumber": "25L1ME8801",
+      "id": "user-stu-1793368278372",
+      "email": "matthewaliu001@gmail.com",
+      "firstName": "Matthew",
+      "lastName": "Aliu",
+      "matricNumber": "25L1CS3653",
       "primaryRole": "STUDENT",
       "assignedRoles": [
         "STUDENT"
       ],
-      "departmentId": "dept-mechanical-engineering",
+      "departmentId": "dept-sen",
       "facultyId": "fac-comp",
       "isActive": true,
-      "createdAt": "2026-11-08T14:55:51.786Z"
+      "createdAt": "2026-10-30T13:51:18.566Z"
     },
     {
-      "id": "user-stu-1794149751800",
-      "email": "25l1cv8802@student.custech.edu.ng",
-      "firstName": "Halima",
-      "lastName": "Dikko",
-      "matricNumber": "25L1CV8802",
+      "id": "user-stu-1793368357128",
+      "email": "matthewaliu01@gmail.com",
+      "firstName": "Matthew",
+      "lastName": "Aliu",
+      "matricNumber": "25L1SE0000",
       "primaryRole": "STUDENT",
       "assignedRoles": [
         "STUDENT"
       ],
-      "departmentId": "dept-civil-engineering",
+      "departmentId": "dept-sen",
       "facultyId": "fac-comp",
       "isActive": true,
-      "createdAt": "2026-11-08T14:55:52.254Z"
+      "createdAt": "2026-10-30T13:52:37.321Z"
+    },
+    {
+      "id": "user-stu-1794242079699",
+      "email": "25l1se0001@student.custech.edu.ng",
+      "firstName": "Zainab",
+      "lastName": "Ahmed",
+      "matricNumber": "25L1SE0001",
+      "primaryRole": "STUDENT",
+      "assignedRoles": [
+        "STUDENT"
+      ],
+      "departmentId": "dept-sen",
+      "facultyId": "fac-comp",
+      "isActive": true,
+      "createdAt": "2026-11-09T16:34:40.114Z"
     }
   ],
   "customStudents": [
     {
-      "id": "stu-1794242079699",
-      "profileId": "user-stu-1794242079699",
-      "matricNumber": "25L1SE0001",
+      "id": "stu-1794149751800",
+      "profileId": "user-stu-1794149751800",
+      "matricNumber": "25L1CV8802",
       "programId": "prog-csc",
       "currentLevel": 100,
-      "attendancePinHash": "$2b$10$dnNoXt8Ztfys.8N8Vg3wBe7OJFBL6zris9md8xmHBJIaCCIexilWy",
+      "attendancePinHash": "$2b$10$rK1T9Dnt/QnYlsEWOwe4cuFmSe0dX/LleaUOZuTyp62RuPlz6dWPy",
       "profile": {
-        "id": "user-stu-1794242079699",
-        "email": "25l1se0001@student.custech.edu.ng",
-        "firstName": "Zainab",
-        "lastName": "Ahmed",
-        "matricNumber": "25L1SE0001",
+        "id": "user-stu-1794149751800",
+        "email": "25l1cv8802@student.custech.edu.ng",
+        "firstName": "Halima",
+        "lastName": "Dikko",
+        "matricNumber": "25L1CV8802",
         "primaryRole": "STUDENT",
         "assignedRoles": [
           "STUDENT"
         ],
-        "departmentId": "dept-sen",
+        "departmentId": "dept-civil-engineering",
         "facultyId": "fac-comp",
         "isActive": true,
-        "createdAt": "2026-11-09T16:34:40.114Z"
+        "createdAt": "2026-11-08T14:55:52.254Z"
       }
     },
     {
-      "id": "stu-1793368357128",
-      "profileId": "user-stu-1793368357128",
-      "matricNumber": "25L1SE0000",
+      "id": "stu-1794149751377",
+      "profileId": "user-stu-1794149751377",
+      "matricNumber": "25L1ME8801",
       "programId": "prog-csc",
       "currentLevel": 200,
-      "attendancePinHash": "$2b$10$HqTIVLHKJLY7g0EK0JBWCOuQTvJnu7LMJZaeIZAdvBtNEEopsXSAG",
+      "attendancePinHash": "$2b$10$Oqupy3/X26KaaGQgBdw2B.bfEJDiAmmqhVrLKBU2HZpXeEVtZVQW6",
       "profile": {
-        "id": "user-stu-1793368357128",
-        "email": "matthewaliu01@gmail.com",
-        "firstName": "Matthew",
-        "lastName": "Aliu",
-        "matricNumber": "25L1SE0000",
+        "id": "user-stu-1794149751377",
+        "email": "25l1me8801@student.custech.edu.ng",
+        "firstName": "Kabir",
+        "lastName": "Bello",
+        "matricNumber": "25L1ME8801",
         "primaryRole": "STUDENT",
         "assignedRoles": [
           "STUDENT"
         ],
-        "departmentId": "dept-sen",
+        "departmentId": "dept-mechanical-engineering",
         "facultyId": "fac-comp",
         "isActive": true,
-        "createdAt": "2026-10-30T13:52:37.321Z"
-      }
-    },
-    {
-      "id": "stu-1793368278372",
-      "profileId": "user-stu-1793368278372",
-      "matricNumber": "25L1CS3653",
-      "programId": "prog-csc",
-      "currentLevel": 200,
-      "attendancePinHash": "$2b$10$.JEnvosQzGMYKKkkq9qseuK19E4IZ/xppFdHOyBUmZkv6Pnonmncq",
-      "profile": {
-        "id": "user-stu-1793368278372",
-        "email": "matthewaliu001@gmail.com",
-        "firstName": "Matthew",
-        "lastName": "Aliu",
-        "matricNumber": "25L1CS3653",
-        "primaryRole": "STUDENT",
-        "assignedRoles": [
-          "STUDENT"
-        ],
-        "departmentId": "dept-sen",
-        "facultyId": "fac-comp",
-        "isActive": true,
-        "createdAt": "2026-10-30T13:51:18.566Z"
+        "createdAt": "2026-11-08T14:55:51.786Z"
       }
     },
     {
@@ -187,49 +164,72 @@
       }
     },
     {
-      "id": "stu-1794149751377",
-      "profileId": "user-stu-1794149751377",
-      "matricNumber": "25L1ME8801",
+      "id": "stu-1793368278372",
+      "profileId": "user-stu-1793368278372",
+      "matricNumber": "25L1CS3653",
       "programId": "prog-csc",
       "currentLevel": 200,
-      "attendancePinHash": "$2b$10$Oqupy3/X26KaaGQgBdw2B.bfEJDiAmmqhVrLKBU2HZpXeEVtZVQW6",
+      "attendancePinHash": "$2b$10$.JEnvosQzGMYKKkkq9qseuK19E4IZ/xppFdHOyBUmZkv6Pnonmncq",
       "profile": {
-        "id": "user-stu-1794149751377",
-        "email": "25l1me8801@student.custech.edu.ng",
-        "firstName": "Kabir",
-        "lastName": "Bello",
-        "matricNumber": "25L1ME8801",
+        "id": "user-stu-1793368278372",
+        "email": "matthewaliu001@gmail.com",
+        "firstName": "Matthew",
+        "lastName": "Aliu",
+        "matricNumber": "25L1CS3653",
         "primaryRole": "STUDENT",
         "assignedRoles": [
           "STUDENT"
         ],
-        "departmentId": "dept-mechanical-engineering",
+        "departmentId": "dept-sen",
         "facultyId": "fac-comp",
         "isActive": true,
-        "createdAt": "2026-11-08T14:55:51.786Z"
+        "createdAt": "2026-10-30T13:51:18.566Z"
       }
     },
     {
-      "id": "stu-1794149751800",
-      "profileId": "user-stu-1794149751800",
-      "matricNumber": "25L1CV8802",
+      "id": "stu-1793368357128",
+      "profileId": "user-stu-1793368357128",
+      "matricNumber": "25L1SE0000",
       "programId": "prog-csc",
-      "currentLevel": 100,
-      "attendancePinHash": "$2b$10$rK1T9Dnt/QnYlsEWOwe4cuFmSe0dX/LleaUOZuTyp62RuPlz6dWPy",
+      "currentLevel": 200,
+      "attendancePinHash": "$2b$10$HqTIVLHKJLY7g0EK0JBWCOuQTvJnu7LMJZaeIZAdvBtNEEopsXSAG",
       "profile": {
-        "id": "user-stu-1794149751800",
-        "email": "25l1cv8802@student.custech.edu.ng",
-        "firstName": "Halima",
-        "lastName": "Dikko",
-        "matricNumber": "25L1CV8802",
+        "id": "user-stu-1793368357128",
+        "email": "matthewaliu01@gmail.com",
+        "firstName": "Matthew",
+        "lastName": "Aliu",
+        "matricNumber": "25L1SE0000",
         "primaryRole": "STUDENT",
         "assignedRoles": [
           "STUDENT"
         ],
-        "departmentId": "dept-civil-engineering",
+        "departmentId": "dept-sen",
         "facultyId": "fac-comp",
         "isActive": true,
-        "createdAt": "2026-11-08T14:55:52.254Z"
+        "createdAt": "2026-10-30T13:52:37.321Z"
+      }
+    },
+    {
+      "id": "stu-1794242079699",
+      "profileId": "user-stu-1794242079699",
+      "matricNumber": "25L1SE0001",
+      "programId": "prog-csc",
+      "currentLevel": 100,
+      "attendancePinHash": "$2b$10$dnNoXt8Ztfys.8N8Vg3wBe7OJFBL6zris9md8xmHBJIaCCIexilWy",
+      "profile": {
+        "id": "user-stu-1794242079699",
+        "email": "25l1se0001@student.custech.edu.ng",
+        "firstName": "Zainab",
+        "lastName": "Ahmed",
+        "matricNumber": "25L1SE0001",
+        "primaryRole": "STUDENT",
+        "assignedRoles": [
+          "STUDENT"
+        ],
+        "departmentId": "dept-sen",
+        "facultyId": "fac-comp",
+        "isActive": true,
+        "createdAt": "2026-11-09T16:34:40.114Z"
       }
     }
   ],
@@ -397,25 +397,48 @@
   ],
   "customSessions": [
     {
-      "id": "sess_1794242079667_wk2",
+      "id": "sess_1794301514198_wk2",
       "courseOfferingId": "offering-mth131",
       "lecturerId": "user-vc",
       "classroomId": "room-lh101",
       "venue": "Mathematics Lecture Hall",
       "weekNumber": 2,
       "topicTitle": "Matrices, Determinants & Linear Systems",
-      "date": "2026-11-09",
-      "scheduledStart": "2026-11-09T16:34:39.667Z",
-      "scheduledEnd": "2026-11-09T18:34:39.667Z",
-      "actualStart": "2026-11-09T16:34:39.667Z",
+      "date": "2026-11-10",
+      "scheduledStart": "2026-11-10T09:05:14.198Z",
+      "scheduledEnd": "2026-11-10T11:05:14.198Z",
+      "actualStart": "2026-11-10T09:05:14.198Z",
       "status": "ACTIVE",
-      "currentTempCode": "G2B6WR",
-      "tempCodeExpiresAt": "2026-11-09T18:34:39.667Z",
+      "currentTempCode": "NAQVRY",
+      "tempCodeExpiresAt": "2026-11-10T11:05:14.198Z",
       "isCodeActive": true,
       "previousCodes": [],
-      "qrRotationSeconds": 20,
+      "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794242079667_pn2sf"
+      "sessionSecretNonce": "nonce_1794301514198_ixdfk"
+    },
+    {
+      "id": "sess_1794301514150_wk1",
+      "courseOfferingId": "offering-mth131",
+      "lecturerId": "user-vc",
+      "classroomId": "room-lh101",
+      "venue": "Mathematics Lecture Hall",
+      "weekNumber": 1,
+      "topicTitle": "Algebraic Functions & Quadratic Forms",
+      "date": "2026-11-10",
+      "scheduledStart": "2026-11-10T09:05:14.150Z",
+      "scheduledEnd": "2026-11-10T11:05:14.150Z",
+      "actualStart": "2026-11-10T09:05:14.150Z",
+      "status": "ACTIVE",
+      "currentTempCode": "T85K57",
+      "tempCodeExpiresAt": "2026-11-10T11:05:14.167Z",
+      "isCodeActive": true,
+      "previousCodes": [
+        "33YHWR"
+      ],
+      "qrRotationSeconds": 60,
+      "lateThresholdMinutes": 15,
+      "sessionSecretNonce": "nonce_1794301514150_547fk"
     },
     {
       "id": "sess_1794242079582_wk1",
@@ -436,9 +459,30 @@
       "previousCodes": [
         "EB2YXW"
       ],
-      "qrRotationSeconds": 20,
+      "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
       "sessionSecretNonce": "nonce_1794242079582_f8dtd"
+    },
+    {
+      "id": "sess_1794242079667_wk2",
+      "courseOfferingId": "offering-mth131",
+      "lecturerId": "user-vc",
+      "classroomId": "room-lh101",
+      "venue": "Mathematics Lecture Hall",
+      "weekNumber": 2,
+      "topicTitle": "Matrices, Determinants & Linear Systems",
+      "date": "2026-11-09",
+      "scheduledStart": "2026-11-09T16:34:39.667Z",
+      "scheduledEnd": "2026-11-09T18:34:39.667Z",
+      "actualStart": "2026-11-09T16:34:39.667Z",
+      "status": "ACTIVE",
+      "currentTempCode": "G2B6WR",
+      "tempCodeExpiresAt": "2026-11-09T18:34:39.667Z",
+      "isCodeActive": true,
+      "previousCodes": [],
+      "qrRotationSeconds": 60,
+      "lateThresholdMinutes": 15,
+      "sessionSecretNonce": "nonce_1794242079667_pn2sf"
     },
     {
       "id": "sess-csc-1",
@@ -453,7 +497,7 @@
       "status": "CLOSED",
       "currentTempCode": "9X2K7L",
       "tempCodeExpiresAt": "2026-08-20T11:55:00Z",
-      "qrRotationSeconds": 20,
+      "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
       "sessionSecretNonce": "nonce_week1_csc201"
     },
@@ -470,7 +514,7 @@
       "status": "CLOSED",
       "currentTempCode": "4M8P2W",
       "tempCodeExpiresAt": "2026-08-27T11:50:00Z",
-      "qrRotationSeconds": 20,
+      "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
       "sessionSecretNonce": "nonce_week2_csc201"
     },
@@ -486,7 +530,7 @@
       "status": "ACTIVE",
       "currentTempCode": "7K4P92",
       "tempCodeExpiresAt": "2026-11-09T17:34:39.474Z",
-      "qrRotationSeconds": 20,
+      "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
       "sessionSecretNonce": "nonce_live_today_csc201"
     }
@@ -514,9 +558,56 @@
       "isFlaggedSuspicious": true,
       "flagReason": "Rapid account switching (1s interval between distinct accounts) detected on this device.",
       "recordedAt": "2026-11-09T16:34:40.117Z"
+    },
+    {
+      "id": "rec_1794301514162_825",
+      "sessionId": "sess_1794301514150_wk1",
+      "studentId": "stu-1793368357128",
+      "status": "PRESENT",
+      "method": "TEMP_CODE",
+      "recordedBy": "user-stu-1793368357128",
+      "deviceFingerprintHash": "dev_fingerprint_matthew_samsung_s21",
+      "isFlaggedSuspicious": false,
+      "recordedAt": "2026-11-10T09:05:14.162Z"
+    },
+    {
+      "id": "rec_1794301514203_943",
+      "sessionId": "sess_1794301514150_wk1",
+      "studentId": "stu-1794242079699",
+      "status": "PRESENT",
+      "method": "TEMP_CODE",
+      "recordedBy": "user-stu-1794242079699",
+      "deviceFingerprintHash": "dev_fingerprint_matthew_samsung_s21",
+      "isFlaggedSuspicious": true,
+      "flagReason": "Rapid account switching (0s interval between distinct accounts) detected on this device.",
+      "recordedAt": "2026-11-10T09:05:14.203Z"
     }
   ],
   "customDeviceCollisionAlerts": [
+    {
+      "id": "alert_col_1794301514203",
+      "sessionId": "sess_1794301514150_wk1",
+      "deviceFingerprintHash": "dev_fingerprint_matthew_samsung_s21",
+      "matchedMatricNumbers": [
+        "25L1SE0000",
+        "25L1SE0001"
+      ],
+      "matchedStudentNames": [
+        "Matthew Aliu",
+        "Zainab Ahmed"
+      ],
+      "sessionCode": "MTH 131",
+      "courseCode": "MTH 131",
+      "attemptCount": 2,
+      "deviceType": "Mobile",
+      "browser": "Chrome 122",
+      "os": "Android 14",
+      "riskLevel": "LOW",
+      "riskReason": "Rapid account switching (0s interval between distinct accounts) detected on this device.",
+      "isReviewed": true,
+      "createdAt": "2026-11-10T09:05:14.203Z",
+      "reviewNotes": "Student Matthew shared phone with Zainab because Zainab battery died in lecture hall."
+    },
     {
       "id": "alert_col_1794242080117",
       "sessionId": "sess_1794242079582_wk1",
@@ -557,7 +648,7 @@
     }
   ],
   "systemSettings": {
-    "qrRotationSeconds": 20,
+    "qrRotationSeconds": 60,
     "attendanceDurationMinutes": 60,
     "lateThresholdMinutes": 15,
     "gracePeriodMinutes": 5,
@@ -570,139 +661,371 @@
   },
   "auditLogs": [
     {
-      "id": "audit_1794242080124_346",
+      "id": "audit_1794301514216_269",
       "actorId": "prof-admin-ict",
       "actorName": "System",
       "actorRole": "SUPER_ADMIN",
       "action": "REVIEWED_DEVICE_ALERT",
       "entityType": "device_collision_alerts",
-      "entityId": "alert_col_1794242080117",
+      "entityId": "alert_col_1794301514203",
       "details": {
         "action": "CLEARED",
         "reviewNotes": "Student Matthew shared phone with Zainab because Zainab battery died in lecture hall."
       },
-      "createdAt": "2026-11-09T16:34:40.124Z"
+      "createdAt": "2026-11-10T09:05:14.216Z"
     },
     {
-      "id": "audit_1794242080117_459",
+      "id": "audit_1794301514203_116",
       "actorId": "user-stu-1794242079699",
       "actorName": "Zainab Ahmed",
       "actorRole": "STUDENT",
       "action": "ATTENDANCE_RECORDED",
       "entityType": "attendance_records",
-      "entityId": "rec_1794242080117_669",
+      "entityId": "rec_1794301514203_943",
       "details": {
         "studentId": "stu-1794242079699",
-        "sessionId": "sess_1794242079582_wk1",
+        "sessionId": "sess_1794301514150_wk1",
         "status": "PRESENT",
         "method": "TEMP_CODE",
         "isFlaggedSuspicious": true,
-        "flagReason": "Rapid account switching (1s interval between distinct accounts) detected on this device."
+        "flagReason": "Rapid account switching (0s interval between distinct accounts) detected on this device."
       },
-      "createdAt": "2026-11-09T16:34:40.117Z"
+      "createdAt": "2026-11-10T09:05:14.203Z"
     },
     {
-      "id": "audit_1794242080114_69",
-      "actorId": "prof-admin-ict",
-      "actorName": "System",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794242079699",
-      "details": {
-        "matricNumber": "25L1SE0001",
-        "fullName": "Zainab Ahmed",
-        "departmentId": "dept-sen",
-        "level": 100
-      },
-      "createdAt": "2026-11-09T16:34:40.114Z"
-    },
-    {
-      "id": "audit_1794242079667_749",
+      "id": "audit_1794301514199_508",
       "actorId": "user-vc",
       "actorName": "Prof. Abdulrahman Salawu",
       "actorRole": "PRINCIPAL_OFFICER",
       "action": "START_ATTENDANCE_SESSION",
       "entityType": "attendance_sessions",
-      "entityId": "sess_1794242079667_wk2",
+      "entityId": "sess_1794301514198_wk2",
       "details": {
         "courseOfferingId": "offering-mth131",
-        "date": "2026-11-09",
+        "date": "2026-11-10",
         "weekNumber": 2,
         "venue": "Mathematics Lecture Hall",
-        "tempCode": "G2B6WR"
+        "tempCode": "NAQVRY"
       },
-      "createdAt": "2026-11-09T16:34:39.667Z"
+      "createdAt": "2026-11-10T09:05:14.199Z"
     },
     {
-      "id": "audit_1794242079643_550",
+      "id": "audit_1794301514189_372",
       "actorId": "user-vc",
       "actorName": "Prof. Abdulrahman Salawu",
       "actorRole": "PRINCIPAL_OFFICER",
       "action": "REACTIVATE_SESSION_CODE",
       "entityType": "attendance_sessions",
-      "entityId": "sess_1794242079582_wk1",
-      "createdAt": "2026-11-09T16:34:39.643Z"
+      "entityId": "sess_1794301514150_wk1",
+      "createdAt": "2026-11-10T09:05:14.190Z"
     },
     {
-      "id": "audit_1794242079615_619",
+      "id": "audit_1794301514172_157",
       "actorId": "user-vc",
       "actorName": "Prof. Abdulrahman Salawu",
       "actorRole": "PRINCIPAL_OFFICER",
       "action": "DEACTIVATE_SESSION_CODE",
       "entityType": "attendance_sessions",
-      "entityId": "sess_1794242079582_wk1",
-      "createdAt": "2026-11-09T16:34:39.615Z"
+      "entityId": "sess_1794301514150_wk1",
+      "createdAt": "2026-11-10T09:05:14.172Z"
     },
     {
-      "id": "audit_1794242079610_45",
+      "id": "audit_1794301514167_243",
       "actorId": "user-vc",
       "actorName": "Prof. Abdulrahman Salawu",
       "actorRole": "PRINCIPAL_OFFICER",
       "action": "REGENERATE_SESSION_CODE",
       "entityType": "attendance_sessions",
-      "entityId": "sess_1794242079582_wk1",
+      "entityId": "sess_1794301514150_wk1",
       "details": {
-        "newCode": "XKCGBD",
+        "newCode": "T85K57",
         "previousCodes": [
-          "EB2YXW"
+          "33YHWR"
         ]
       },
-      "createdAt": "2026-11-09T16:34:39.610Z"
+      "createdAt": "2026-11-10T09:05:14.167Z"
     },
     {
-      "id": "audit_1794242079599_555",
+      "id": "audit_1794301514163_163",
       "actorId": "user-stu-1793368357128",
       "actorName": "Matthew Aliu",
       "actorRole": "STUDENT",
       "action": "ATTENDANCE_RECORDED",
       "entityType": "attendance_records",
-      "entityId": "rec_1794242079599_975",
+      "entityId": "rec_1794301514162_825",
       "details": {
         "studentId": "stu-1793368357128",
-        "sessionId": "sess_1794242079582_wk1",
+        "sessionId": "sess_1794301514150_wk1",
         "status": "PRESENT",
         "method": "TEMP_CODE",
         "isFlaggedSuspicious": false
       },
-      "createdAt": "2026-11-09T16:34:39.600Z"
+      "createdAt": "2026-11-10T09:05:14.163Z"
     },
     {
-      "id": "audit_1794242079582_760",
+      "id": "audit_1794301514151_889",
       "actorId": "user-vc",
       "actorName": "Prof. Abdulrahman Salawu",
       "actorRole": "PRINCIPAL_OFFICER",
       "action": "START_ATTENDANCE_SESSION",
       "entityType": "attendance_sessions",
-      "entityId": "sess_1794242079582_wk1",
+      "entityId": "sess_1794301514150_wk1",
       "details": {
         "courseOfferingId": "offering-mth131",
-        "date": "2026-11-09",
+        "date": "2026-11-10",
         "weekNumber": 1,
         "venue": "Mathematics Lecture Hall",
-        "tempCode": "EB2YXW"
+        "tempCode": "33YHWR"
       },
-      "createdAt": "2026-11-09T16:34:39.582Z"
+      "createdAt": "2026-11-10T09:05:14.151Z"
+    },
+    {
+      "id": "audit_1794149752298_295",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_ASSIGNED_ROLE",
+      "entityType": "user_profiles",
+      "entityId": "user-stu-1794149751116",
+      "details": {
+        "userName": "Bilikisu Sani",
+        "email": "bilikisu.sani@student.custech.edu.ng",
+        "oldRole": "STUDENT",
+        "newRole": "COURSE_REP"
+      },
+      "createdAt": "2026-11-08T14:55:52.298Z"
+    },
+    {
+      "id": "audit_1794149752287_976",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REACTIVATED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "isActive": true
+      },
+      "createdAt": "2026-11-08T14:55:52.287Z"
+    },
+    {
+      "id": "audit_1794149752284_51",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_DEACTIVATED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "isActive": false
+      },
+      "createdAt": "2026-11-08T14:55:52.284Z"
+    },
+    {
+      "id": "audit_1794149752268_109",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_BULK_STUDENT_IMPORT",
+      "entityType": "students",
+      "details": {
+        "totalProcessed": 3,
+        "successful": 2,
+        "skipped": 1,
+        "failed": 0
+      },
+      "createdAt": "2026-11-08T14:55:52.268Z"
+    },
+    {
+      "id": "audit_1794149752254_652",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751800",
+      "details": {
+        "matricNumber": "25L1CV8802",
+        "fullName": "Halima Dikko",
+        "departmentId": "dept-civil-engineering",
+        "level": 100
+      },
+      "createdAt": "2026-11-08T14:55:52.254Z"
+    },
+    {
+      "id": "audit_1794149751786_486",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751377",
+      "details": {
+        "matricNumber": "25L1ME8801",
+        "fullName": "Kabir Bello",
+        "departmentId": "dept-mechanical-engineering",
+        "level": 200
+      },
+      "createdAt": "2026-11-08T14:55:51.786Z"
+    },
+    {
+      "id": "audit_1794149751367_977",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794149751116",
+      "details": {
+        "matricNumber": "25L1CS9999",
+        "fullName": "Bilikisu Sani",
+        "departmentId": "dept-csc",
+        "level": 200
+      },
+      "createdAt": "2026-11-08T14:55:51.367Z"
+    },
+    {
+      "id": "audit_1794149751115_20",
+      "actorId": "user-dean",
+      "actorName": "Prof. M. O. Yusuf",
+      "actorRole": "DEAN",
+      "action": "APPROVE_MEDICAL_WAIVER",
+      "entityType": "medical_waivers",
+      "entityId": "waiver_1794149751114",
+      "details": {
+        "studentId": "stu-3",
+        "startDate": "2026-08-26",
+        "endDate": "2026-08-28"
+      },
+      "createdAt": "2026-11-08T14:55:51.115Z"
+    },
+    {
+      "id": "audit_1794149751113_621",
+      "actorId": "user-stu-2",
+      "actorName": "Emeka Okonkwo",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751113_851",
+      "details": {
+        "studentId": "stu-2",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:51.113Z"
+    },
+    {
+      "id": "audit_1794149751113_868",
+      "actorId": "user-rep",
+      "actorName": "Ibrahim Aliyu",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751113_440",
+      "details": {
+        "studentId": "stu-rep",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:51.113Z"
+    },
+    {
+      "id": "audit_1794149751102_346",
+      "actorId": "user-rep",
+      "actorName": "Ibrahim Aliyu",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149751102_531",
+      "details": {
+        "studentId": "stu-3",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "KIOSK_PIN"
+      },
+      "createdAt": "2026-11-08T14:55:51.102Z"
+    },
+    {
+      "id": "audit_1794149750816_980",
+      "actorId": "user-stu-1",
+      "actorName": "Amina Usman",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794149750815_625",
+      "details": {
+        "studentId": "stu-1",
+        "sessionId": "sess-today-csc",
+        "status": "LATE",
+        "method": "DYNAMIC_QR"
+      },
+      "createdAt": "2026-11-08T14:55:50.816Z"
+    },
+    {
+      "id": "audit_1793368278567_905",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1793368278372",
+      "details": {
+        "matricNumber": "25L1CS3653",
+        "fullName": "Matthew Aliu",
+        "departmentId": "dept-sen",
+        "level": 200
+      },
+      "createdAt": "2026-10-30T13:51:18.567Z"
+    },
+    {
+      "id": "audit_1793368357321_870",
+      "actorId": "user-admin",
+      "actorName": "Faruq Bello",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1793368357128",
+      "details": {
+        "matricNumber": "25L1SE0000",
+        "fullName": "Matthew Aliu",
+        "departmentId": "dept-sen",
+        "level": 200
+      },
+      "createdAt": "2026-10-30T13:52:37.321Z"
+    },
+    {
+      "id": "audit_1794242079548_463",
+      "actorId": "prof-admin-ict",
+      "actorName": "System",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ADMIN_CREATED_COURSE",
+      "entityType": "courses",
+      "entityId": "course-mth131",
+      "details": {
+        "code": "MTH 131",
+        "title": "General Mathematics I",
+        "departmentId": "dept-se",
+        "level": 100
+      },
+      "createdAt": "2026-11-09T16:34:39.548Z"
+    },
+    {
+      "id": "audit_1794242079562_281",
+      "actorId": "prof-admin-ict",
+      "actorName": "System",
+      "actorRole": "SUPER_ADMIN",
+      "action": "ASSIGNED_LECTURER_TO_OFFERING",
+      "entityType": "course_offerings",
+      "entityId": "offering-mth131",
+      "details": {
+        "lecturerId": "user-vc",
+        "lecturerName": "Prof. Abdulrahman Salawu"
+      },
+      "createdAt": "2026-11-09T16:34:39.562Z"
     },
     {
       "id": "audit_1794242079569_825",
@@ -723,252 +1046,139 @@
       "createdAt": "2026-11-09T16:34:39.569Z"
     },
     {
-      "id": "audit_1794242079562_281",
+      "id": "audit_1794242079582_760",
+      "actorId": "user-vc",
+      "actorName": "Prof. Abdulrahman Salawu",
+      "actorRole": "PRINCIPAL_OFFICER",
+      "action": "START_ATTENDANCE_SESSION",
+      "entityType": "attendance_sessions",
+      "entityId": "sess_1794242079582_wk1",
+      "details": {
+        "courseOfferingId": "offering-mth131",
+        "date": "2026-11-09",
+        "weekNumber": 1,
+        "venue": "Mathematics Lecture Hall",
+        "tempCode": "EB2YXW"
+      },
+      "createdAt": "2026-11-09T16:34:39.582Z"
+    },
+    {
+      "id": "audit_1794242079599_555",
+      "actorId": "user-stu-1793368357128",
+      "actorName": "Matthew Aliu",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794242079599_975",
+      "details": {
+        "studentId": "stu-1793368357128",
+        "sessionId": "sess_1794242079582_wk1",
+        "status": "PRESENT",
+        "method": "TEMP_CODE",
+        "isFlaggedSuspicious": false
+      },
+      "createdAt": "2026-11-09T16:34:39.600Z"
+    },
+    {
+      "id": "audit_1794242079610_45",
+      "actorId": "user-vc",
+      "actorName": "Prof. Abdulrahman Salawu",
+      "actorRole": "PRINCIPAL_OFFICER",
+      "action": "REGENERATE_SESSION_CODE",
+      "entityType": "attendance_sessions",
+      "entityId": "sess_1794242079582_wk1",
+      "details": {
+        "newCode": "XKCGBD",
+        "previousCodes": [
+          "EB2YXW"
+        ]
+      },
+      "createdAt": "2026-11-09T16:34:39.610Z"
+    },
+    {
+      "id": "audit_1794242079615_619",
+      "actorId": "user-vc",
+      "actorName": "Prof. Abdulrahman Salawu",
+      "actorRole": "PRINCIPAL_OFFICER",
+      "action": "DEACTIVATE_SESSION_CODE",
+      "entityType": "attendance_sessions",
+      "entityId": "sess_1794242079582_wk1",
+      "createdAt": "2026-11-09T16:34:39.615Z"
+    },
+    {
+      "id": "audit_1794242079643_550",
+      "actorId": "user-vc",
+      "actorName": "Prof. Abdulrahman Salawu",
+      "actorRole": "PRINCIPAL_OFFICER",
+      "action": "REACTIVATE_SESSION_CODE",
+      "entityType": "attendance_sessions",
+      "entityId": "sess_1794242079582_wk1",
+      "createdAt": "2026-11-09T16:34:39.643Z"
+    },
+    {
+      "id": "audit_1794242079667_749",
+      "actorId": "user-vc",
+      "actorName": "Prof. Abdulrahman Salawu",
+      "actorRole": "PRINCIPAL_OFFICER",
+      "action": "START_ATTENDANCE_SESSION",
+      "entityType": "attendance_sessions",
+      "entityId": "sess_1794242079667_wk2",
+      "details": {
+        "courseOfferingId": "offering-mth131",
+        "date": "2026-11-09",
+        "weekNumber": 2,
+        "venue": "Mathematics Lecture Hall",
+        "tempCode": "G2B6WR"
+      },
+      "createdAt": "2026-11-09T16:34:39.667Z"
+    },
+    {
+      "id": "audit_1794242080114_69",
       "actorId": "prof-admin-ict",
       "actorName": "System",
       "actorRole": "SUPER_ADMIN",
-      "action": "ASSIGNED_LECTURER_TO_OFFERING",
-      "entityType": "course_offerings",
-      "entityId": "offering-mth131",
+      "action": "ADMIN_REGISTERED_STUDENT",
+      "entityType": "students",
+      "entityId": "stu-1794242079699",
       "details": {
-        "lecturerId": "user-vc",
-        "lecturerName": "Prof. Abdulrahman Salawu"
+        "matricNumber": "25L1SE0001",
+        "fullName": "Zainab Ahmed",
+        "departmentId": "dept-sen",
+        "level": 100
       },
-      "createdAt": "2026-11-09T16:34:39.562Z"
+      "createdAt": "2026-11-09T16:34:40.114Z"
     },
     {
-      "id": "audit_1794242079548_463",
+      "id": "audit_1794242080117_459",
+      "actorId": "user-stu-1794242079699",
+      "actorName": "Zainab Ahmed",
+      "actorRole": "STUDENT",
+      "action": "ATTENDANCE_RECORDED",
+      "entityType": "attendance_records",
+      "entityId": "rec_1794242080117_669",
+      "details": {
+        "studentId": "stu-1794242079699",
+        "sessionId": "sess_1794242079582_wk1",
+        "status": "PRESENT",
+        "method": "TEMP_CODE",
+        "isFlaggedSuspicious": true,
+        "flagReason": "Rapid account switching (1s interval between distinct accounts) detected on this device."
+      },
+      "createdAt": "2026-11-09T16:34:40.117Z"
+    },
+    {
+      "id": "audit_1794242080124_346",
       "actorId": "prof-admin-ict",
       "actorName": "System",
       "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_CREATED_COURSE",
-      "entityType": "courses",
-      "entityId": "course-mth131",
+      "action": "REVIEWED_DEVICE_ALERT",
+      "entityType": "device_collision_alerts",
+      "entityId": "alert_col_1794242080117",
       "details": {
-        "code": "MTH 131",
-        "title": "General Mathematics I",
-        "departmentId": "dept-se",
-        "level": 100
+        "action": "CLEARED",
+        "reviewNotes": "Student Matthew shared phone with Zainab because Zainab battery died in lecture hall."
       },
-      "createdAt": "2026-11-09T16:34:39.548Z"
-    },
-    {
-      "id": "audit_1793368357321_870",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1793368357128",
-      "details": {
-        "matricNumber": "25L1SE0000",
-        "fullName": "Matthew Aliu",
-        "departmentId": "dept-sen",
-        "level": 200
-      },
-      "createdAt": "2026-10-30T13:52:37.321Z"
-    },
-    {
-      "id": "audit_1793368278567_905",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1793368278372",
-      "details": {
-        "matricNumber": "25L1CS3653",
-        "fullName": "Matthew Aliu",
-        "departmentId": "dept-sen",
-        "level": 200
-      },
-      "createdAt": "2026-10-30T13:51:18.567Z"
-    },
-    {
-      "id": "audit_1794149750816_980",
-      "actorId": "user-stu-1",
-      "actorName": "Amina Usman",
-      "actorRole": "STUDENT",
-      "action": "ATTENDANCE_RECORDED",
-      "entityType": "attendance_records",
-      "entityId": "rec_1794149750815_625",
-      "details": {
-        "studentId": "stu-1",
-        "sessionId": "sess-today-csc",
-        "status": "LATE",
-        "method": "DYNAMIC_QR"
-      },
-      "createdAt": "2026-11-08T14:55:50.816Z"
-    },
-    {
-      "id": "audit_1794149751102_346",
-      "actorId": "user-rep",
-      "actorName": "Ibrahim Aliyu",
-      "actorRole": "STUDENT",
-      "action": "ATTENDANCE_RECORDED",
-      "entityType": "attendance_records",
-      "entityId": "rec_1794149751102_531",
-      "details": {
-        "studentId": "stu-3",
-        "sessionId": "sess-today-csc",
-        "status": "LATE",
-        "method": "KIOSK_PIN"
-      },
-      "createdAt": "2026-11-08T14:55:51.102Z"
-    },
-    {
-      "id": "audit_1794149751113_868",
-      "actorId": "user-rep",
-      "actorName": "Ibrahim Aliyu",
-      "actorRole": "STUDENT",
-      "action": "ATTENDANCE_RECORDED",
-      "entityType": "attendance_records",
-      "entityId": "rec_1794149751113_440",
-      "details": {
-        "studentId": "stu-rep",
-        "sessionId": "sess-today-csc",
-        "status": "LATE",
-        "method": "DYNAMIC_QR"
-      },
-      "createdAt": "2026-11-08T14:55:51.113Z"
-    },
-    {
-      "id": "audit_1794149751113_621",
-      "actorId": "user-stu-2",
-      "actorName": "Emeka Okonkwo",
-      "actorRole": "STUDENT",
-      "action": "ATTENDANCE_RECORDED",
-      "entityType": "attendance_records",
-      "entityId": "rec_1794149751113_851",
-      "details": {
-        "studentId": "stu-2",
-        "sessionId": "sess-today-csc",
-        "status": "LATE",
-        "method": "DYNAMIC_QR"
-      },
-      "createdAt": "2026-11-08T14:55:51.113Z"
-    },
-    {
-      "id": "audit_1794149751115_20",
-      "actorId": "user-dean",
-      "actorName": "Prof. M. O. Yusuf",
-      "actorRole": "DEAN",
-      "action": "APPROVE_MEDICAL_WAIVER",
-      "entityType": "medical_waivers",
-      "entityId": "waiver_1794149751114",
-      "details": {
-        "studentId": "stu-3",
-        "startDate": "2026-08-26",
-        "endDate": "2026-08-28"
-      },
-      "createdAt": "2026-11-08T14:55:51.115Z"
-    },
-    {
-      "id": "audit_1794149751367_977",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794149751116",
-      "details": {
-        "matricNumber": "25L1CS9999",
-        "fullName": "Bilikisu Sani",
-        "departmentId": "dept-csc",
-        "level": 200
-      },
-      "createdAt": "2026-11-08T14:55:51.367Z"
-    },
-    {
-      "id": "audit_1794149751786_486",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794149751377",
-      "details": {
-        "matricNumber": "25L1ME8801",
-        "fullName": "Kabir Bello",
-        "departmentId": "dept-mechanical-engineering",
-        "level": 200
-      },
-      "createdAt": "2026-11-08T14:55:51.786Z"
-    },
-    {
-      "id": "audit_1794149752254_652",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REGISTERED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794149751800",
-      "details": {
-        "matricNumber": "25L1CV8802",
-        "fullName": "Halima Dikko",
-        "departmentId": "dept-civil-engineering",
-        "level": 100
-      },
-      "createdAt": "2026-11-08T14:55:52.254Z"
-    },
-    {
-      "id": "audit_1794149752268_109",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_BULK_STUDENT_IMPORT",
-      "entityType": "students",
-      "details": {
-        "totalProcessed": 3,
-        "successful": 2,
-        "skipped": 1,
-        "failed": 0
-      },
-      "createdAt": "2026-11-08T14:55:52.268Z"
-    },
-    {
-      "id": "audit_1794149752284_51",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_DEACTIVATED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794149751116",
-      "details": {
-        "matricNumber": "25L1CS9999",
-        "isActive": false
-      },
-      "createdAt": "2026-11-08T14:55:52.284Z"
-    },
-    {
-      "id": "audit_1794149752287_976",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_REACTIVATED_STUDENT",
-      "entityType": "students",
-      "entityId": "stu-1794149751116",
-      "details": {
-        "matricNumber": "25L1CS9999",
-        "isActive": true
-      },
-      "createdAt": "2026-11-08T14:55:52.287Z"
-    },
-    {
-      "id": "audit_1794149752298_295",
-      "actorId": "user-admin",
-      "actorName": "Faruq Bello",
-      "actorRole": "SUPER_ADMIN",
-      "action": "ADMIN_ASSIGNED_ROLE",
-      "entityType": "user_profiles",
-      "entityId": "user-stu-1794149751116",
-      "details": {
-        "userName": "Bilikisu Sani",
-        "email": "bilikisu.sani@student.custech.edu.ng",
-        "oldRole": "STUDENT",
-        "newRole": "COURSE_REP"
-      },
-      "createdAt": "2026-11-08T14:55:52.298Z"
+      "createdAt": "2026-11-09T16:34:40.124Z"
     },
     {
       "id": "audit-1",
@@ -998,5 +1208,5 @@
       "createdAt": "2026-09-03T10:05:00Z"
     }
   ],
-  "updatedAt": "2026-11-09T16:34:40.124Z"
+  "updatedAt": "2026-11-10T09:05:14.216Z"
 }

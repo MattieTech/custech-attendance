@@ -18,7 +18,7 @@ import {
   Square,
   Key,
   ShieldAlert,
-  Sparkles,
+  Camera,
   RefreshCw,
   Copy,
   Check,
@@ -72,7 +72,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   const [session, setSession] = React.useState<AttendanceSession>(initialSession);
   const [qrSvg, setQrSvg] = React.useState<string>('');
   const [currentPayload, setCurrentPayload] = React.useState<RotatingQrPayload | null>(null);
-  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(initialSession.qrRotationSeconds || 20);
+  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(initialSession.qrRotationSeconds || 60);
   const [isLoading, setIsLoading] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -120,7 +120,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
         },
       });
       setQrSvg(svg);
-      setSecondsRemaining(session.qrRotationSeconds || 20);
+      setSecondsRemaining(session.qrRotationSeconds || 60);
       setActionError(null);
     } catch {
       setActionError('Error generating dynamic token');
@@ -137,7 +137,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           fetchNewToken();
-          return session.qrRotationSeconds || 20;
+          return session.qrRotationSeconds || 60;
         }
         return prev - 1;
       });
@@ -246,7 +246,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     }
   };
 
-  const rotationInterval = session.qrRotationSeconds || 20;
+  const rotationInterval = session.qrRotationSeconds || 60;
   const progressPercent = ((rotationInterval - secondsRemaining) / rotationInterval) * 100;
   const displayVenue = venue || session.venue || classroomCode;
   const displayWeek = weekNumber || session.weekNumber || 1;
@@ -357,8 +357,8 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
 
             {/* Micro Badge inside QR frame */}
             <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#8d4a27] text-white text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1">
-              <Sparkles className="w-2.5 h-2.5" />
-              <span>Rotates Every {session.qrRotationSeconds}s</span>
+              <RefreshCw className="w-2.5 h-2.5" />
+              <span>Rotates Every {session.qrRotationSeconds || 60}s</span>
             </div>
           </div>
 
@@ -650,7 +650,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
               </div>
 
               <div className="text-slate-400 text-xs sm:text-sm max-w-sm flex items-center gap-2.5 bg-slate-900/60 p-3 rounded-xl border border-slate-800">
-                <Sparkles className="w-5 h-5 text-[#eed7c3] shrink-0" />
+                <Camera className="w-5 h-5 text-[#eed7c3] shrink-0" />
                 <span>Open normal phone camera & scan QR code. Automatically signs student into lecture session.</span>
               </div>
             </div>

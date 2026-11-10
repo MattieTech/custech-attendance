@@ -30,7 +30,6 @@ import {
   HeartPulse,
   History,
   X,
-  Sparkles,
   ChevronRight,
   ChevronDown,
   Layers,
@@ -236,6 +235,49 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
         </div>
       )}
 
+      {/* ACTIVE ATTENDANCE CONSOLE (DYNAMIC QR & LIVE ROSTER MONITORING) */}
+      {activeSession && (
+        <div className="space-y-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-2">
+              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
+              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+                Live Attendance Console — {activeCourse?.code || 'CSC 201'} (Week {activeSession.weekNumber || 1})
+              </h3>
+            </div>
+            <span className="text-xs text-slate-500 font-medium">
+              Venue: {activeSession.venue || 'LH 101'}
+            </span>
+          </div>
+
+          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
+            <DynamicQrDisplay
+              session={activeSession}
+              courseCode={activeCourse?.code || 'CSC 201'}
+              courseTitle={activeCourse?.title || 'Data Structures and Algorithms'}
+              creditUnits={activeCourse?.creditUnits || 2}
+              lecturerName={`Dr. ${user.firstName} ${user.lastName}`}
+              departmentName={activeDept?.name || 'Computer Science'}
+              academicLevel={activeCourse?.level ? `${activeCourse.level}L` : '200L'}
+              classroomCode={activeSession.venue || 'LH 101'}
+              venue={activeSession.venue || 'LH 101'}
+              weekNumber={activeSession.weekNumber || 1}
+              lecturerId={user.id}
+              onOpenKiosk={() => setIsKioskOpen(true)}
+              onSessionUpdate={(updated) => {
+                setActiveSession(updated);
+                setRefreshTrigger((prev) => prev + 1);
+              }}
+            />
+
+            <LiveCounter
+              records={sessionRecords}
+              totalEnrolled={enrolledStudents.length || 4}
+            />
+          </div>
+        </div>
+      )}
+
       {/* PHASE 4: ASSIGNED COURSES & WEEKLY TIMETABLE CARDS */}
       <div>
         <div className="flex items-center justify-between mb-3">
@@ -365,49 +407,6 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
           })}
         </div>
       </div>
-
-      {/* ACTIVE ATTENDANCE CONSOLE (DYNAMIC QR & LIVE ROSTER MONITORING) */}
-      {activeSession && (
-        <div className="space-y-3">
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-2">
-              <span className="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-ping" />
-              <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-                Live Attendance Console — {activeCourse?.code || 'CSC 201'} (Week {activeSession.weekNumber || 1})
-              </h3>
-            </div>
-            <span className="text-xs text-slate-500 font-medium">
-              Venue: {activeSession.venue || 'LH 101'}
-            </span>
-          </div>
-
-          <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 items-start">
-            <DynamicQrDisplay
-              session={activeSession}
-              courseCode={activeCourse?.code || 'CSC 201'}
-              courseTitle={activeCourse?.title || 'Data Structures and Algorithms'}
-              creditUnits={activeCourse?.creditUnits || 2}
-              lecturerName={`Dr. ${user.firstName} ${user.lastName}`}
-              departmentName={activeDept?.name || 'Computer Science'}
-              academicLevel={activeCourse?.level ? `${activeCourse.level}L` : '200L'}
-              classroomCode={activeSession.venue || 'LH 101'}
-              venue={activeSession.venue || 'LH 101'}
-              weekNumber={activeSession.weekNumber || 1}
-              lecturerId={user.id}
-              onOpenKiosk={() => setIsKioskOpen(true)}
-              onSessionUpdate={(updated) => {
-                setActiveSession(updated);
-                setRefreshTrigger((prev) => prev + 1);
-              }}
-            />
-
-            <LiveCounter
-              records={sessionRecords}
-              totalEnrolled={enrolledStudents.length || 4}
-            />
-          </div>
-        </div>
-      )}
 
       {/* KIOSK MODAL FOR LECTURER / REP */}
       {isKioskOpen && activeSession && (

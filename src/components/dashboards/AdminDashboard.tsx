@@ -32,7 +32,6 @@ import {
   AlertCircle,
   ExternalLink,
   RefreshCw,
-  Sparkles,
   ChevronDown,
   Upload,
   Download,
@@ -1306,14 +1305,14 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
               <input
                 type="number"
                 min={10}
-                max={60}
+                max={120}
                 value={settings.qrRotationSeconds}
                 onChange={(e) =>
                   setSettings({ ...settings, qrRotationSeconds: Number(e.target.value) })
                 }
                 className="w-full px-3 py-2 text-xs rounded-lg border border-slate-300 bg-slate-50 text-slate-900 font-mono focus:border-[#8d4a27] focus:ring-1 focus:ring-[#8d4a27] outline-hidden transition"
               />
-              <p className="text-xs text-slate-400 mt-1">Anti-proxy refresh period (default 20s)</p>
+              <p className="text-xs text-slate-400 mt-1">Anti-proxy refresh period (default 60s)</p>
             </div>
 
             <div>

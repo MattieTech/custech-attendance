@@ -547,7 +547,7 @@ export const initialSessions: AttendanceSession[] = [
     status: 'CLOSED',
     currentTempCode: '9X2K7L',
     tempCodeExpiresAt: '2026-08-20T11:55:00Z',
-    qrRotationSeconds: 20,
+    qrRotationSeconds: 60,
     lateThresholdMinutes: 15,
     sessionSecretNonce: 'nonce_week1_csc201',
   },
@@ -565,7 +565,7 @@ export const initialSessions: AttendanceSession[] = [
     status: 'CLOSED',
     currentTempCode: '4M8P2W',
     tempCodeExpiresAt: '2026-08-27T11:50:00Z',
-    qrRotationSeconds: 20,
+    qrRotationSeconds: 60,
     lateThresholdMinutes: 15,
     sessionSecretNonce: 'nonce_week2_csc201',
   },
@@ -582,7 +582,7 @@ export const initialSessions: AttendanceSession[] = [
     status: 'ACTIVE',
     currentTempCode: '7K4P92',
     tempCodeExpiresAt: new Date(Date.now() + 3600000).toISOString(),
-    qrRotationSeconds: 20,
+    qrRotationSeconds: 60,
     lateThresholdMinutes: 15,
     sessionSecretNonce: 'nonce_live_today_csc201',
   },
@@ -761,7 +761,7 @@ export const initialStaffAttendance: StaffAttendance[] = [
 ];
 
 export const initialSystemSettings: SystemSettings = {
-  qrRotationSeconds: 20,
+  qrRotationSeconds: 60,
   attendanceDurationMinutes: 60,
   lateThresholdMinutes: 15,
   gracePeriodMinutes: 5,

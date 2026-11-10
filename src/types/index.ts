@@ -210,7 +210,7 @@ export interface AttendanceSession {
   tempCodeExpiresAt: string;
   isCodeActive?: boolean;
   previousCodes?: string[];
-  qrRotationSeconds: number; // default 20s
+  qrRotationSeconds: number; // default 60s
   lateThresholdMinutes: number; // default 15m
   sessionSecretNonce: string; // HMAC secret
   cancellationReason?: string;
@@ -234,6 +234,10 @@ export interface AttendanceRecord {
   longitude?: number;
   isFlaggedSuspicious: boolean;
   flagReason?: string;
+  facialVerified?: boolean;
+  facialConfidence?: number; // 0 - 100 similarity percentage
+  facialDistance?: number; // Euclidean descriptor distance
+  livenessVerified?: boolean;
   recordedAt: string;
   student?: Student;
 }
@@ -330,6 +334,8 @@ export interface SystemSettings {
   staffWorkStartTime: string; // '08:00'
   staffWorkEndTime: string; // '16:00'
   staffLateGraceMinutes: number; // 15
+  requireFacialVerification?: boolean; // Require live facial scan for student attendance
+  facialMatchThreshold?: number; // Euclidean distance cutoff (default 0.50, lower = stricter)
 }
 
 export interface AuditLog {
