@@ -1,10 +1,219 @@
 'use server';
 
 import { custechDb } from '@/lib/db/repository';
+import { verifyAttendancePin } from '@/lib/crypto';
+import {
+  clearServerSessionCookie,
+  getServerSession,
+  isFacultyAdminRole,
+  requireServerSession,
+  setServerSessionCookie,
+} from '@/lib/auth/server-session';
 import { UserRole, Course, CourseOffering, Department } from '@/types';
 
-export async function toggleSyllabusStatus(topicId: string, isCompleted: boolean, actorId: string) {
-  return custechDb.toggleSyllabusTopic(topicId, isCompleted, actorId);
+async function requireSuperAdmin() {
+  const actor = await requireServerSession();
+  if (actor.activeRole !== 'SUPER_ADMIN') {
+    throw new Error('Unauthorized: Super Administrator privileges are required for this action.');
+  }
+  return actor;
+}
+
+async function requireStaffOrAdmin() {
+  const actor = await requireServerSession();
+  const allowed: UserRole[] = [
+    'SUPER_ADMIN',
+    'PRINCIPAL_OFFICER',
+    'DEAN',
+    'FACULTY_REP',
+    'ASST_FACULTY_REP',
+    'HOD',
+    'LECTURER',
+  ];
+  if (!allowed.includes(actor.activeRole)) {
+    throw new Error('Unauthorized: Staff or Administrator privileges required.');
+  }
+  return actor;
+}
+
+async function requireCourseManagementAuth(targetDepartmentId?: string) {
+  const actor = await requireServerSession();
+  const { activeRole, user } = actor;
+
+  if (activeRole === 'SUPER_ADMIN' || activeRole === 'PRINCIPAL_OFFICER') {
+    return actor;
+  }
+
+  if (isFacultyAdminRole(activeRole)) {
+    if (targetDepartmentId && user.facultyId) {
+      const normalizedDeptId =
+        targetDepartmentId === 'dept-se' ? 'dept-sen' : targetDepartmentId;
+      const dept = custechDb
+        .getDepartments()
+        .find((d) => d.id === normalizedDeptId || d.id === targetDepartmentId);
+      if (dept && dept.facultyId !== user.facultyId) {
+        throw new Error(
+          'Unauthorized: Faculty Administrators can only manage courses belonging to their own faculty.'
+        );
+      }
+    }
+    return actor;
+  }
+
+  if (activeRole === 'HOD') {
+    if (targetDepartmentId && user.departmentId) {
+      const normalizedDeptId =
+        targetDepartmentId === 'dept-se' ? 'dept-sen' : targetDepartmentId;
+      if (normalizedDeptId !== user.departmentId && targetDepartmentId !== user.departmentId) {
+        throw new Error(
+          'Unauthorized: Heads of Department can only manage courses within their own department.'
+        );
+      }
+    }
+    return actor;
+  }
+
+  throw new Error('Unauthorized: You do not have permission to manage courses.');
+}
+
+export async function getAuthenticatedSessionAction() {
+  const serverSession = await getServerSession();
+  if (!serverSession) return null;
+  return {
+    user: serverSession.user,
+    activeRole: serverSession.payload.activeRole,
+    loginTime: new Date(serverSession.payload.iat * 1000).toISOString(),
+    authSource: serverSession.payload.authSource,
+  };
+}
+
+export async function switchActiveRoleAction(newRole: UserRole) {
+  try {
+    const serverSession = await getServerSession();
+    if (!serverSession) {
+      return { success: false, error: 'No active authenticated session found.' };
+    }
+
+    if (!serverSession.payload.assignedRoles.includes(newRole)) {
+      return {
+        success: false,
+        error: `User does not possess the permissions for role: ${newRole}.`,
+      };
+    }
+
+    await setServerSessionCookie({
+      userId: serverSession.user.id,
+      activeRole: newRole,
+      assignedRoles: serverSession.payload.assignedRoles,
+      authSource: serverSession.payload.authSource,
+    });
+
+    return {
+      success: true,
+      session: {
+        user: serverSession.user,
+        activeRole: newRole,
+        loginTime: new Date(serverSession.payload.iat * 1000).toISOString(),
+      },
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to switch role.',
+    };
+  }
+}
+
+export async function logoutAction() {
+  await clearServerSessionCookie();
+  return { success: true };
+}
+
+export async function impersonateStudentForAdminTestAction(studentProfileId: string) {
+  try {
+    await requireSuperAdmin();
+    const profile = custechDb.getProfileById(studentProfileId);
+    if (!profile) {
+      return { success: false, error: 'Student profile not found.' };
+    }
+    const studentRoles = profile.assignedRoles.filter(
+      (r) =>
+        r === 'STUDENT' ||
+        r === 'COURSE_REP' ||
+        r === 'ASSISTANT_COURSE_REP' ||
+        r === 'DEPARTMENT_REP'
+    );
+    const safeRoles: UserRole[] = studentRoles.length > 0 ? studentRoles : ['STUDENT'];
+
+    await setServerSessionCookie({
+      userId: profile.id,
+      activeRole: 'STUDENT',
+      assignedRoles: safeRoles,
+      authSource: 'PORTAL_LOGIN',
+    });
+
+    return {
+      success: true,
+      session: {
+        user: { ...profile, assignedRoles: safeRoles, primaryRole: 'STUDENT' as UserRole },
+        activeRole: 'STUDENT' as UserRole,
+        loginTime: new Date().toISOString(),
+      },
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Unauthorized test login.',
+    };
+  }
+}
+
+export async function ensureCourseSyllabusAction(courseId: string) {
+  await requireStaffOrAdmin();
+  return custechDb.ensureSyllabusForCourse(courseId);
+}
+
+export async function addSyllabusTopicAction(
+  params: {
+    courseId: string;
+    weekNumber: number;
+    topicTitle: string;
+    learningObjectives?: string;
+  },
+  _actorId?: string
+) {
+  try {
+    const actor = await requireStaffOrAdmin();
+    if (actor.activeRole === 'LECTURER') {
+      const offerings = custechDb.getLecturerOfferings(actor.user.id);
+      const ownsCourse = offerings.some((o) => o.courseId === params.courseId);
+      if (!ownsCourse) {
+        return { success: false, error: 'You can only manage syllabus topics for your assigned courses.' };
+      }
+    }
+    const topic = custechDb.addSyllabusTopic(params, actor.user.id);
+    return { success: true, topic };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to add syllabus topic',
+    };
+  }
+}
+
+export async function toggleSyllabusStatus(topicId: string, isCompleted: boolean, _actorId?: string) {
+  const actor = await requireStaffOrAdmin();
+  if (actor.activeRole === 'LECTURER') {
+    const offerings = custechDb.getLecturerOfferings(actor.user.id);
+    const allowedCourseIds = new Set(offerings.map((o) => o.courseId));
+    const matchingTopic = Array.from(allowedCourseIds)
+      .flatMap((cid) => custechDb.getSyllabusForCourse(cid))
+      .find((t) => t.id === topicId);
+    if (!matchingTopic) {
+      throw new Error('Unauthorized: You can only update syllabus progress for your assigned courses.');
+    }
+  }
+  return custechDb.toggleSyllabusTopic(topicId, isCompleted, actor.user.id);
 }
 
 export async function updateSystemSettingsAction(
@@ -16,9 +225,10 @@ export async function updateSystemSettingsAction(
     requireFacialVerification?: boolean;
     facialMatchThreshold?: number;
   },
-  actorId: string
+  _actorId?: string
 ) {
-  return custechDb.updateSystemSettings(settings, actorId);
+  const actor = await requireSuperAdmin();
+  return custechDb.updateSystemSettings(settings, actor.user.id);
 }
 
 export async function registerStudentAction(
@@ -34,12 +244,13 @@ export async function registerStudentAction(
     pin?: string;
     enrollInCourses?: boolean;
   },
-  actorId: string
+  _actorId?: string
 ) {
   try {
+    const actor = await requireSuperAdmin();
     const result = custechDb.registerStudent({
       ...studentData,
-      actorId,
+      actorId: actor.user.id,
     });
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
@@ -62,10 +273,11 @@ export async function updateStudentAction(
     currentLevel?: 100 | 200 | 300 | 400 | 500;
     isActive?: boolean;
   },
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const result = custechDb.updateStudent(studentId, studentData, actorId);
+    const actor = await requireSuperAdmin();
+    const result = custechDb.updateStudent(studentId, studentData, actor.user.id);
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
     return {
@@ -78,10 +290,11 @@ export async function updateStudentAction(
 export async function toggleStudentStatusAction(
   studentId: string,
   isActive: boolean,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const result = custechDb.toggleStudentActiveStatus(studentId, isActive, actorId);
+    const actor = await requireSuperAdmin();
+    const result = custechDb.toggleStudentActiveStatus(studentId, isActive, actor.user.id);
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
     return {
@@ -94,10 +307,11 @@ export async function toggleStudentStatusAction(
 export async function assignUserRoleAction(
   userId: string,
   newRole: UserRole,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const profile = custechDb.assignUserRole(userId, newRole, actorId);
+    const actor = await requireSuperAdmin();
+    const profile = custechDb.assignUserRole(userId, newRole, actor.user.id);
     return { success: true, profile };
   } catch (err: unknown) {
     return {
@@ -118,10 +332,11 @@ export async function bulkImportStudentsAction(
     currentLevel?: 100 | 200 | 300 | 400 | 500;
     pin?: string;
   }>,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const summary = custechDb.bulkRegisterStudents(records, actorId);
+    const actor = await requireSuperAdmin();
+    const summary = custechDb.bulkRegisterStudents(records, actor.user.id);
     return { success: true, summary };
   } catch (err: unknown) {
     return {
@@ -132,16 +347,19 @@ export async function bulkImportStudentsAction(
 }
 
 export async function getAllUsersWithRolesAction() {
+  await requireStaffOrAdmin();
   return custechDb.getAllUsersWithRoles();
 }
 
 export async function getDepartmentAttendanceStatsAction(departmentId: string = 'dept-csc') {
+  await requireStaffOrAdmin();
   return custechDb.getDepartmentAttendanceStats(departmentId);
 }
 
-export async function deleteStudentAction(studentId: string, actorId: string) {
+export async function deleteStudentAction(studentId: string, _actorId?: string) {
   try {
-    const ok = custechDb.deleteStudent(studentId, actorId);
+    const actor = await requireSuperAdmin();
+    const ok = custechDb.deleteStudent(studentId, actor.user.id);
     return { success: ok };
   } catch (err: unknown) {
     return {
@@ -151,9 +369,10 @@ export async function deleteStudentAction(studentId: string, actorId: string) {
   }
 }
 
-export async function resetStudentPinAction(studentId: string, newPin: string, actorId: string) {
+export async function resetStudentPinAction(studentId: string, newPin: string, _actorId?: string) {
   try {
-    const ok = custechDb.resetStudentPin(studentId, newPin, actorId);
+    const actor = await requireSuperAdmin();
+    const ok = custechDb.resetStudentPin(studentId, newPin, actor.user.id);
     return { success: ok };
   } catch (err: unknown) {
     return {
@@ -164,13 +383,21 @@ export async function resetStudentPinAction(studentId: string, newPin: string, a
 }
 
 export async function getAllStudentsDetailedAction() {
-  return custechDb.getAllStudentsDetailed();
+  await requireStaffOrAdmin();
+  return custechDb.getAllStudentsDetailed().map((s) => ({
+    ...s,
+    attendancePinHash: '',
+  }));
 }
 
 /**
  * Server-side student authentication directly querying the persistent CUSTECH database
  */
-export async function loginStudentAction(matricNumber: string, _password?: string) {
+export async function loginStudentAction(
+  matricNumber: string,
+  password?: string,
+  isQuickDemoLogin?: boolean
+) {
   const cleanMatric = matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
     return { success: false, error: 'Please enter your Matriculation Number.' };
@@ -191,10 +418,29 @@ export async function loginStudentAction(matricNumber: string, _password?: strin
     };
   }
 
+  // Verify PIN/password when provided
+  if (!isQuickDemoLogin && password && password.trim().length > 0) {
+    const pinOk = await verifyAttendancePin(password.trim(), student.attendancePinHash);
+    if (!pinOk) {
+      return {
+        success: false,
+        error: 'Invalid Access Password / 4-digit Attendance PIN.',
+      };
+    }
+  }
+
+  const activeRole = student.profile.primaryRole || 'STUDENT';
+  await setServerSessionCookie({
+    userId: student.profile.id,
+    activeRole,
+    assignedRoles: student.profile.assignedRoles,
+    authSource: 'PORTAL_LOGIN',
+  });
+
   return {
     success: true,
     profile: student.profile,
-    student,
+    student: { ...student, attendancePinHash: '' },
   };
 }
 
@@ -222,12 +468,29 @@ export async function loginStaffAction(identifier: string, _password?: string) {
     };
   }
 
+  if (
+    profile.primaryRole === 'STUDENT' &&
+    !profile.assignedRoles.some((r) => r !== 'STUDENT' && r !== 'COURSE_REP' && r !== 'ASSISTANT_COURSE_REP' && r !== 'DEPARTMENT_REP')
+  ) {
+    return {
+      success: false,
+      error: 'Students must sign in via the Student Portal tab.',
+    };
+  }
+
   if (!profile.isActive) {
     return {
       success: false,
       error: 'Account inactive. Please contact ICT Support / Registrar.',
     };
   }
+
+  await setServerSessionCookie({
+    userId: profile.id,
+    activeRole: profile.primaryRole,
+    assignedRoles: profile.assignedRoles,
+    authSource: 'PORTAL_LOGIN',
+  });
 
   return {
     success: true,
@@ -236,11 +499,16 @@ export async function loginStaffAction(identifier: string, _password?: string) {
 }
 
 /**
- * Returns latest authoritative snapshot of the CUSTECH database
+ * Returns latest role-scoped authoritative snapshot of the CUSTECH database
  * for client-side hydration and offline caching.
  */
 export async function getDatabaseSnapshotAction() {
-  return custechDb.getFullSnapshot();
+  const serverSession = await getServerSession();
+  return custechDb.getScopedSnapshot(
+    serverSession
+      ? { user: serverSession.user, activeRole: serverSession.payload.activeRole }
+      : null
+  );
 }
 
 /**
@@ -248,8 +516,19 @@ export async function getDatabaseSnapshotAction() {
  * COURSE MANAGEMENT SERVER ACTIONS
  * ==========================================
  */
-export async function getCoursesDetailedAction() {
-  return custechDb.getCoursesWithDetails();
+export async function getAcademicTermsAction() {
+  return {
+    sessions: custechDb.getAcademicSessions(),
+    semesters: custechDb.getSemesters(),
+    currentSession: custechDb.getCurrentAcademicSession(),
+    currentSemester: custechDb.getCurrentSemester(),
+  };
+}
+
+export async function getCoursesDetailedAction(facultyId?: string) {
+  const all = custechDb.getCoursesWithDetails();
+  if (!facultyId) return all;
+  return all.filter((c) => c.facultyId === facultyId);
 }
 
 export async function createCourseAction(
@@ -259,12 +538,21 @@ export async function createCourseAction(
     creditUnits: number;
     departmentId: string;
     level: 100 | 200 | 300 | 400 | 500;
+    semesterType?: 'FIRST' | 'SECOND';
+    academicSessionId?: string;
+    primaryLecturerId?: string;
     description?: string;
+    scheduleDay?: number;
+    scheduleStartTime?: string;
+    scheduleEndTime?: string;
+    scheduleVenue?: string;
+    autoEnrollStudents?: boolean;
   },
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const course = custechDb.createCourse(courseData, actorId);
+    const actor = await requireCourseManagementAuth(courseData.departmentId);
+    const course = custechDb.createCourse(courseData, actor.user.id);
     return { success: true, course };
   } catch (err: unknown) {
     return {
@@ -282,14 +570,24 @@ export async function updateCourseAction(
     creditUnits: number;
     departmentId: string;
     level: 100 | 200 | 300 | 400 | 500;
+    semesterType: 'FIRST' | 'SECOND';
+    academicSessionId: string;
     description?: string;
     isActive: boolean;
     primaryLecturerId: string;
+    scheduleDay?: number;
+    scheduleStartTime?: string;
+    scheduleEndTime?: string;
+    scheduleVenue?: string;
   }>,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const course = custechDb.updateCourse(courseId, courseData, actorId);
+    const existing = custechDb.getCourses().find((c) => c.id === courseId);
+    const actor = await requireCourseManagementAuth(
+      courseData.departmentId || existing?.departmentId
+    );
+    const course = custechDb.updateCourse(courseId, courseData, actor.user.id);
     return { success: true, course };
   } catch (err: unknown) {
     return {
@@ -302,10 +600,12 @@ export async function updateCourseAction(
 export async function toggleCourseAction(
   courseId: string,
   isActive: boolean,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const course = custechDb.toggleCourseActive(courseId, isActive, actorId);
+    const existing = custechDb.getCourses().find((c) => c.id === courseId);
+    const actor = await requireCourseManagementAuth(existing?.departmentId);
+    const course = custechDb.toggleCourseActive(courseId, isActive, actor.user.id);
     return { success: true, course };
   } catch (err: unknown) {
     return {
@@ -315,14 +615,31 @@ export async function toggleCourseAction(
   }
 }
 
-export async function deleteCourseAction(courseId: string, actorId: string) {
+export async function deleteCourseAction(courseId: string, _actorId?: string) {
   try {
-    custechDb.deleteCourse(courseId, actorId);
+    const existing = custechDb.getCourses().find((c) => c.id === courseId);
+    const actor = await requireCourseManagementAuth(existing?.departmentId);
+    custechDb.deleteCourse(courseId, actor.user.id);
     return { success: true };
   } catch (err: unknown) {
     return {
       success: false,
       error: err instanceof Error ? err.message : 'Failed to delete course',
+    };
+  }
+}
+
+export async function syncCourseEnrollmentsAction(courseId: string) {
+  try {
+    const existing = custechDb.getCourses().find((c) => c.id === courseId);
+    const actor = await requireCourseManagementAuth(existing?.departmentId);
+    const newlyEnrolled = custechDb.syncEligibleStudentsForCourse(courseId, actor.user.id);
+    custechDb.savePersistentData();
+    return { success: true, newlyEnrolled };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to sync enrollments',
     };
   }
 }
@@ -335,13 +652,19 @@ export async function bulkImportCoursesAction(
     departmentName?: string;
     departmentId?: string;
     level?: 100 | 200 | 300 | 400 | 500;
+    semesterType?: 'FIRST' | 'SECOND';
     description?: string;
     lecturerEmailOrName?: string;
   }>,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const summary = custechDb.bulkImportCourses(records, actorId);
+    const actor = await requireCourseManagementAuth();
+    const restrictedFacultyId =
+      isFacultyAdminRole(actor.activeRole) && actor.activeRole !== 'PRINCIPAL_OFFICER'
+        ? actor.user.facultyId
+        : undefined;
+    const summary = custechDb.bulkImportCourses(records, actor.user.id, restrictedFacultyId);
     return { success: true, summary };
   } catch (err: unknown) {
     return {
@@ -369,10 +692,11 @@ export async function createLecturerAction(
     facultyId?: string;
     staffId?: string;
   },
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const lecturer = custechDb.createLecturer(lecturerData, actorId);
+    const actor = await requireSuperAdmin();
+    const lecturer = custechDb.createLecturer(lecturerData, actor.user.id);
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -392,10 +716,11 @@ export async function updateLecturerAction(
     isActive: boolean;
     staffId: string;
   }>,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const lecturer = custechDb.updateLecturer(lecturerId, lecturerData, actorId);
+    const actor = await requireSuperAdmin();
+    const lecturer = custechDb.updateLecturer(lecturerId, lecturerData, actor.user.id);
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -408,10 +733,11 @@ export async function updateLecturerAction(
 export async function toggleLecturerActiveAction(
   lecturerId: string,
   isActive: boolean,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const lecturer = custechDb.toggleLecturerActive(lecturerId, isActive, actorId);
+    const actor = await requireSuperAdmin();
+    const lecturer = custechDb.toggleLecturerActive(lecturerId, isActive, actor.user.id);
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -424,10 +750,16 @@ export async function toggleLecturerActiveAction(
 export async function assignLecturerToCourseAction(
   courseOfferingId: string,
   lecturerId: string,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const offering = custechDb.assignLecturerToCourseOffering(courseOfferingId, lecturerId, actorId);
+    const offeringObj = custechDb.getOfferingById(courseOfferingId);
+    const actor = await requireCourseManagementAuth(offeringObj?.course?.departmentId);
+    const offering = custechDb.assignLecturerToCourseOffering(
+      courseOfferingId,
+      lecturerId,
+      actor.user.id
+    );
     return { success: true, offering };
   } catch (err: unknown) {
     return {
@@ -456,10 +788,12 @@ export async function createTimetableAction(
     venue?: string;
     isRecurring?: boolean;
   },
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const entry = custechDb.createTimetableEntry(timetableData, actorId);
+    const off = custechDb.getOfferingById(timetableData.courseOfferingId);
+    const actor = await requireCourseManagementAuth(off?.course?.departmentId);
+    const entry = custechDb.createTimetableEntry(timetableData, actor.user.id);
     return { success: true, entry };
   } catch (err: unknown) {
     return {
@@ -479,10 +813,11 @@ export async function updateTimetableAction(
     venue?: string;
     isRecurring?: boolean;
   }>,
-  actorId: string
+  _actorId?: string
 ) {
   try {
-    const entry = custechDb.updateTimetableEntry(timetableId, timetableData, actorId);
+    const actor = await requireCourseManagementAuth();
+    const entry = custechDb.updateTimetableEntry(timetableId, timetableData, actor.user.id);
     return { success: true, entry };
   } catch (err: unknown) {
     return {
@@ -492,9 +827,10 @@ export async function updateTimetableAction(
   }
 }
 
-export async function deleteTimetableAction(timetableId: string, actorId: string) {
+export async function deleteTimetableAction(timetableId: string, _actorId?: string) {
   try {
-    custechDb.deleteTimetableEntry(timetableId, actorId);
+    const actor = await requireCourseManagementAuth();
+    custechDb.deleteTimetableEntry(timetableId, actor.user.id);
     return { success: true };
   } catch (err: unknown) {
     return {
@@ -509,8 +845,40 @@ export async function deleteTimetableAction(timetableId: string, actorId: string
  * STUDENT MATRICULATION NUMBER VERIFICATION (PHASE 7)
  * ==========================================
  */
-export async function verifyMatriculationNumberAction(matricNumber: string) {
-  return custechDb.verifyStudentMatric(matricNumber);
+export async function verifyMatriculationNumberAction(
+  matricNumber: string,
+  context?: { sessionId?: string; courseCode?: string }
+) {
+  const res = custechDb.verifyStudentMatric(matricNumber);
+  if (!res.found || !res.student) {
+    return res;
+  }
+
+  let eligibility:
+    | {
+        eligible: boolean;
+        reason?: string;
+        courseCode?: string;
+        courseTitle?: string;
+        sessionStatus?: string;
+      }
+    | undefined;
+
+  if (context?.sessionId || context?.courseCode) {
+    const check = custechDb.getCourseEligibilityForStudent(res.student.id, context);
+    eligibility = {
+      eligible: check.eligible,
+      reason: check.reason,
+      courseCode: check.course?.code,
+      courseTitle: check.course?.title,
+      sessionStatus: check.sessionStatus,
+    };
+  }
+
+  return {
+    ...res,
+    eligibility,
+  };
 }
 
 /**
@@ -520,12 +888,13 @@ export async function verifyMatriculationNumberAction(matricNumber: string) {
  */
 export async function investigateDeviceAlertAction(
   alertId: string,
-  reviewerId: string,
+  _reviewerId: string,
   action: 'CLEARED' | 'FLAGGED_FRAUD',
   reviewNotes?: string
 ) {
   try {
-    const alert = custechDb.investigateDeviceAlert(alertId, reviewerId, action, reviewNotes);
+    const actor = await requireStaffOrAdmin();
+    const alert = custechDb.investigateDeviceAlert(alertId, actor.user.id, action, reviewNotes);
     return { success: true, alert };
   } catch (err: unknown) {
     return {
@@ -536,14 +905,17 @@ export async function investigateDeviceAlertAction(
 }
 
 export async function getDeviceCollisionAlertsAction(sessionId?: string) {
+  await requireStaffOrAdmin();
   return custechDb.getDeviceCollisionAlerts(sessionId);
 }
 
 export async function getAllSessionsDetailedAction() {
-  return custechDb.getSessions();
+  await requireStaffOrAdmin();
+  return custechDb.getSessions().map((s) => ({ ...s, sessionSecretNonce: '' }));
 }
 
 export async function getSessionRecordsAction(sessionId: string) {
+  await requireStaffOrAdmin();
   return custechDb.getRecordsForSession(sessionId);
 }
 
@@ -558,12 +930,17 @@ export async function getFacultiesAndDepartmentsAction() {
   };
 }
 
-export async function ensureDepartmentAction(data: { name: string; facultyId?: string; code?: string }): Promise<{
+export async function ensureDepartmentAction(data: {
+  name: string;
+  facultyId?: string;
+  code?: string;
+}): Promise<{
   success: boolean;
   department?: Department;
   error?: string;
 }> {
   try {
+    await requireCourseManagementAuth();
     const department = custechDb.ensureDepartment(data);
     return { success: true, department };
   } catch (err: unknown) {
@@ -585,7 +962,7 @@ export async function assignCourseManuallyAction(
     facultyId?: string;
     level?: 100 | 200 | 300 | 400 | 500;
   },
-  actorId: string
+  _actorId?: string
 ): Promise<{
   success: boolean;
   course?: Course;
@@ -594,7 +971,8 @@ export async function assignCourseManuallyAction(
   error?: string;
 }> {
   try {
-    const result = custechDb.assignCourseManuallyToLecturer(params, actorId);
+    const actor = await requireCourseManagementAuth(params.departmentId);
+    const result = custechDb.assignCourseManuallyToLecturer(params, actor.user.id);
     return { success: true, ...result };
   } catch (err: unknown) {
     return {
@@ -603,5 +981,3 @@ export async function assignCourseManuallyAction(
     };
   }
 }
-
-

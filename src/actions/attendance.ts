@@ -1,7 +1,16 @@
 'use server';
 
 import { custechDb } from '@/lib/db/repository';
-import { createDynamicQrPayload, verifyQrPayload } from '@/lib/crypto';
+import {
+  createDynamicQrPayload,
+  verifyAttendancePin,
+  verifyQrPayload,
+} from '@/lib/crypto';
+import {
+  requireServerSession,
+  setServerSessionCookie,
+  STUDENT_ONLY_ROLES,
+} from '@/lib/auth/server-session';
 import {
   RotatingQrPayload,
   KioskAttendanceDTO,
@@ -9,7 +18,30 @@ import {
   AttendanceRecord,
   AttendanceMethod,
   FaceVerificationSubmission,
+  UserProfile,
+  UserRole,
 } from '@/types';
+
+async function requireLecturerCourseAccess(courseOfferingId: string) {
+  const actor = await requireServerSession();
+  if (actor.activeRole === 'SUPER_ADMIN') {
+    return actor;
+  }
+
+  const allowedRoles: UserRole[] = ['LECTURER', 'HOD', 'DEAN', 'PRINCIPAL_OFFICER'];
+  if (!allowedRoles.includes(actor.activeRole)) {
+    throw new Error('Unauthorized: Only assigned course lecturers can manage attendance sessions.');
+  }
+
+  const isAssigned = custechDb.isLecturerAssignedToOffering(actor.user.id, courseOfferingId);
+  if (!isAssigned) {
+    throw new Error(
+      'Unauthorized: You are not assigned to teach this course and cannot start or manage its attendance.'
+    );
+  }
+
+  return actor;
+}
 
 /**
  * Shared server-side helper to enforce biometric facial verification
@@ -77,11 +109,12 @@ function verifyAndRecordWithFace(params: {
 }
 
 /**
- * Fetch current state of an attendance session
+ * Fetch current state of an attendance session (sanitized)
  */
 export async function getSessionDetails(sessionId: string): Promise<AttendanceSession | null> {
   const session = custechDb.getSessionById(sessionId);
-  return session || null;
+  if (!session) return null;
+  return { ...session, sessionSecretNonce: '' };
 }
 
 /**
@@ -118,7 +151,6 @@ export async function submitQrAttendance(
   clientEventId?: string,
   faceVerification?: FaceVerificationSubmission
 ): Promise<{ success: boolean; message: string; record?: AttendanceRecord; biometricErrorCode?: string }> {
-  // 1. Verify Cryptographic Signature & Window
   const session = custechDb.getSessionById(payload.sessionId);
   if (!session) {
     return { success: false, message: 'Invalid or expired attendance session.' };
@@ -129,13 +161,11 @@ export async function submitQrAttendance(
     return { success: false, message: verification.reason || 'Invalid QR token' };
   }
 
-  // 2. Identify Student from profile
   const student = custechDb.getStudentByProfileId(studentProfileId);
   if (!student) {
     return { success: false, message: 'Student profile not found in CUSTECH registry.' };
   }
 
-  // 3. Enforce Facial Verification & Record Attendance
   const res = verifyAndRecordWithFace({
     sessionId: session.id,
     studentId: student.id,
@@ -239,17 +269,14 @@ export async function submitAttendanceByCourseAndCode(
     return { success: false, message: 'Please enter the 6-character session code.' };
   }
 
-  // Find active session for this course or matching temp code
   const allSessions = custechDb.getSessions();
   const activeSessions = allSessions.filter((s) => s.status === 'ACTIVE');
 
-  // Match by course code
   let session = activeSessions.find((s) => {
     const offeringCourseCode = s.courseOffering?.course?.code?.trim().toUpperCase().replace(/\s+/g, '');
     return offeringCourseCode === cleanCourse;
   });
 
-  // If not found by course code directly, check if any active session matches the temp code
   if (!session) {
     session = activeSessions.find(
       (s) => s.currentTempCode?.trim().toUpperCase() === cleanCode
@@ -344,7 +371,6 @@ export async function submitAttendanceFromUrl(params: {
 
   let verified = false;
 
-  // 1. Try cryptographic verification if signature and window are provided
   if (params.signature && params.timestampWindow && params.nonce) {
     const offering = custechDb.getOfferingById(session.courseOfferingId);
     const courseCode = params.courseCode || offering?.course?.code || 'CUSTECH';
@@ -356,13 +382,12 @@ export async function submitAttendanceFromUrl(params: {
       signature: params.signature,
     };
 
-    const verification = verifyQrPayload(payload, session.qrRotationSeconds || 60, 4); // allow 4 windows for mobile redirect
+    const verification = verifyQrPayload(payload, session.qrRotationSeconds || 60, 4);
     if (verification.isValid) {
       verified = true;
     }
   }
 
-  // 2. Fallback to temp code match if signature check failed or wasn't provided
   if (!verified && params.code) {
     if (session.currentTempCode.toUpperCase() === params.code.trim().toUpperCase()) {
       verified = true;
@@ -462,22 +487,36 @@ export async function syncOfflineBatch(
 }
 
 /**
- * Session Lifecycle Controls
+ * Session Lifecycle Controls (Strictly Protected by Server Role & Course Ownership)
  */
-export async function startAttendanceSession(courseOfferingId: string, lecturerId: string) {
-  return custechDb.startSession(courseOfferingId, lecturerId);
+export async function startAttendanceSession(courseOfferingId: string, _lecturerId: string) {
+  const actor = await requireLecturerCourseAccess(courseOfferingId);
+  const session = custechDb.startSession(courseOfferingId, actor.user.id);
+  return { ...session, sessionSecretNonce: '' };
 }
 
-export async function pauseSession(sessionId: string, actorId: string) {
-  return custechDb.pauseSession(sessionId, actorId);
+export async function pauseSession(sessionId: string, _actorId: string) {
+  const existing = custechDb.getSessionById(sessionId);
+  if (!existing) throw new Error('Session not found');
+  const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+  const session = custechDb.pauseSession(sessionId, actor.user.id);
+  return { ...session, sessionSecretNonce: '' };
 }
 
-export async function resumeSession(sessionId: string, actorId: string) {
-  return custechDb.resumeSession(sessionId, actorId);
+export async function resumeSession(sessionId: string, _actorId: string) {
+  const existing = custechDb.getSessionById(sessionId);
+  if (!existing) throw new Error('Session not found');
+  const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+  const session = custechDb.resumeSession(sessionId, actor.user.id);
+  return { ...session, sessionSecretNonce: '' };
 }
 
-export async function closeSession(sessionId: string, actorId: string) {
-  return custechDb.closeSession(sessionId, actorId);
+export async function closeSession(sessionId: string, _actorId: string) {
+  const existing = custechDb.getSessionById(sessionId);
+  if (!existing) throw new Error('Session not found');
+  const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+  const session = custechDb.closeSession(sessionId, actor.user.id);
+  return { ...session, sessionSecretNonce: '' };
 }
 
 export async function submitAttendanceCorrection(
@@ -485,16 +524,36 @@ export async function submitAttendanceCorrection(
   studentId: string,
   reason: string
 ) {
+  const actor = await requireServerSession();
+  const student = custechDb.getStudentById(studentId);
+  if (!student) throw new Error('Student record not found.');
+  if (actor.activeRole !== 'SUPER_ADMIN' && student.profileId !== actor.user.id) {
+    throw new Error('Unauthorized: You can only lodge attendance corrections for your own account.');
+  }
   return custechDb.submitCorrection({ sessionId, studentId, reason });
 }
 
 export async function reviewAttendanceCorrection(
   correctionId: string,
-  reviewerId: string,
+  _reviewerId: string,
   status: 'APPROVED' | 'REJECTED',
   notes?: string
 ) {
-  return custechDb.resolveCorrection({ correctionId, reviewerId, status, reviewNotes: notes });
+  const correction = custechDb.getCorrections().find((c) => c.id === correctionId);
+  if (!correction) throw new Error('Correction request not found.');
+  const session = custechDb.getSessionById(correction.sessionId);
+  if (session) {
+    await requireLecturerCourseAccess(session.courseOfferingId);
+  } else {
+    await requireServerSession();
+  }
+  const actor = await requireServerSession();
+  return custechDb.resolveCorrection({
+    correctionId,
+    reviewerId: actor.user.id,
+    status,
+    reviewNotes: notes,
+  });
 }
 
 /**
@@ -513,8 +572,12 @@ export async function startNewLectureSessionAction(params: {
   forceNew?: boolean;
 }) {
   try {
-    const session = custechDb.startSession(params);
-    return { success: true, session };
+    const actor = await requireLecturerCourseAccess(params.courseOfferingId);
+    const session = custechDb.startSession({
+      ...params,
+      lecturerId: actor.user.id,
+    });
+    return { success: true, session: { ...session, sessionSecretNonce: '' } };
   } catch (err: unknown) {
     return {
       success: false,
@@ -525,10 +588,13 @@ export async function startNewLectureSessionAction(params: {
 
 export async function regenerateSessionCodeAction(
   sessionId: string,
-  actorId: string
+  _actorId: string
 ): Promise<{ success: boolean; newCode?: string; expiresAt?: string; error?: string }> {
   try {
-    const result = custechDb.regenerateSessionCode(sessionId, actorId);
+    const existing = custechDb.getSessionById(sessionId);
+    if (!existing) throw new Error('Session not found');
+    const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+    const result = custechDb.regenerateSessionCode(sessionId, actor.user.id);
     return { success: true, newCode: result.newCode, expiresAt: result.expiresAt };
   } catch (err: unknown) {
     return {
@@ -538,9 +604,12 @@ export async function regenerateSessionCodeAction(
   }
 }
 
-export async function deactivateSessionCodeAction(sessionId: string, actorId: string) {
+export async function deactivateSessionCodeAction(sessionId: string, _actorId: string) {
   try {
-    custechDb.deactivateSessionCode(sessionId, actorId);
+    const existing = custechDb.getSessionById(sessionId);
+    if (!existing) throw new Error('Session not found');
+    const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+    custechDb.deactivateSessionCode(sessionId, actor.user.id);
     return { success: true };
   } catch (err: unknown) {
     return {
@@ -550,9 +619,12 @@ export async function deactivateSessionCodeAction(sessionId: string, actorId: st
   }
 }
 
-export async function reactivateSessionCodeAction(sessionId: string, actorId: string) {
+export async function reactivateSessionCodeAction(sessionId: string, _actorId: string) {
   try {
-    custechDb.reactivateSessionCode(sessionId, actorId);
+    const existing = custechDb.getSessionById(sessionId);
+    if (!existing) throw new Error('Session not found');
+    const actor = await requireLecturerCourseAccess(existing.courseOfferingId);
+    custechDb.reactivateSessionCode(sessionId, actor.user.id);
     return { success: true };
   } catch (err: unknown) {
     return {
@@ -563,11 +635,11 @@ export async function reactivateSessionCodeAction(sessionId: string, actorId: st
 }
 
 export async function getOfferingSessionsAction(offeringId: string) {
-  return custechDb.getSessionsForOffering(offeringId);
+  return custechDb.getSessionsForOffering(offeringId).map((s) => ({ ...s, sessionSecretNonce: '' }));
 }
 
 export async function getLecturerSessionsAction(lecturerId: string) {
-  return custechDb.getSessionsForLecturer(lecturerId);
+  return custechDb.getSessionsForLecturer(lecturerId).map((s) => ({ ...s, sessionSecretNonce: '' }));
 }
 
 /**
@@ -577,6 +649,7 @@ export async function getLecturerSessionsAction(lecturerId: string) {
  */
 export async function submitStudentAttendanceWithMatric(params: {
   matricNumber: string;
+  attendancePin?: string;
   sessionId?: string;
   courseCode?: string;
   code?: string;
@@ -606,6 +679,11 @@ export async function submitStudentAttendanceWithMatric(params: {
     weekNumber?: number;
   };
   record?: AttendanceRecord;
+  restoredSession?: {
+    user: UserProfile;
+    activeRole: UserRole;
+    loginTime: string;
+  };
 }> {
   const cleanMatric = params.matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
@@ -622,6 +700,8 @@ export async function submitStudentAttendanceWithMatric(params: {
   }
 
   const student = verification.student;
+  const studentRecord = custechDb.getStudentById(student.id);
+  const studentProfile = custechDb.getProfileById(student.profileId);
 
   // 2. Identify target session
   let targetSession: AttendanceSession | undefined;
@@ -662,7 +742,18 @@ export async function submitStudentAttendanceWithMatric(params: {
     };
   }
 
-  // 3. Verify Code if provided
+  // 3. Verify Student Eligibility for this Course Offering
+  const eligibility = custechDb.getCourseEligibilityForStudent(student.id, {
+    sessionId: targetSession.id,
+  });
+  if (!eligibility.eligible) {
+    return {
+      success: false,
+      message: eligibility.reason || 'You are not eligible to mark attendance for this course.',
+    };
+  }
+
+  // 4. Verify Code if provided
   if (params.code) {
     const cleanCode = params.code.trim().toUpperCase();
     if (targetSession.isCodeActive === false) {
@@ -685,7 +776,27 @@ export async function submitStudentAttendanceWithMatric(params: {
     }
   }
 
-  // 4. Enforce Facial Verification & Record attendance with device telemetry and deduplication
+  // 5. If facial verification is disabled by policy, verify 4-digit Attendance PIN so
+  // matriculation number alone never grants dashboard access or attendance marking
+  const settings = custechDb.getSystemSettings();
+  if (settings.requireFacialVerification === false && studentRecord) {
+    const cleanPin = params.attendancePin?.trim() || '';
+    if (!cleanPin) {
+      return {
+        success: false,
+        message: 'Please enter your 4-digit Attendance PIN to verify your identity.',
+      };
+    }
+    const pinValid = await verifyAttendancePin(cleanPin, studentRecord.attendancePinHash);
+    if (!pinValid) {
+      return {
+        success: false,
+        message: 'Invalid 4-digit Attendance PIN. Attendance and portal access denied.',
+      };
+    }
+  }
+
+  // 6. Enforce Facial Verification & Record attendance with device telemetry and deduplication
   const offering = custechDb.getOfferingById(targetSession.courseOfferingId);
   const course = offering?.course;
   const lecturer = offering?.primaryLecturer;
@@ -719,6 +830,40 @@ export async function submitStudentAttendanceWithMatric(params: {
     },
   });
 
+  // 7. Establish authenticated STUDENT-only session upon verified attendance (success or verified duplicate)
+  let restoredSession:
+    | {
+        user: UserProfile;
+        activeRole: UserRole;
+        loginTime: string;
+      }
+    | undefined;
+
+  if ((result.success || result.isDuplicate) && studentProfile) {
+    const allowedStudentRoles = studentProfile.assignedRoles.filter((r) =>
+      STUDENT_ONLY_ROLES.includes(r)
+    );
+    const safeRoles: UserRole[] =
+      allowedStudentRoles.length > 0 ? allowedStudentRoles : ['STUDENT'];
+
+    await setServerSessionCookie({
+      userId: studentProfile.id,
+      activeRole: 'STUDENT',
+      assignedRoles: safeRoles,
+      authSource: 'QR_VERIFIED_STUDENT',
+    });
+
+    restoredSession = {
+      user: {
+        ...studentProfile,
+        primaryRole: 'STUDENT',
+        assignedRoles: safeRoles,
+      },
+      activeRole: 'STUDENT',
+      loginTime: new Date().toISOString(),
+    };
+  }
+
   return {
     success: result.success,
     isDuplicate: result.isDuplicate,
@@ -727,5 +872,6 @@ export async function submitStudentAttendanceWithMatric(params: {
     student: studentSummary,
     course: courseSummary,
     record: result.record,
+    restoredSession,
   };
 }

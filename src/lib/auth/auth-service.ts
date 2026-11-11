@@ -1,6 +1,12 @@
 import { UserProfile, UserRole } from '@/types';
-import { initialProfiles } from '../db/initial-data';
 import { custechDb } from '../db/repository';
+import {
+  getAuthenticatedSessionAction,
+  loginStaffAction,
+  loginStudentAction,
+  logoutAction,
+  switchActiveRoleAction,
+} from '@/actions/academic';
 
 export interface AuthenticatedSession {
   user: UserProfile;
@@ -29,19 +35,28 @@ export function getStoredSession(): AuthenticatedSession | null {
     const raw = localStorage.getItem(STORAGE_KEY);
     if (!raw) return null;
     const parsed: AuthenticatedSession = JSON.parse(raw);
-    // Ensure user still exists in database and update profile data in case it changed
-    const freshUser =
-      custechDb.getProfileById(parsed.user.id) ||
-      initialProfiles.find((p) => p.id === parsed.user.id);
-    if (!freshUser) {
+    const freshUser = custechDb.getProfileById(parsed.user.id) || parsed.user;
+    if (!freshUser || !freshUser.isActive) {
       localStorage.removeItem(STORAGE_KEY);
       return null;
     }
+
+    // Preserve restricted role scope if session came from QR student verification
+    const allowedRoles = parsed.user.assignedRoles?.length
+      ? parsed.user.assignedRoles.filter((r) => freshUser.assignedRoles.includes(r))
+      : freshUser.assignedRoles;
+
+    const effectiveRoles = allowedRoles.length > 0 ? allowedRoles : [freshUser.primaryRole];
+    const activeRole = effectiveRoles.includes(parsed.activeRole)
+      ? parsed.activeRole
+      : effectiveRoles[0];
+
     return {
-      user: freshUser,
-      activeRole: freshUser.assignedRoles.includes(parsed.activeRole)
-        ? parsed.activeRole
-        : freshUser.primaryRole,
+      user: {
+        ...freshUser,
+        assignedRoles: effectiveRoles,
+      },
+      activeRole,
       loginTime: parsed.loginTime,
     };
   } catch {
@@ -50,7 +65,7 @@ export function getStoredSession(): AuthenticatedSession | null {
 }
 
 /**
- * Save active session
+ * Save active session locally and notify listeners.
  */
 export function storeSession(session: AuthenticatedSession): void {
   if (typeof window === 'undefined') return;
@@ -58,137 +73,117 @@ export function storeSession(session: AuthenticatedSession): void {
   notifyAuthChange();
 }
 
-import { loginStudentAction, loginStaffAction } from '@/actions/academic';
+/**
+ * Synchronize client session with the authoritative HTTP-only server session cookie.
+ * Ensures role integrity across page refreshes and QR attendance redirects.
+ */
+export async function syncSessionWithServer(): Promise<AuthenticatedSession | null> {
+  if (typeof window === 'undefined') return null;
+  try {
+    const serverSession = await getAuthenticatedSessionAction();
+    if (!serverSession) {
+      localStorage.removeItem(STORAGE_KEY);
+      return null;
+    }
+    const synced: AuthenticatedSession = {
+      user: serverSession.user,
+      activeRole: serverSession.activeRole,
+      loginTime: serverSession.loginTime,
+    };
+    localStorage.setItem(STORAGE_KEY, JSON.stringify(synced));
+    return synced;
+  } catch {
+    // Offline fallback
+    return getStoredSession();
+  }
+}
 
 /**
- * Authenticate a Student using Matriculation Number and Password.
- * Queries server database and synchronizes into local client store.
+ * Authenticate a Student using Matriculation Number and Password/PIN.
+ * Always establishes an HTTP-only signed cookie on the server.
  */
 export async function loginStudent(
   matricNumber: string,
-  _password?: string
+  password?: string,
+  isQuickDemoLogin?: boolean
 ): Promise<{ success: boolean; session?: AuthenticatedSession; error?: string }> {
   const cleanMatric = matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
     return { success: false, error: 'Please enter your Matriculation Number.' };
   }
 
-  // 1. Check local client database
-  let profile = custechDb
-    .getProfiles()
-    .find((p) => p.matricNumber?.toUpperCase() === cleanMatric);
-
-  let student = custechDb.getStudentByMatric(cleanMatric);
-
-  // 2. Query persistent server database if not found or to get freshest state
-  if (!profile) {
-    try {
-      const serverRes = await loginStudentAction(cleanMatric, _password);
-      if (serverRes.success && serverRes.profile) {
-        profile = serverRes.profile;
-        student = serverRes.student;
-        // Sync into client-side database and localStorage
-        custechDb.syncClientProfileAndStudent(profile, student);
-      } else if (serverRes.error) {
-        return { success: false, error: serverRes.error };
-      }
-    } catch (err) {
-      console.warn('Server auth query failed:', err);
+  try {
+    const serverRes = await loginStudentAction(cleanMatric, password, isQuickDemoLogin);
+    if (!serverRes.success || !serverRes.profile) {
+      return {
+        success: false,
+        error:
+          serverRes.error ||
+          `Matriculation number "${cleanMatric}" was not found in the CUSTECH academic registry.`,
+      };
     }
-  }
 
-  if (!profile) {
-    return {
-      success: false,
-      error: `Matriculation number "${cleanMatric}" was not found in the CUSTECH academic registry.`,
+    custechDb.syncClientProfileAndStudent(serverRes.profile, serverRes.student);
+    const session: AuthenticatedSession = {
+      user: serverRes.profile,
+      activeRole: serverRes.profile.primaryRole || 'STUDENT',
+      loginTime: new Date().toISOString(),
     };
+    storeSession(session);
+    return { success: true, session };
+  } catch (err) {
+    console.warn('Server student auth query failed:', err);
+    return { success: false, error: 'Unable to reach authentication server. Please try again.' };
   }
-
-  if (!profile.isActive) {
-    return {
-      success: false,
-      error: 'This student account has been flagged inactive. Please contact the Directorate of Academic Planning.',
-    };
-  }
-
-  const session: AuthenticatedSession = {
-    user: profile,
-    activeRole: profile.primaryRole || 'STUDENT',
-    loginTime: new Date().toISOString(),
-  };
-
-  storeSession(session);
-  return { success: true, session };
 }
 
 /**
  * Authenticate an Academic Staff, HOD, Dean, Principal Officer, or Administrator
- * using Staff ID or University Email.
+ * using Staff ID or University Email. Always establishes an HTTP-only signed cookie.
  */
 export async function loginStaff(
   identifier: string,
-  _password?: string
+  password?: string
 ): Promise<{ success: boolean; session?: AuthenticatedSession; error?: string }> {
   const cleanId = identifier.trim().toLowerCase();
   if (!cleanId) {
     return { success: false, error: 'Please enter your Staff ID or University Email.' };
   }
 
-  let profile = custechDb
-    .getProfiles()
-    .find(
-      (p) =>
-        p.email.toLowerCase() === cleanId ||
-        (p.staffId && p.staffId.toLowerCase() === cleanId)
-    );
-
-  if (!profile) {
-    try {
-      const serverRes = await loginStaffAction(cleanId, _password);
-      if (serverRes.success && serverRes.profile) {
-        profile = serverRes.profile;
-        custechDb.syncClientProfileAndStudent(profile);
-      } else if (serverRes.error) {
-        return { success: false, error: serverRes.error };
-      }
-    } catch (err) {
-      console.warn('Server staff auth query failed:', err);
+  try {
+    const serverRes = await loginStaffAction(cleanId, password);
+    if (!serverRes.success || !serverRes.profile) {
+      return {
+        success: false,
+        error:
+          serverRes.error ||
+          `Staff account "${identifier}" was not found in the CUSTECH staff directory.`,
+      };
     }
-  }
 
-  if (!profile) {
-    return {
-      success: false,
-      error: `Staff account "${identifier}" was not found in the CUSTECH staff directory.`,
+    custechDb.syncClientProfileAndStudent(serverRes.profile);
+    const session: AuthenticatedSession = {
+      user: serverRes.profile,
+      activeRole: serverRes.profile.primaryRole,
+      loginTime: new Date().toISOString(),
     };
+    storeSession(session);
+    return { success: true, session };
+  } catch (err) {
+    console.warn('Server staff auth query failed:', err);
+    return { success: false, error: 'Unable to reach authentication server. Please try again.' };
   }
-
-  if (!profile.isActive) {
-    return {
-      success: false,
-      error: 'Account inactive. Please contact ICT Support / Registrar.',
-    };
-  }
-
-  const session: AuthenticatedSession = {
-    user: profile,
-    activeRole: profile.primaryRole,
-    loginTime: new Date().toISOString(),
-  };
-
-  storeSession(session);
-  return { success: true, session };
 }
 
 /**
  * Switch the active perspective (e.g. "View as Lecturer" vs "View as HOD")
- * without requiring the user to re-authenticate.
+ * and update the signed server session cookie.
  */
-export function switchActiveRole(newRole: UserRole): {
+export async function switchActiveRole(newRole: UserRole): Promise<{
   success: boolean;
   session?: AuthenticatedSession;
   error?: string;
-} {
+}> {
   const current = getStoredSession();
   if (!current) {
     return { success: false, error: 'No active authenticated session found.' };
@@ -201,21 +196,35 @@ export function switchActiveRole(newRole: UserRole): {
     };
   }
 
-  const updated: AuthenticatedSession = {
-    ...current,
-    activeRole: newRole,
-  };
-
-  storeSession(updated);
-  return { success: true, session: updated };
+  try {
+    const serverRes = await switchActiveRoleAction(newRole);
+    if (serverRes.success && serverRes.session) {
+      storeSession(serverRes.session);
+      return { success: true, session: serverRes.session };
+    }
+    return { success: false, error: serverRes.error || 'Role switch rejected by server.' };
+  } catch {
+    const updated: AuthenticatedSession = {
+      ...current,
+      activeRole: newRole,
+    };
+    storeSession(updated);
+    return { success: true, session: updated };
+  }
 }
 
 /**
- * Sign out and clear stored credentials.
+ * Sign out and clear stored credentials & server cookie.
  */
-export function logoutUser(): void {
+export async function logoutUser(): Promise<void> {
   if (typeof window !== 'undefined') {
     localStorage.removeItem(STORAGE_KEY);
+    localStorage.removeItem('custech_verified_matric');
+    try {
+      await logoutAction();
+    } catch {
+      // ignore offline
+    }
     notifyAuthChange();
   }
 }

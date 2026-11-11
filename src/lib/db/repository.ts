@@ -168,7 +168,12 @@ class CustechDatabase {
     });
 
     if (Array.isArray(parsed.courses)) {
-      this.courses = parsed.courses as Course[];
+      this.courses = (parsed.courses as Course[]).map((c) => ({
+        ...c,
+        departmentId: c.departmentId === 'dept-se' ? 'dept-sen' : c.departmentId,
+        semesterType: c.semesterType || 'FIRST',
+        academicSessionId: c.academicSessionId || 'session-2026',
+      }));
       // Ensure any newly seeded university courses are available
       initialCourses.forEach((ic) => {
         if (!this.courses.some((c) => c.id === ic.id || c.code.toUpperCase() === ic.code.toUpperCase())) {
@@ -180,7 +185,17 @@ class CustechDatabase {
     }
 
     if (Array.isArray(parsed.courseOfferings)) {
-      this.courseOfferings = parsed.courseOfferings as CourseOffering[];
+      this.courseOfferings = (parsed.courseOfferings as CourseOffering[]).map((o) => ({
+        ...o,
+        semesterId:
+          !o.semesterId || o.semesterId === 'sem-2026-first' ? 'sem-2026-1' : o.semesterId,
+        academicSessionId:
+          !o.academicSessionId || o.academicSessionId === 'sess-2026-first'
+            ? 'session-2026'
+            : o.academicSessionId,
+        primaryLecturerId:
+          o.primaryLecturerId === 'user-lec-csc1' ? '' : o.primaryLecturerId,
+      }));
       initialCourseOfferings.forEach((io) => {
         if (!this.courseOfferings.some((o) => o.id === io.id || o.courseId === io.courseId)) {
           this.courseOfferings.push(io);
@@ -463,11 +478,12 @@ class CustechDatabase {
       createdAt: new Date().toISOString(),
     };
 
+    const matchedProgram = this.programs.find((p) => p.departmentId === deptId);
     const newStudent: Student = {
       id: studentId,
       profileId: profileId,
       matricNumber: cleanMatric,
-      programId: params.programId || 'prog-csc',
+      programId: params.programId || matchedProgram?.id || 'prog-csc',
       currentLevel: level,
       attendancePinHash: pinHash,
       profile: newProfile,
@@ -476,14 +492,18 @@ class CustechDatabase {
     this.profiles.unshift(newProfile);
     this.students.unshift(newStudent);
 
-    // Auto-enroll in active courses for their level/department (or default offerings like CSC 201)
+    // Auto-enroll ONLY in active courses matching BOTH the student's department AND academic level
     if (params.enrollInCourses !== false) {
-      const activeOfferings = this.courseOfferings.filter((co) => {
+      const currentSem = this.getCurrentSemester();
+      const targetOfferings = this.courseOfferings.filter((co) => {
         const c = this.courses.find((course) => course.id === co.courseId);
-        return c && (c.departmentId === deptId || c.level === level);
+        if (!c || c.isActive === false) return false;
+        const deptMatch = c.departmentId === deptId;
+        const levelMatch = c.level === level;
+        const semMatch = !currentSem || !co.semesterId || co.semesterId === currentSem.id;
+        return deptMatch && levelMatch && semMatch;
       });
 
-      const targetOfferings = activeOfferings.length > 0 ? activeOfferings : this.courseOfferings;
       targetOfferings.forEach((off) => {
         if (!this.enrollments.some((e) => e.studentId === studentId && e.courseOfferingId === off.id)) {
           this.enrollments.push({
@@ -870,17 +890,33 @@ class CustechDatabase {
     this.savePersistentData();
   }
 
+  private sanitizeStudents(students: ReturnType<CustechDatabase['getAllStudentsDetailed']>) {
+    return students.map((s) => ({
+      ...s,
+      attendancePinHash: '',
+    }));
+  }
+
+  private sanitizeSessions(sessions: AttendanceSession[]) {
+    return sessions.map((s) => ({
+      ...s,
+      sessionSecretNonce: '',
+    }));
+  }
+
   getFullSnapshot() {
     return {
       profiles: this.profiles,
-      students: this.getAllStudentsDetailed(),
+      students: this.sanitizeStudents(this.getAllStudentsDetailed()),
       departments: this.departments,
       faculties: this.faculties,
+      academicSessions: this.academicSessions,
+      semesters: this.semesters,
       courses: this.courses,
       courseOfferings: this.courseOfferings,
       timetables: this.timetables,
       enrollments: this.enrollments,
-      sessions: this.sessions,
+      sessions: this.sanitizeSessions(this.sessions),
       attendanceRecords: this.attendanceRecords,
       corrections: this.corrections,
       syllabusTopics: this.syllabusTopics,
@@ -892,6 +928,144 @@ class CustechDatabase {
       systemSettings: this.systemSettings,
       auditLogs: this.auditLogs.slice(0, 100),
     };
+  }
+
+  /**
+   * Role-scoped, sanitized database snapshot for client hydration.
+   * Strips all password/PIN hashes and HMAC session secrets.
+   * Ensures students only receive their own records and enrolled courses.
+   */
+  getScopedSnapshot(actor?: { user: UserProfile; activeRole: UserRole } | null) {
+    if (!actor) {
+      return {
+        profiles: [],
+        students: [],
+        departments: this.departments,
+        faculties: this.faculties,
+        academicSessions: this.academicSessions,
+        semesters: this.semesters,
+        courses: [],
+        courseOfferings: [],
+        timetables: [],
+        enrollments: [],
+        sessions: [],
+        attendanceRecords: [],
+        corrections: [],
+        syllabusTopics: [],
+        staffAttendance: [],
+        medicalWaivers: [],
+        notifications: [],
+        courseReps: [],
+        deviceCollisionAlerts: [],
+        systemSettings: {
+          ...this.systemSettings,
+        },
+        auditLogs: [],
+      };
+    }
+
+    const { user, activeRole } = actor;
+
+    // Pure Student scope: strictly own profile, own enrollments, own courses, own records
+    if (activeRole === 'STUDENT') {
+      const student = this.getStudentByProfileId(user.id);
+      const studentId = student?.id || '';
+      const myEnrollments = this.enrollments.filter((e) => e.studentId === studentId && e.isActive);
+      const myOfferingIds = new Set(myEnrollments.map((e) => e.courseOfferingId));
+      const myOfferings = this.courseOfferings.filter((o) => myOfferingIds.has(o.id));
+      const myCourseIds = new Set(myOfferings.map((o) => o.courseId));
+      const myLecturerIds = new Set(
+        myOfferings.flatMap((o) => [o.primaryLecturerId, ...(o.assignedLecturerIds || [])]).filter(Boolean)
+      );
+      const mySessions = this.sessions.filter((s) => myOfferingIds.has(s.courseOfferingId));
+      const mySessionIds = new Set(mySessions.map((s) => s.id));
+
+      return {
+        profiles: this.profiles.filter((p) => p.id === user.id || myLecturerIds.has(p.id)),
+        students: student
+          ? this.sanitizeStudents(this.getAllStudentsDetailed().filter((s) => s.id === student.id))
+          : [],
+        departments: this.departments,
+        faculties: this.faculties,
+        academicSessions: this.academicSessions,
+        semesters: this.semesters,
+        courses: this.courses.filter((c) => myCourseIds.has(c.id)),
+        courseOfferings: myOfferings,
+        timetables: this.timetables.filter((t) => myOfferingIds.has(t.courseOfferingId)),
+        enrollments: myEnrollments,
+        sessions: this.sanitizeSessions(mySessions),
+        attendanceRecords: this.attendanceRecords.filter(
+          (r) => r.studentId === studentId && mySessionIds.has(r.sessionId)
+        ),
+        corrections: this.corrections.filter((c) => c.studentId === studentId),
+        syllabusTopics: this.syllabusTopics.filter((t) => myCourseIds.has(t.courseId)),
+        staffAttendance: [],
+        medicalWaivers: this.medicalWaivers.filter((w) => w.studentId === studentId),
+        notifications: this.notifications.filter((n) => n.userId === user.id),
+        courseReps: this.courseReps.filter((r) => r.studentId === studentId),
+        deviceCollisionAlerts: [],
+        systemSettings: this.systemSettings,
+        auditLogs: [],
+      };
+    }
+
+    // Rep student roles: classmates in their offering/department, no fraud/audit logs
+    if (
+      activeRole === 'COURSE_REP' ||
+      activeRole === 'ASSISTANT_COURSE_REP' ||
+      activeRole === 'DEPARTMENT_REP'
+    ) {
+      return {
+        ...this.getFullSnapshot(),
+        deviceCollisionAlerts: [],
+        auditLogs: [],
+        staffAttendance: [],
+      };
+    }
+
+    // Lecturer scope: assigned offerings, enrolled students, own sessions & corrections
+    if (activeRole === 'LECTURER') {
+      const lecOfferings = this.getLecturerOfferings(user.id);
+      const lecOfferingIds = new Set(lecOfferings.map((o) => o.id));
+      const lecCourseIds = new Set(lecOfferings.map((o) => o.courseId));
+      const lecSessions = this.sessions.filter(
+        (s) => s.lecturerId === user.id || lecOfferingIds.has(s.courseOfferingId)
+      );
+      const lecSessionIds = new Set(lecSessions.map((s) => s.id));
+      const lecEnrollments = this.enrollments.filter((e) => lecOfferingIds.has(e.courseOfferingId));
+      const enrolledStudentIds = new Set(lecEnrollments.map((e) => e.studentId));
+
+      return {
+        profiles: this.profiles,
+        students: this.sanitizeStudents(
+          this.getAllStudentsDetailed().filter((s) => enrolledStudentIds.has(s.id))
+        ),
+        departments: this.departments,
+        faculties: this.faculties,
+        academicSessions: this.academicSessions,
+        semesters: this.semesters,
+        courses: this.courses.filter((c) => lecCourseIds.has(c.id)),
+        courseOfferings: lecOfferings,
+        timetables: this.timetables.filter((t) => lecOfferingIds.has(t.courseOfferingId)),
+        enrollments: lecEnrollments,
+        sessions: this.sanitizeSessions(lecSessions),
+        attendanceRecords: this.attendanceRecords.filter((r) => lecSessionIds.has(r.sessionId)),
+        corrections: this.corrections.filter((c) => lecSessionIds.has(c.sessionId)),
+        syllabusTopics: this.syllabusTopics.filter((t) => lecCourseIds.has(t.courseId)),
+        staffAttendance: [],
+        medicalWaivers: this.medicalWaivers,
+        notifications: this.notifications.filter((n) => n.userId === user.id),
+        courseReps: this.courseReps,
+        deviceCollisionAlerts: this.deviceCollisionAlerts.filter((a) =>
+          lecSessionIds.has(a.sessionId)
+        ),
+        systemSettings: this.systemSettings,
+        auditLogs: [],
+      };
+    }
+
+    // Admin, HOD, Dean, Faculty Rep, Staff
+    return this.getFullSnapshot();
   }
 
   upsertClientSession(session: AttendanceSession): void {
@@ -925,6 +1099,7 @@ class CustechDatabase {
     systemSettings?: SystemSettings;
     auditLogs?: AuditLog[];
   }): void {
+    if (typeof window === 'undefined') return;
     if (Array.isArray(data.profiles)) this.profiles = data.profiles;
     if (Array.isArray(data.students)) this.students = data.students;
     if (Array.isArray(data.departments)) this.departments = data.departments;
@@ -947,9 +1122,7 @@ class CustechDatabase {
 
     this.savePersistentData();
 
-    if (typeof window !== 'undefined') {
-      window.dispatchEvent(new CustomEvent('custech-db-synced'));
-    }
+    window.dispatchEvent(new CustomEvent('custech-db-synced'));
   }
 
   getEnrolledStudentsForOffering(courseOfferingId: string): (Student & { profile?: UserProfile })[] {
@@ -982,8 +1155,24 @@ class CustechDatabase {
   }
 
   // ==========================================
-  // COURSES, TIMETABLES & OFFERINGS
+  // ACADEMIC SESSIONS, SEMESTERS & COURSES
   // ==========================================
+  getAcademicSessions() {
+    return [...this.academicSessions];
+  }
+
+  getSemesters() {
+    return [...this.semesters];
+  }
+
+  getCurrentAcademicSession() {
+    return this.academicSessions.find((s) => s.isCurrent) || this.academicSessions[0];
+  }
+
+  getCurrentSemester() {
+    return this.semesters.find((s) => s.isCurrent) || this.semesters[0];
+  }
+
   getCourses(): Course[] {
     return [...this.courses];
   }
@@ -1006,15 +1195,104 @@ class CustechDatabase {
     };
   }
 
+  isLecturerAssignedToOffering(lecturerProfileId: string, courseOfferingId: string): boolean {
+    const co = this.courseOfferings.find((o) => o.id === courseOfferingId);
+    if (!co) return false;
+    return (
+      co.primaryLecturerId === lecturerProfileId ||
+      Boolean(co.assignedLecturerIds && co.assignedLecturerIds.includes(lecturerProfileId))
+    );
+  }
+
   getLecturerOfferings(lecturerProfileId: string) {
-    return this.getCourseOfferings().filter((co) => co.primaryLecturerId === lecturerProfileId);
+    return this.getCourseOfferings().filter(
+      (co) =>
+        co.course?.isActive !== false &&
+        co.isActive !== false &&
+        (co.primaryLecturerId === lecturerProfileId ||
+          Boolean(co.assignedLecturerIds && co.assignedLecturerIds.includes(lecturerProfileId)))
+    );
   }
 
   getStudentOfferings(studentId: string) {
-    const enrolledOfferingIds = this.enrollments
-      .filter((e) => e.studentId === studentId && e.isActive)
-      .map((e) => e.courseOfferingId);
-    return this.getCourseOfferings().filter((co) => enrolledOfferingIds.includes(co.id));
+    const currentSem = this.getCurrentSemester();
+    const enrolledOfferingIds = new Set(
+      this.enrollments
+        .filter((e) => e.studentId === studentId && e.isActive)
+        .map((e) => e.courseOfferingId)
+    );
+    return this.getCourseOfferings().filter((co) => {
+      if (!enrolledOfferingIds.has(co.id)) return false;
+      if (co.course?.isActive === false || co.isActive === false) return false;
+      if (currentSem && co.semesterId && co.semesterId !== currentSem.id) return false;
+      return true;
+    });
+  }
+
+  getCourseEligibilityForStudent(
+    studentId: string,
+    params: { sessionId?: string; courseCode?: string }
+  ): {
+    eligible: boolean;
+    reason?: string;
+    course?: Course;
+    offering?: CourseOffering;
+    sessionStatus?: string;
+  } {
+    const student = this.getStudentById(studentId);
+    if (!student) {
+      return { eligible: false, reason: 'Student record not found.' };
+    }
+
+    let session: AttendanceSession | undefined;
+    if (params.sessionId) {
+      session = this.sessions.find((s) => s.id === params.sessionId);
+      if (!session) {
+        return { eligible: false, reason: 'Attendance session not found or has expired.' };
+      }
+      const offering = this.courseOfferings.find((o) => o.id === session!.courseOfferingId);
+      const course = offering ? this.courses.find((c) => c.id === offering.courseId) : undefined;
+      if (!offering || !course) {
+        return { eligible: false, reason: 'Course offering for this session was not found.' };
+      }
+      const isEnrolled = this.isStudentEnrolled(student.id, offering.id);
+      if (!isEnrolled) {
+        return {
+          eligible: false,
+          course,
+          offering,
+          sessionStatus: session.status,
+          reason: `You (${student.matricNumber}) are not registered for ${course.code} (${course.title}). Attendance is restricted to enrolled students.`,
+        };
+      }
+      return { eligible: true, course, offering, sessionStatus: session.status };
+    }
+
+    if (params.courseCode) {
+      const cleanCode = params.courseCode.trim().toUpperCase().replace(/\s+/g, '');
+      const course = this.courses.find(
+        (c) => c.code.trim().toUpperCase().replace(/\s+/g, '') === cleanCode
+      );
+      if (!course) {
+        return { eligible: false, reason: `Course "${params.courseCode}" was not found.` };
+      }
+      const offering = this.courseOfferings.find((o) => o.courseId === course.id);
+      if (!offering) {
+        return { eligible: false, course, reason: `No active offering for ${course.code}.` };
+      }
+      const isEnrolled = this.isStudentEnrolled(student.id, offering.id);
+      if (!isEnrolled) {
+        return {
+          eligible: false,
+          course,
+          offering,
+          reason: `You (${student.matricNumber}) are not registered for ${course.code} (${course.title}).`,
+        };
+      }
+      return { eligible: true, course, offering };
+    }
+
+    return { eligible: true };
   }
 
   getTimetableEntries(): (TimetableEntry & {
@@ -1696,7 +1974,89 @@ class CustechDatabase {
   // SYLLABUS & MATERIALS
   // ==========================================
   getSyllabusForCourse(courseId: string): SyllabusTopic[] {
-    return this.syllabusTopics.filter((s) => s.courseId === courseId);
+    return this.syllabusTopics
+      .filter((s) => s.courseId === courseId)
+      .sort((a, b) => a.weekNumber - b.weekNumber);
+  }
+
+  ensureSyllabusForCourse(courseId: string): SyllabusTopic[] {
+    const existing = this.getSyllabusForCourse(courseId);
+    if (existing.length > 0) return existing;
+
+    const course = this.courses.find((c) => c.id === courseId);
+    if (!course) return [];
+
+    const defaults: SyllabusTopic[] = [
+      {
+        id: `syl_${course.id}_wk1`,
+        courseId: course.id,
+        weekNumber: 1,
+        topicTitle: `Course Introduction & Foundations of ${course.title}`,
+        learningObjectives: `Core concepts, terminology, and module overview for ${course.code}.`,
+        isCompleted: false,
+      },
+      {
+        id: `syl_${course.id}_wk2`,
+        courseId: course.id,
+        weekNumber: 2,
+        topicTitle: `Core Principles & Analytical Methods in ${course.code}`,
+        learningObjectives: `Theoretical frameworks, structured problem-solving, and guided exercises.`,
+        isCompleted: false,
+      },
+      {
+        id: `syl_${course.id}_wk3`,
+        courseId: course.id,
+        weekNumber: 3,
+        topicTitle: `Intermediate Applications & Practical Case Studies`,
+        learningObjectives: `Applied laboratory/tutorial workflows and mid-semester review.`,
+        isCompleted: false,
+      },
+      {
+        id: `syl_${course.id}_wk4`,
+        courseId: course.id,
+        weekNumber: 4,
+        topicTitle: `Advanced Topics, Synthesis & Assessment Preparation`,
+        learningObjectives: `Comprehensive integration, revision, and examination readiness.`,
+        isCompleted: false,
+      },
+    ];
+
+    this.syllabusTopics.push(...defaults);
+    this.savePersistentData();
+    return defaults;
+  }
+
+  addSyllabusTopic(
+    params: {
+      courseId: string;
+      weekNumber: number;
+      topicTitle: string;
+      learningObjectives?: string;
+    },
+    actorId: string
+  ): SyllabusTopic {
+    const course = this.courses.find((c) => c.id === params.courseId);
+    if (!course) throw new Error('Course not found');
+
+    const newTopic: SyllabusTopic = {
+      id: `syl_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      courseId: params.courseId,
+      weekNumber: Number(params.weekNumber) || 1,
+      topicTitle: params.topicTitle.trim(),
+      learningObjectives: params.learningObjectives?.trim() || '',
+      isCompleted: false,
+    };
+
+    this.syllabusTopics.push(newTopic);
+    this.logAudit({
+      actorId,
+      action: 'ADD_SYLLABUS_TOPIC',
+      entityType: 'syllabus_topics',
+      entityId: newTopic.id,
+      details: { courseId: params.courseId, weekNumber: newTopic.weekNumber, topicTitle: newTopic.topicTitle },
+    });
+    this.savePersistentData();
+    return newTopic;
   }
 
   toggleSyllabusTopic(topicId: string, isCompleted: boolean, actorId: string): SyllabusTopic {
@@ -1709,7 +2069,7 @@ class CustechDatabase {
       action: 'UPDATE_SYLLABUS_PROGRESS',
       entityType: 'syllabus_topics',
       entityId: topicId,
-      details: { isCompleted },
+      details: { courseId: topic.courseId, isCompleted },
     });
 
     this.savePersistentData();
@@ -2163,15 +2523,42 @@ class CustechDatabase {
   // DYNAMIC COURSE CATALOGUE & OFFERINGS
   // ==========================================
   getCoursesWithDetails() {
+    const dayNames = ['Sun', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Sat'];
+    const currentSession = this.getCurrentAcademicSession();
+    const currentSem = this.getCurrentSemester();
+
     return this.courses.map((course) => {
       const normalizedDeptId = course.departmentId === 'dept-se' ? 'dept-sen' : course.departmentId;
       const dept = this.departments.find((d) => d.id === normalizedDeptId || d.id === course.departmentId);
       const fac = this.faculties.find((f) => f.id === dept?.facultyId);
       const offerings = this.courseOfferings.filter((o) => o.courseId === course.id);
-      const assignedLecturers = offerings.map((o) => {
-        const p = this.getProfileById(o.primaryLecturerId);
-        return p ? `${p.firstName} ${p.lastName}` : 'Unassigned';
-      });
+      const primaryOffering = offerings[0];
+      const assignedLecturers = offerings
+        .map((o) => {
+          const p = this.getProfileById(o.primaryLecturerId);
+          return p ? `${p.firstName} ${p.lastName}` : null;
+        })
+        .filter((name): name is string => Boolean(name));
+
+      const tt = primaryOffering
+        ? this.timetables.find((t) => t.courseOfferingId === primaryOffering.id)
+        : undefined;
+      const classroom = tt ? this.classrooms.find((c) => c.id === tt.classroomId) : undefined;
+      const scheduleLabel = tt
+        ? `${dayNames[tt.dayOfWeek] || 'Day'}, ${tt.startTime} – ${tt.endTime}`
+        : 'Schedule TBD';
+      const venueLabel = tt?.venue || classroom?.code || 'Lecture Hall';
+
+      const enrolledCount = primaryOffering
+        ? this.enrollments.filter((e) => e.courseOfferingId === primaryOffering.id && e.isActive).length
+        : 0;
+
+      const semObj = primaryOffering?.semesterId
+        ? this.semesters.find((s) => s.id === primaryOffering.semesterId)
+        : currentSem;
+      const sessObj = primaryOffering?.academicSessionId
+        ? this.academicSessions.find((s) => s.id === primaryOffering.academicSessionId)
+        : currentSession;
 
       return {
         ...course,
@@ -2179,11 +2566,61 @@ class CustechDatabase {
         facultyId: fac?.id || dept?.facultyId || 'fac-comp',
         departmentName: dept?.name || 'General Studies',
         facultyName: fac?.name || 'Faculty of Computing and Informatics',
+        semesterType: course.semesterType || semObj?.semesterType || 'FIRST',
+        academicSessionId: course.academicSessionId || sessObj?.id || 'session-2026',
+        academicSessionName: sessObj?.name || '2026/2027',
         offeringsCount: offerings.length,
         assignedLecturers: Array.from(new Set(assignedLecturers)),
-        primaryOffering: offerings[0],
+        primaryOffering,
+        primaryLecturerId: primaryOffering?.primaryLecturerId || '',
+        timetable: tt,
+        scheduleLabel,
+        venueLabel,
+        enrolledCount,
       };
     });
+  }
+
+  syncEligibleStudentsForCourse(courseId: string, actorId?: string): number {
+    const course = this.courses.find((c) => c.id === courseId);
+    if (!course) return 0;
+    const offering = this.courseOfferings.find((o) => o.courseId === courseId);
+    if (!offering) return 0;
+
+    const normalizedDeptId = course.departmentId === 'dept-se' ? 'dept-sen' : course.departmentId;
+    let newlyEnrolled = 0;
+
+    this.students.forEach((stu) => {
+      const profile = this.getProfileById(stu.profileId);
+      if (!profile || !profile.isActive) return;
+      const stuDeptId = profile.departmentId === 'dept-se' ? 'dept-sen' : profile.departmentId;
+      if (stuDeptId === normalizedDeptId && stu.currentLevel === course.level) {
+        const exists = this.enrollments.some(
+          (e) => e.studentId === stu.id && e.courseOfferingId === offering.id
+        );
+        if (!exists) {
+          this.enrollments.push({
+            id: `enr_${Date.now()}_${stu.id}_${Math.floor(Math.random() * 1000)}`,
+            studentId: stu.id,
+            courseOfferingId: offering.id,
+            isActive: true,
+          });
+          newlyEnrolled++;
+        }
+      }
+    });
+
+    if (newlyEnrolled > 0 && actorId) {
+      this.logAudit({
+        actorId,
+        action: 'SYNCED_COURSE_ENROLLMENTS',
+        entityType: 'enrollments',
+        entityId: offering.id,
+        details: { courseCode: course.code, newlyEnrolled },
+      });
+    }
+
+    return newlyEnrolled;
   }
 
   createCourse(
@@ -2193,50 +2630,101 @@ class CustechDatabase {
       creditUnits: number;
       departmentId: string;
       level: 100 | 200 | 300 | 400 | 500;
+      semesterType?: 'FIRST' | 'SECOND';
+      academicSessionId?: string;
+      primaryLecturerId?: string;
       description?: string;
+      scheduleDay?: number;
+      scheduleStartTime?: string;
+      scheduleEndTime?: string;
+      scheduleVenue?: string;
+      autoEnrollStudents?: boolean;
     },
     actorId: string
   ): Course {
-    const cleanCode = data.code.trim().toUpperCase();
-    if (this.courses.some((c) => c.code.toUpperCase() === cleanCode)) {
+    const rawCode = data.code.trim().toUpperCase();
+    const cleanCode = rawCode.replace(/^([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)$/, '$1 $2');
+    const stripped = cleanCode.replace(/\s+/g, '');
+
+    if (this.courses.some((c) => c.code.toUpperCase().replace(/\s+/g, '') === stripped)) {
       throw new Error(`Course code "${cleanCode}" already exists in the university catalogue.`);
     }
 
-    const courseId = `course-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const normalizedDeptId = data.departmentId === 'dept-se' ? 'dept-sen' : data.departmentId;
+    const currentSession = this.getCurrentAcademicSession();
+    const currentSem = this.getCurrentSemester();
+    const sessionId = data.academicSessionId || currentSession?.id || 'session-2026';
+    const semesterType = data.semesterType || currentSem?.semesterType || 'FIRST';
+    const matchedSem =
+      this.semesters.find(
+        (s) => s.academicSessionId === sessionId && s.semesterType === semesterType
+      ) || currentSem;
+
+    const courseId = `course-${stripped.toLowerCase()}`;
     const newCourse: Course = {
       id: courseId,
       code: cleanCode,
       title: data.title.trim(),
       creditUnits: Number(data.creditUnits) || 2,
-      departmentId: data.departmentId,
+      departmentId: normalizedDeptId,
       level: data.level,
+      semesterType,
+      academicSessionId: sessionId,
       isActive: true,
       description: data.description?.trim(),
     };
 
     this.courses.unshift(newCourse);
 
+    const validLecturer = data.primaryLecturerId
+      ? this.profiles.find((p) => p.id === data.primaryLecturerId)
+      : undefined;
+    const lecturerId = validLecturer ? validLecturer.id : '';
+
     // Auto-create a default offering for this course so it's ready for timetabling & attendance
-    const offeringId = `offering-${cleanCode.toLowerCase().replace(/[^a-z0-9]/g, '')}`;
+    const offeringId = `offering-${stripped.toLowerCase()}`;
     if (!this.courseOfferings.some((o) => o.id === offeringId)) {
       this.courseOfferings.push({
         id: offeringId,
         courseId: newCourse.id,
-        academicSessionId: 'sess-2026-first',
-        semesterId: 'sem-2026-first',
-        primaryLecturerId: actorId.startsWith('user-lec') ? actorId : 'user-lec-csc1',
-        assignedLecturerIds: [actorId.startsWith('user-lec') ? actorId : 'user-lec-csc1'],
+        academicSessionId: sessionId,
+        semesterId: matchedSem?.id || 'sem-2026-1',
+        primaryLecturerId: lecturerId,
+        assignedLecturerIds: lecturerId ? [lecturerId] : [],
         isActive: true,
       });
     }
 
+    if (data.scheduleDay && data.scheduleStartTime && data.scheduleEndTime) {
+      this.timetables.push({
+        id: `tt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+        courseOfferingId: offeringId,
+        classroomId: 'room-lh101',
+        dayOfWeek: Number(data.scheduleDay),
+        startTime: data.scheduleStartTime,
+        endTime: data.scheduleEndTime,
+        venue: data.scheduleVenue?.trim() || 'Lecture Hall 101',
+        isRecurring: true,
+      });
+    }
+
+    if (data.autoEnrollStudents !== false) {
+      this.syncEligibleStudentsForCourse(newCourse.id, actorId);
+    }
+
     this.logAudit({
       actorId,
-      actorRole: 'SUPER_ADMIN',
       action: 'ADMIN_CREATED_COURSE',
       entityType: 'courses',
       entityId: courseId,
-      details: { code: cleanCode, title: newCourse.title, departmentId: data.departmentId, level: data.level },
+      details: {
+        code: cleanCode,
+        title: newCourse.title,
+        departmentId: normalizedDeptId,
+        level: data.level,
+        semesterType,
+        primaryLecturerId: lecturerId || 'Unassigned',
+      },
     });
 
     this.savePersistentData();
@@ -2251,9 +2739,15 @@ class CustechDatabase {
       creditUnits: number;
       departmentId: string;
       level: 100 | 200 | 300 | 400 | 500;
+      semesterType: 'FIRST' | 'SECOND';
+      academicSessionId: string;
       description?: string;
       isActive: boolean;
       primaryLecturerId: string;
+      scheduleDay?: number;
+      scheduleStartTime?: string;
+      scheduleEndTime?: string;
+      scheduleVenue?: string;
     }>,
     actorId: string
   ): Course {
@@ -2261,33 +2755,71 @@ class CustechDatabase {
     if (!course) throw new Error('Course not found');
 
     if (data.code && data.code.trim().toUpperCase() !== course.code.toUpperCase()) {
-      const cleanCode = data.code.trim().toUpperCase();
-      if (this.courses.some((c) => c.id !== courseId && c.code.toUpperCase() === cleanCode)) {
+      const cleanCode = data.code
+        .trim()
+        .toUpperCase()
+        .replace(/^([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)$/, '$1 $2');
+      const stripped = cleanCode.replace(/\s+/g, '');
+      if (
+        this.courses.some(
+          (c) => c.id !== courseId && c.code.toUpperCase().replace(/\s+/g, '') === stripped
+        )
+      ) {
         throw new Error(`Course code "${cleanCode}" is already used by another course.`);
       }
       course.code = cleanCode;
     }
     if (data.title) course.title = data.title.trim();
     if (data.creditUnits !== undefined) course.creditUnits = Number(data.creditUnits);
-    if (data.departmentId) course.departmentId = data.departmentId;
+    if (data.departmentId) {
+      course.departmentId = data.departmentId === 'dept-se' ? 'dept-sen' : data.departmentId;
+    }
     if (data.level) course.level = data.level;
+    if (data.semesterType) course.semesterType = data.semesterType;
+    if (data.academicSessionId) course.academicSessionId = data.academicSessionId;
     if (data.description !== undefined) course.description = data.description.trim();
     if (data.isActive !== undefined) course.isActive = data.isActive;
 
-    if (data.primaryLecturerId) {
-      const offerings = this.courseOfferings.filter((o) => o.courseId === courseId);
+    const offerings = this.courseOfferings.filter((o) => o.courseId === courseId);
+    if (data.primaryLecturerId !== undefined) {
       offerings.forEach((off) => {
         off.primaryLecturerId = data.primaryLecturerId!;
-        if (!off.assignedLecturerIds) off.assignedLecturerIds = [];
-        if (!off.assignedLecturerIds.includes(data.primaryLecturerId!)) {
-          off.assignedLecturerIds.push(data.primaryLecturerId!);
+        if (data.primaryLecturerId) {
+          if (!off.assignedLecturerIds) off.assignedLecturerIds = [];
+          if (!off.assignedLecturerIds.includes(data.primaryLecturerId)) {
+            off.assignedLecturerIds.push(data.primaryLecturerId);
+          }
         }
       });
     }
 
+    if (data.scheduleDay && data.scheduleStartTime && data.scheduleEndTime && offerings[0]) {
+      const existingTt = this.timetables.find((t) => t.courseOfferingId === offerings[0].id);
+      if (existingTt) {
+        existingTt.dayOfWeek = Number(data.scheduleDay);
+        existingTt.startTime = data.scheduleStartTime;
+        existingTt.endTime = data.scheduleEndTime;
+        if (data.scheduleVenue !== undefined) {
+          existingTt.venue = data.scheduleVenue.trim() || existingTt.venue;
+        }
+      } else {
+        this.timetables.push({
+          id: `tt_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+          courseOfferingId: offerings[0].id,
+          classroomId: 'room-lh101',
+          dayOfWeek: Number(data.scheduleDay),
+          startTime: data.scheduleStartTime,
+          endTime: data.scheduleEndTime,
+          venue: data.scheduleVenue?.trim() || 'Lecture Hall 101',
+          isRecurring: true,
+        });
+      }
+    }
+
+    this.syncEligibleStudentsForCourse(course.id, actorId);
+
     this.logAudit({
       actorId,
-      actorRole: 'SUPER_ADMIN',
       action: 'ADMIN_UPDATED_COURSE',
       entityType: 'courses',
       entityId: courseId,
@@ -2305,7 +2837,6 @@ class CustechDatabase {
 
     this.logAudit({
       actorId,
-      actorRole: 'SUPER_ADMIN',
       action: isActive ? 'ADMIN_ACTIVATED_COURSE' : 'ADMIN_DEACTIVATED_COURSE',
       entityType: 'courses',
       entityId: courseId,
@@ -2322,7 +2853,6 @@ class CustechDatabase {
 
     this.logAudit({
       actorId,
-      actorRole: 'SUPER_ADMIN',
       action: 'ADMIN_DELETED_COURSE',
       entityType: 'courses',
       entityId: courseId,
@@ -2341,10 +2871,12 @@ class CustechDatabase {
       departmentName?: string;
       departmentId?: string;
       level?: 100 | 200 | 300 | 400 | 500;
+      semesterType?: 'FIRST' | 'SECOND';
       description?: string;
       lecturerEmailOrName?: string;
     }>,
-    actorId: string
+    actorId: string,
+    restrictedFacultyId?: string
   ): {
     successful: number;
     skipped: number;
@@ -2360,19 +2892,23 @@ class CustechDatabase {
     const seenBatchCodes = new Set<string>();
 
     for (const record of records) {
-      const cleanCode = record.code?.trim().toUpperCase();
+      const cleanCode = record.code
+        ?.trim()
+        .toUpperCase()
+        .replace(/^([A-Z]{2,5})\s*(\d{3,4}[A-Z]?)$/, '$1 $2');
       if (!cleanCode) {
         failed++;
         errors.push({ code: 'UNKNOWN', error: 'Missing course code.' });
         continue;
       }
 
-      if (seenBatchCodes.has(cleanCode)) {
+      const stripped = cleanCode.replace(/\s+/g, '');
+      if (seenBatchCodes.has(stripped)) {
         skipped++;
         errors.push({ code: cleanCode, error: 'Duplicate course code in uploaded batch.' });
         continue;
       }
-      seenBatchCodes.add(cleanCode);
+      seenBatchCodes.add(stripped);
 
       if (!record.title?.trim()) {
         failed++;
@@ -2380,7 +2916,7 @@ class CustechDatabase {
         continue;
       }
 
-      if (this.courses.some((c) => c.code.toUpperCase() === cleanCode)) {
+      if (this.courses.some((c) => c.code.toUpperCase().replace(/\s+/g, '') === stripped)) {
         skipped++;
         errors.push({ code: cleanCode, error: 'Course code already exists in university catalogue.' });
         continue;
@@ -2388,44 +2924,71 @@ class CustechDatabase {
 
       try {
         let deptId = record.departmentId;
-        if (!deptId && record.departmentName) {
+        if (!deptId && record.departmentName?.trim()) {
           const dept = this.departments.find(
             (d) =>
-              d.name.toLowerCase() === record.departmentName!.toLowerCase() ||
-              d.code.toLowerCase() === record.departmentName!.toLowerCase()
+              d.name.toLowerCase() === record.departmentName!.trim().toLowerCase() ||
+              d.code.toLowerCase() === record.departmentName!.trim().toLowerCase()
           );
-          if (dept) deptId = dept.id;
+          if (dept) {
+            deptId = dept.id;
+          } else if (!restrictedFacultyId) {
+            deptId = this.ensureDepartment({ name: record.departmentName.trim() }).id;
+          }
         }
-        if (!deptId) deptId = 'dept-csc';
 
-        const newCourse = this.createCourse(
+        if (!deptId) {
+          if (restrictedFacultyId) {
+            const facDept = this.departments.find((d) => d.facultyId === restrictedFacultyId);
+            deptId = facDept?.id;
+          } else {
+            deptId = 'dept-csc';
+          }
+        }
+
+        const resolvedDept = this.departments.find((d) => d.id === deptId);
+        if (restrictedFacultyId && resolvedDept && resolvedDept.facultyId !== restrictedFacultyId) {
+          failed++;
+          errors.push({
+            code: cleanCode,
+            error: `Department "${resolvedDept.name}" belongs to another faculty.`,
+          });
+          continue;
+        }
+
+        if (!deptId) {
+          failed++;
+          errors.push({ code: cleanCode, error: 'Department could not be resolved.' });
+          continue;
+        }
+
+        let lecturerId = '';
+        if (record.lecturerEmailOrName?.trim()) {
+          const needle = record.lecturerEmailOrName.trim().toLowerCase();
+          const lec = this.profiles.find(
+            (p) =>
+              (p.primaryRole === 'LECTURER' || p.assignedRoles.includes('LECTURER')) &&
+              (p.email.toLowerCase() === needle ||
+                `${p.firstName} ${p.lastName}`.toLowerCase().includes(needle) ||
+                (p.staffId && p.staffId.toLowerCase() === needle))
+          );
+          if (lec) lecturerId = lec.id;
+        }
+
+        this.createCourse(
           {
             code: cleanCode,
             title: record.title.trim(),
             creditUnits: Number(record.creditUnits) || 2,
             departmentId: deptId,
             level: (record.level || 100) as 100 | 200 | 300 | 400 | 500,
+            semesterType: record.semesterType || 'FIRST',
+            primaryLecturerId: lecturerId || undefined,
             description: record.description,
+            autoEnrollStudents: true,
           },
           actorId
         );
-
-        let lecturerId = 'user-lec-csc1';
-        if (record.lecturerEmailOrName) {
-          const lec = this.profiles.find(
-            (p) =>
-              (p.primaryRole === 'LECTURER' || p.assignedRoles.includes('LECTURER')) &&
-              (p.email.toLowerCase() === record.lecturerEmailOrName!.toLowerCase() ||
-                `${p.firstName} ${p.lastName}`.toLowerCase().includes(record.lecturerEmailOrName!.toLowerCase()))
-          );
-          if (lec) lecturerId = lec.id;
-        }
-
-        const offering = this.courseOfferings.find((o) => o.courseId === newCourse.id);
-        if (offering) {
-          offering.primaryLecturerId = lecturerId;
-          offering.assignedLecturerIds = [lecturerId];
-        }
 
         successful++;
         importedCodes.push(cleanCode);

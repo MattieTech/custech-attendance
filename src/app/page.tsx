@@ -8,6 +8,7 @@ import {
   getStoredSession,
   logoutUser,
   switchActiveRole,
+  syncSessionWithServer,
 } from '@/lib/auth/auth-service';
 import { UserRole } from '@/types';
 import { StudentDashboard } from '@/components/dashboards/StudentDashboard';
@@ -33,31 +34,42 @@ export default function Home() {
     setIsLoading(false);
   }, []);
 
+  const hydrateFromServer = React.useCallback(async () => {
+    try {
+      const [serverSession, snapshot] = await Promise.race([
+        Promise.all([syncSessionWithServer(), getDatabaseSnapshotAction()]),
+        new Promise<[null, null]>((resolve) =>
+          setTimeout(() => resolve([null, null]), 3000)
+        ),
+      ]);
+      if (snapshot) {
+        custechDb.syncClientSnapshot(snapshot);
+      }
+      if (serverSession) {
+        setSession(serverSession);
+        setIsLoading(false);
+        return;
+      }
+    } catch {
+      // Offline / network fallback uses localStorage cache
+    }
+    refreshSession();
+  }, [refreshSession]);
+
   React.useEffect(() => {
     let mounted = true;
 
-    const hydrateAndLoad = async () => {
-      try {
-        // Hydrate client database with authoritative server store (with 2.5s offline fallback)
-        const snapshot = await Promise.race([
-          getDatabaseSnapshotAction(),
-          new Promise<null>((resolve) => setTimeout(() => resolve(null), 2500)),
-        ]);
-        if (mounted && snapshot) {
-          custechDb.syncClientSnapshot(snapshot);
-        }
-      } catch {
-        // Offline / network fallback uses localStorage cache
-      } finally {
-        if (mounted) {
-          refreshSession();
-        }
-      }
+    const init = async () => {
+      await hydrateFromServer();
+      if (!mounted) return;
+      refreshSession();
     };
 
-    void hydrateAndLoad();
+    void init();
 
-    const handleAuthChange = () => refreshSession();
+    const handleAuthChange = () => {
+      refreshSession();
+    };
     window.addEventListener('custech-auth-changed', handleAuthChange);
     window.addEventListener('storage', handleAuthChange);
 
@@ -66,19 +78,19 @@ export default function Home() {
       window.removeEventListener('custech-auth-changed', handleAuthChange);
       window.removeEventListener('storage', handleAuthChange);
     };
-  }, [refreshSession]);
+  }, [hydrateFromServer, refreshSession]);
 
-  const handleRoleSwitched = (newRole: UserRole) => {
-    switchActiveRole(newRole);
-    refreshSession();
+  const handleRoleSwitched = async (newRole: UserRole) => {
+    await switchActiveRole(newRole);
+    await hydrateFromServer();
   };
 
-  const handleLogout = () => {
-    logoutUser();
+  const handleLogout = async () => {
+    await logoutUser();
     setSession(null);
   };
 
-  // Initial loading state while reading local session
+  // Initial loading state while reading server/local session
   if (isLoading) {
     return (
       <div className="min-h-screen bg-slate-50 flex items-center justify-center p-4">
@@ -103,26 +115,32 @@ export default function Home() {
 
   // If no authenticated session, render the official University Login Portal
   if (!session) {
-    return <LoginPortal onLoginSuccess={refreshSession} />;
+    return (
+      <LoginPortal
+        onLoginSuccess={() => {
+          void hydrateFromServer();
+        }}
+      />
+    );
   }
 
   const { user, activeRole } = session;
 
   return (
-    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans">
+    <div className="min-h-screen bg-slate-50 text-slate-900 flex flex-col font-sans overflow-x-hidden">
       {/* Institutional Top Navbar with Dynamic Multi-Role Context Switcher & Sign Out */}
       <Navbar
         user={user}
         activeRole={activeRole}
-        onRoleSwitched={handleRoleSwitched}
-        onLogout={handleLogout}
+        onRoleSwitched={(role) => void handleRoleSwitched(role)}
+        onLogout={() => void handleLogout()}
       />
 
       {/* Offline Mode Banner & Auto-Sync Notification */}
       <OfflineSyncBanner />
 
       {/* Main Perspective Dashboard */}
-      <main className="flex-1 max-w-7xl w-full mx-auto px-4 sm:px-6 lg:px-8 py-8 space-y-6">
+      <main className="flex-1 max-w-7xl w-full mx-auto px-3 sm:px-6 lg:px-8 py-6 sm:py-8 space-y-6">
         {activeRole === 'STUDENT' && <StudentDashboard user={user} />}
 
         {activeRole === 'COURSE_REP' && <CourseRepDashboard user={user} />}
@@ -135,9 +153,10 @@ export default function Home() {
 
         {activeRole === 'HOD' && <HodDashboard user={user} />}
 
-        {(activeRole === 'DEAN' || activeRole === 'PRINCIPAL_OFFICER') && (
-          <DeanDashboard user={user} />
-        )}
+        {(activeRole === 'DEAN' ||
+          activeRole === 'PRINCIPAL_OFFICER' ||
+          activeRole === 'FACULTY_REP' ||
+          activeRole === 'ASST_FACULTY_REP') && <DeanDashboard user={user} />}
 
         {activeRole === 'SUPER_ADMIN' && <AdminDashboard user={user} />}
 
@@ -160,7 +179,8 @@ export default function Home() {
               Confluence University of Science &amp; Technology, Osara, Kogi State, Nigeria
             </p>
             <p className="text-xs text-slate-400 pt-1">
-              Authenticated Session &bull; Active Context: <span className="font-semibold text-slate-600">{activeRole}</span>
+              Authenticated Session &bull; Active Context:{' '}
+              <span className="font-semibold text-slate-600">{activeRole}</span>
             </p>
           </div>
         </div>

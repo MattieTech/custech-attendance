@@ -13,6 +13,7 @@ import {
   assignUserRoleAction,
   bulkImportStudentsAction,
   getDatabaseSnapshotAction,
+  impersonateStudentForAdminTestAction,
 } from '@/actions/academic';
 import {
   getEnrolledFaceStudentIdsAction,

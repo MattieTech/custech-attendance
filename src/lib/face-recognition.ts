@@ -66,6 +66,9 @@ export interface FrameFaceAnalysis {
   centerPoint?: Point2D;
   descriptor?: number[];
   box?: { x: number; y: number; width: number; height: number };
+  landmarks?: Point2D[];
+  videoWidth?: number;
+  videoHeight?: number;
 }
 
 export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<FrameFaceAnalysis> {
@@ -91,8 +94,10 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (!detections || detections.length === 0) {
     return {
       status: 'NO_FACE',
-      message: 'No face detected. Position your face clearly inside the guide oval.',
+      message: 'No face detected. Position your face clearly inside the reticle.',
       faceCount: 0,
+      videoWidth: videoEl.videoWidth,
+      videoHeight: videoEl.videoHeight,
     };
   }
 
@@ -101,19 +106,26 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
       status: 'MULTIPLE_FACES',
       message: `Multiple faces detected (${detections.length}). Only you may appear in the camera frame.`,
       faceCount: detections.length,
+      videoWidth: videoEl.videoWidth,
+      videoHeight: videoEl.videoHeight,
     };
   }
 
   const det = detections[0];
   const box = det.detection.box;
   const widthRatio = box.width / videoEl.videoWidth;
+  const landmarkPoints: Point2D[] = det.landmarks.positions.map((pt) => ({ x: pt.x, y: pt.y }));
 
   if (widthRatio < 0.17) {
     return {
       status: 'TOO_FAR',
-      message: 'Move closer to the camera so your face fills the guide oval.',
+      message: 'Move closer to the camera so your face fills the scanner reticle.',
       faceCount: 1,
+      score: det.detection.score,
       box: { x: box.x, y: box.y, width: box.width, height: box.height },
+      landmarks: landmarkPoints,
+      videoWidth: videoEl.videoWidth,
+      videoHeight: videoEl.videoHeight,
     };
   }
 
@@ -122,9 +134,13 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (faceCenterX < 0.2 || faceCenterX > 0.8 || faceCenterY < 0.15 || faceCenterY > 0.85) {
     return {
       status: 'OFF_CENTER',
-      message: 'Center your face inside the oval frame.',
+      message: 'Center your face inside the biometric reticle.',
       faceCount: 1,
+      score: det.detection.score,
       box: { x: box.x, y: box.y, width: box.width, height: box.height },
+      landmarks: landmarkPoints,
+      videoWidth: videoEl.videoWidth,
+      videoHeight: videoEl.videoHeight,
     };
   }
 
@@ -156,6 +172,9 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
     },
     descriptor: Array.from(det.descriptor),
     box: { x: box.x, y: box.y, width: box.width, height: box.height },
+    landmarks: landmarkPoints,
+    videoWidth: videoEl.videoWidth,
+    videoHeight: videoEl.videoHeight,
   };
 }
 

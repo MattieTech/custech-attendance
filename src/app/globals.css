@@ -44,10 +44,79 @@ body {
   -webkit-overflow-scrolling: touch;
 }
 
+@layer base {
+  button:not(:disabled),
+  [role="button"]:not([aria-disabled="true"]),
+  a[href],
+  select:not(:disabled),
+  summary {
+    cursor: pointer;
+  }
+
+  button:disabled,
+  select:disabled,
+  input:disabled,
+  textarea:disabled {
+    cursor: not-allowed;
+  }
+}
+
 @layer utilities {
   .transition-smooth {
     transition-property: color, background-color, border-color, opacity, box-shadow, transform;
     transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
     transition-duration: 200ms;
   }
+
+  .animate-biometric-sweep {
+    animation: biometric-sweep 2.2s ease-in-out infinite;
+  }
+
+  .animate-hud-spin {
+    animation: hud-spin 14s linear infinite;
+  }
+
+  .animate-hud-spin-reverse {
+    animation: hud-spin-reverse 10s linear infinite;
+  }
 }
+
+@keyframes biometric-sweep {
+  0% {
+    top: 12%;
+    opacity: 0.25;
+  }
+  15% {
+    opacity: 1;
+  }
+  50% {
+    top: 84%;
+    opacity: 1;
+  }
+  85% {
+    opacity: 1;
+  }
+  100% {
+    top: 12%;
+    opacity: 0.25;
+  }
+}
+
+@keyframes hud-spin {
+  from {
+    transform: rotate(0deg);
+  }
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@keyframes hud-spin-reverse {
+  from {
+    transform: rotate(360deg);
+  }
+  to {
+    transform: rotate(0deg);
+  }
+}
+

@@ -70,15 +70,23 @@ export const LoginPortal: React.FC<LoginPortalProps> = ({ onLoginSuccess }) => {
   const handleQuickLogin = async (profileId: string) => {
     const profile = initialProfiles.find((p) => p.id === profileId);
     if (!profile) return;
+    setErrorMessage(null);
+    setIsSubmitting(true);
 
-    if (profile.matricNumber) {
-      setStudentMatric(profile.matricNumber);
-      await loginStudent(profile.matricNumber);
-      onLoginSuccess();
-    } else {
-      setStaffIdentifier(profile.staffId || profile.email);
-      await loginStaff(profile.staffId || profile.email);
-      onLoginSuccess();
+    try {
+      if (profile.matricNumber) {
+        setStudentMatric(profile.matricNumber);
+        const res = await loginStudent(profile.matricNumber, undefined, true);
+        if (res.success) onLoginSuccess();
+        else setErrorMessage(res.error || 'Quick login failed.');
+      } else {
+        setStaffIdentifier(profile.staffId || profile.email);
+        const res = await loginStaff(profile.staffId || profile.email);
+        if (res.success) onLoginSuccess();
+        else setErrorMessage(res.error || 'Quick login failed.');
+      }
+    } finally {
+      setIsSubmitting(false);
     }
   };
 

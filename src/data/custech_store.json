@@ -564,27 +564,9 @@
       "isActive": true
     },
     {
-      "id": "enr_1793368278372_offering-csc201",
-      "studentId": "stu-1793368278372",
-      "courseOfferingId": "offering-csc201",
-      "isActive": true
-    },
-    {
       "id": "enr_1793368278372_offering-sen201",
       "studentId": "stu-1793368278372",
       "courseOfferingId": "offering-sen201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1793368278372_offering-mth201",
-      "studentId": "stu-1793368278372",
-      "courseOfferingId": "offering-mth201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1793368357128_offering-csc201",
-      "studentId": "stu-1793368357128",
-      "courseOfferingId": "offering-csc201",
       "isActive": true
     },
     {
@@ -594,63 +576,9 @@
       "isActive": true
     },
     {
-      "id": "enr_1793368357128_offering-mth201",
-      "studentId": "stu-1793368357128",
-      "courseOfferingId": "offering-mth201",
-      "isActive": true
-    },
-    {
       "id": "enr_1794149751116_offering-csc201",
       "studentId": "stu-1794149751116",
       "courseOfferingId": "offering-csc201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751116_offering-sen201",
-      "studentId": "stu-1794149751116",
-      "courseOfferingId": "offering-sen201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751116_offering-mth201",
-      "studentId": "stu-1794149751116",
-      "courseOfferingId": "offering-mth201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751377_offering-csc201",
-      "studentId": "stu-1794149751377",
-      "courseOfferingId": "offering-csc201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751377_offering-sen201",
-      "studentId": "stu-1794149751377",
-      "courseOfferingId": "offering-sen201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751377_offering-mth201",
-      "studentId": "stu-1794149751377",
-      "courseOfferingId": "offering-mth201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751800_offering-csc201",
-      "studentId": "stu-1794149751800",
-      "courseOfferingId": "offering-csc201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751800_offering-sen201",
-      "studentId": "stu-1794149751800",
-      "courseOfferingId": "offering-sen201",
-      "isActive": true
-    },
-    {
-      "id": "enr_1794149751800_offering-mth201",
-      "studentId": "stu-1794149751800",
-      "courseOfferingId": "offering-mth201",
       "isActive": true
     },
     {
@@ -660,15 +588,21 @@
       "isActive": true
     },
     {
-      "id": "enr_1794242079699_offering-sen201",
-      "studentId": "stu-1794242079699",
-      "courseOfferingId": "offering-sen201",
-      "isActive": true
-    },
-    {
       "id": "enr_1794242079699_offering-mth131",
       "studentId": "stu-1794242079699",
       "courseOfferingId": "offering-mth131",
+      "isActive": true
+    },
+    {
+      "id": "enr_sync_stu-1794149751377_offering-mee201",
+      "studentId": "stu-1794149751377",
+      "courseOfferingId": "offering-mee201",
+      "isActive": true
+    },
+    {
+      "id": "enr_sync_stu-1794149751800_offering-get101",
+      "studentId": "stu-1794149751800",
+      "courseOfferingId": "offering-get101",
       "isActive": true
     }
   ],
@@ -1109,17 +1043,21 @@
       "creditUnits": 3,
       "departmentId": "dept-mechanical-engineering",
       "level": 300,
-      "isActive": true
+      "isActive": true,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-mth131",
       "code": "MTH 131",
       "title": "General Mathematics I",
       "creditUnits": 2,
-      "departmentId": "dept-se",
+      "departmentId": "dept-sen",
       "level": 100,
       "isActive": true,
-      "description": "Calculus, algebra and analytical geometry for engineering and sciences."
+      "description": "Calculus, algebra and analytical geometry for engineering and sciences.",
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-csc201",
@@ -1127,7 +1065,9 @@
       "code": "CSC 201",
       "title": "Data Structures and Algorithms",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-sen201",
@@ -1135,7 +1075,9 @@
       "code": "SEN 201",
       "title": "Software Engineering Fundamentals",
       "creditUnits": 2,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-mth201",
@@ -1143,7 +1085,9 @@
       "code": "MTH 201",
       "title": "Mathematical Methods I",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-phy201",
@@ -1151,7 +1095,9 @@
       "code": "PHY 201",
       "title": "General Physics for Engineers",
       "creditUnits": 2,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-csc101",
@@ -1159,7 +1105,9 @@
       "code": "CSC 101",
       "title": "Introduction to Computing Sciences",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-csc301",
@@ -1167,7 +1115,9 @@
       "code": "CSC 301",
       "title": "Structured Programming & Compiler Design",
       "creditUnits": 3,
-      "level": 300
+      "level": 300,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-cys201",
@@ -1175,7 +1125,9 @@
       "code": "CYB 201",
       "title": "Introduction to Cyber Security",
       "creditUnits": 2,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-ift201",
@@ -1183,7 +1135,9 @@
       "code": "IFT 201",
       "title": "Database Systems & Cloud Infrastructure",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-get101",
@@ -1191,7 +1145,9 @@
       "code": "GET 101",
       "title": "Engineering Drawing & Graphics",
       "creditUnits": 2,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-cve201",
@@ -1199,7 +1155,9 @@
       "code": "CVE 201",
       "title": "Strength of Materials I",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-mee201",
@@ -1207,7 +1165,9 @@
       "code": "MEE 201",
       "title": "Applied Thermodynamics & Fluid Mechanics",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-eee201",
@@ -1215,7 +1175,9 @@
       "code": "EEE 201",
       "title": "Applied Electricity & Circuit Theory",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-cpe201",
@@ -1223,7 +1185,9 @@
       "code": "CPE 201",
       "title": "Digital Logic Design",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-mth101",
@@ -1231,7 +1195,9 @@
       "code": "MTH 101",
       "title": "Elementary Mathematics I (Algebra & Trigonometry)",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-chm101",
@@ -1239,7 +1205,9 @@
       "code": "CHM 101",
       "title": "General Chemistry I",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-bio101",
@@ -1247,7 +1215,9 @@
       "code": "BIO 101",
       "title": "General Biology I",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-bch201",
@@ -1255,7 +1225,9 @@
       "code": "BCH 201",
       "title": "General Biochemistry I",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-mcb201",
@@ -1263,7 +1235,9 @@
       "code": "MCB 201",
       "title": "General Microbiology",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-ana201",
@@ -1271,7 +1245,9 @@
       "code": "ANA 201",
       "title": "Gross Anatomy of Upper & Lower Limbs",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-phs201",
@@ -1279,7 +1255,9 @@
       "code": "PHS 201",
       "title": "Introductory Human Physiology",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-nsc201",
@@ -1287,7 +1265,9 @@
       "code": "NSC 201",
       "title": "Foundations of Nursing Science",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-arc101",
@@ -1295,7 +1275,9 @@
       "code": "ARC 101",
       "title": "Architectural Graphics & Freehand Sketching",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-bld201",
@@ -1303,7 +1285,9 @@
       "code": "BLD 201",
       "title": "Building Construction & Materials",
       "creditUnits": 3,
-      "level": 200
+      "level": 200,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-acc101",
@@ -1311,7 +1295,9 @@
       "code": "ACC 101",
       "title": "Introduction to Financial Accounting",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-bus101",
@@ -1319,7 +1305,9 @@
       "code": "BUS 101",
       "title": "Introduction to Business Management",
       "creditUnits": 2,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-ecn101",
@@ -1327,7 +1315,9 @@
       "code": "ECN 101",
       "title": "Principles of Economics I",
       "creditUnits": 3,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-agr101",
@@ -1335,7 +1325,9 @@
       "code": "AGR 101",
       "title": "Introduction to Agriculture & Food Production",
       "creditUnits": 2,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-law101",
@@ -1343,7 +1335,9 @@
       "code": "LAW 101",
       "title": "Legal Methods I",
       "creditUnits": 4,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-edu101",
@@ -1351,7 +1345,9 @@
       "code": "EDU 101",
       "title": "Introduction to Teaching & Foundations of Education",
       "creditUnits": 2,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "course-gst111",
@@ -1359,7 +1355,9 @@
       "code": "GST 111",
       "title": "Communication in English & Use of Library",
       "creditUnits": 2,
-      "level": 100
+      "level": 100,
+      "semesterType": "FIRST",
+      "academicSessionId": "session-2026"
     }
   ],
   "courseOfferings": [
@@ -1367,187 +1365,217 @@
       "id": "offering-csc201",
       "courseId": "course-csc201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-sen201",
       "courseId": "course-sen201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-mth201",
       "courseId": "course-mth201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-hod"
+      "primaryLecturerId": "user-hod",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-phy201",
       "courseId": "course-phy201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-csc101",
       "courseId": "course-csc101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-csc301",
       "courseId": "course-csc301",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-hod"
+      "primaryLecturerId": "user-hod",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-cys201",
       "courseId": "course-cys201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-ift201",
       "courseId": "course-ift201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-get101",
       "courseId": "course-get101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-cve201",
       "courseId": "course-cve201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-mee201",
       "courseId": "course-mee201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-eee201",
       "courseId": "course-eee201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-cpe201",
       "courseId": "course-cpe201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-mth101",
       "courseId": "course-mth101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-hod"
+      "primaryLecturerId": "user-hod",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-chm101",
       "courseId": "course-chm101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-bio101",
       "courseId": "course-bio101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-bch201",
       "courseId": "course-bch201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-mcb201",
       "courseId": "course-mcb201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-ana201",
       "courseId": "course-ana201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-phs201",
       "courseId": "course-phs201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-nsc201",
       "courseId": "course-nsc201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-arc101",
       "courseId": "course-arc101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-bld201",
       "courseId": "course-bld201",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-acc101",
       "courseId": "course-acc101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-bus101",
       "courseId": "course-bus101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-ecn101",
       "courseId": "course-ecn101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-agr101",
       "courseId": "course-agr101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-law101",
       "courseId": "course-law101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-2"
+      "primaryLecturerId": "user-lecturer-2",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-edu101",
       "courseId": "course-edu101",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-lecturer-1"
+      "primaryLecturerId": "user-lecturer-1",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-gst111",
       "courseId": "course-gst111",
       "semesterId": "sem-2026-1",
-      "primaryLecturerId": "user-dean"
+      "primaryLecturerId": "user-dean",
+      "academicSessionId": "session-2026"
     },
     {
       "id": "offering-mth131",
       "courseId": "course-mth131",
-      "academicSessionId": "sess-2026-first",
-      "semesterId": "sem-2026-first",
+      "academicSessionId": "session-2026",
+      "semesterId": "sem-2026-1",
       "primaryLecturerId": "user-vc",
       "assignedLecturerIds": [
         "user-lec-csc1",
@@ -1558,8 +1586,8 @@
     {
       "id": "offering-mee305",
       "courseId": "course-mee305",
-      "academicSessionId": "sess-2026-first",
-      "semesterId": "sem-2026-first",
+      "academicSessionId": "session-2026",
+      "semesterId": "sem-2026-1",
       "primaryLecturerId": "user-vc",
       "assignedLecturerIds": [
         "user-lec-csc1",

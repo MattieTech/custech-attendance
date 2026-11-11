@@ -21,12 +21,12 @@ export const UserRoleContextSwitcher: React.FC<UserRoleContextSwitcherProps> = (
   const assignedRoles = user.assignedRoles || [user.primaryRole];
   const hasMultipleRoles = assignedRoles.length > 1;
 
-  const handleSelectRole = (role: UserRole) => {
+  const handleSelectRole = async (role: UserRole) => {
     if (role === activeRole) {
       setIsOpen(false);
       return;
     }
-    const res = switchActiveRole(role);
+    const res = await switchActiveRole(role);
     if (res.success) {
       setIsOpen(false);
       if (onRoleSwitched) onRoleSwitched(role);

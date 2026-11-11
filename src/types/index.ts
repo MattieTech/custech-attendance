@@ -146,6 +146,8 @@ export interface Course {
   title: string;
   creditUnits: number;
   level: 100 | 200 | 300 | 400 | 500;
+  semesterType?: 'FIRST' | 'SECOND';
+  academicSessionId?: string;
   isActive?: boolean;
   description?: string;
 }
