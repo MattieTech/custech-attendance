@@ -324,11 +324,11 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
           >
             {qrSvg ? (
               <div
-                className="w-56 h-56 sm:w-64 sm:h-64 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                className="w-44 h-44 sm:w-64 sm:h-64 flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
                 dangerouslySetInnerHTML={{ __html: qrSvg }}
               />
             ) : (
-              <div className="w-56 h-56 flex items-center justify-center text-slate-400">
+              <div className="w-44 h-44 sm:w-56 sm:h-56 flex items-center justify-center text-slate-400">
                 <RefreshCw className="w-8 h-8 animate-spin text-[#8d4a27]" />
               </div>
             )}
@@ -340,7 +340,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
             </div>
 
             {/* Micro Badge inside QR frame */}
-            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 px-3 py-0.5 rounded-full bg-[#8d4a27] text-white text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1">
+            <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-0.5 rounded-full bg-[#8d4a27] text-white text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1">
               <RefreshCw className="w-2.5 h-2.5" />
               <span>Rotates Every {session.qrRotationSeconds || 60}s</span>
             </div>
@@ -381,7 +381,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
               </span>
             </div>
 
-            <div className="flex items-center justify-center gap-2 my-2">
+            <div className="flex flex-wrap items-center justify-center gap-2 my-2">
               <div className="bg-[#fbf5ef] border border-[#ecdacb] px-3 py-1.5 rounded-lg text-center">
                 <span className="block text-[10px] uppercase font-bold text-slate-400">Course Code</span>
                 <span className="text-base font-extrabold text-[#8d4a27] font-mono">{courseCode}</span>
@@ -407,7 +407,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
             )}
 
             {/* Code Management Controls (Phase 6) */}
-            <div className="grid grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-3 pt-3 border-t border-slate-200">
               <button
                 type="button"
                 onClick={handleRegenerateCode}
@@ -591,11 +591,11 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
             <div className="p-4 sm:p-6 bg-white rounded-3xl shadow-2xl flex items-center justify-center border-4 border-[#8d4a27]">
               {qrSvg ? (
                 <div
-                  className="w-72 h-72 sm:w-96 sm:h-96 md:w-[440px] md:h-[440px] flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
+                  className="w-56 h-56 sm:w-96 sm:h-96 md:w-[440px] md:h-[440px] flex items-center justify-center [&>svg]:w-full [&>svg]:h-full"
                   dangerouslySetInnerHTML={{ __html: qrSvg }}
                 />
               ) : (
-                <div className="w-72 h-72 flex items-center justify-center">
+                <div className="w-56 h-56 sm:w-72 sm:h-72 flex items-center justify-center">
                   <RefreshCw className="w-12 h-12 animate-spin text-[#8d4a27]" />
                 </div>
               )}

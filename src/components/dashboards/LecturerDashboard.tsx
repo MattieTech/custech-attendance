@@ -104,37 +104,28 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
     (s) => s.status === 'ACTIVE' || s.status === 'PAUSED'
   );
 
-  // Maintain valid selectedOfferingId (UI-only selection; never mutates course ownership)
-  React.useEffect(() => {
-    if (offerings.length === 0) {
-      if (selectedOfferingId) setSelectedOfferingId('');
-      return;
-    }
-    if (!selectedOfferingId || !offerings.some((o) => o.id === selectedOfferingId)) {
-      const liveOffId = lecturerActiveSessions[0]?.courseOfferingId;
-      setSelectedOfferingId(
-        liveOffId && offerings.some((o) => o.id === liveOffId) ? liveOffId : offerings[0].id
-      );
-    }
-  }, [offerings, selectedOfferingId, lecturerActiveSessions]);
-
-  const selectedOffering = offerings.find((o) => o.id === selectedOfferingId) || offerings[0];
+  // Derive valid selectedOffering (UI-only selection; never auto-opens an old session)
+  const selectedOffering =
+    offerings.find((o) => o.id === selectedOfferingId) ||
+    offerings[0];
   const selectedCourse = selectedOffering?.course;
   const selectedCourseDept = custechDb
     .getDepartments()
     .find((d) => d.id === selectedCourse?.departmentId);
 
-  // Active or explicitly viewed session for the currently selected course
+  // Active live session for the currently selected course (only shown in console if lecturer explicitly opens/starts it)
   const selectedCourseLiveSession = selectedOffering
     ? lecturerActiveSessions.find((s) => s.courseOfferingId === selectedOffering.id)
     : undefined;
 
-  const activeSession: AttendanceSession | undefined =
-    (selectedSessionId
-      ? lecturerSessions.find(
-          (s) => s.id === selectedSessionId && (!selectedOffering || s.courseOfferingId === selectedOffering.id)
-        )
-      : undefined) || selectedCourseLiveSession;
+  const activeSession: AttendanceSession | undefined = selectedSessionId
+    ? lecturerSessions.find(
+        (s) =>
+          s.id === selectedSessionId &&
+          (s.status === 'ACTIVE' || s.status === 'PAUSED') &&
+          (!selectedOffering || s.courseOfferingId === selectedOffering.id)
+      )
+    : undefined;
 
   // Initialize syllabus topics for selected course if empty
   React.useEffect(() => {
@@ -228,8 +219,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
   const handleSelectOffering = (offeringId: string) => {
     setSelectedOfferingId(offeringId);
-    const live = lecturerActiveSessions.find((s) => s.courseOfferingId === offeringId);
-    setSelectedSessionId(live ? live.id : null);
+    setSelectedSessionId(null);
     setIsAddingTopic(false);
   };
 
@@ -639,18 +629,28 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
 
                     <div className="pt-2 flex flex-wrap items-center gap-2">
                       {selectedCourseLiveSession ? (
-                        <button
-                          type="button"
-                          onClick={() => setSelectedSessionId(selectedCourseLiveSession.id)}
-                          className="flex-1 min-w-[180px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5"
-                        >
-                          <Radio className="w-3.5 h-3.5" />
-                          <span>
-                            {activeSession?.id === selectedCourseLiveSession.id
-                              ? 'Managing Live Attendance Session Below'
-                              : 'Manage Live Attendance Session'}
-                          </span>
-                        </button>
+                        <>
+                          <button
+                            type="button"
+                            onClick={() => setSelectedSessionId(selectedCourseLiveSession.id)}
+                            className="flex-1 min-w-[170px] py-2.5 px-4 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5"
+                          >
+                            <Radio className="w-3.5 h-3.5" />
+                            <span>
+                              {activeSession?.id === selectedCourseLiveSession.id
+                                ? 'Managing Live Attendance Below'
+                                : 'Resume Live Attendance Session'}
+                            </span>
+                          </button>
+                          <button
+                            type="button"
+                            onClick={() => handleOpenStartModal(selectedOffering)}
+                            className="py-2.5 px-4 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition shadow-sm flex items-center justify-center gap-1.5"
+                          >
+                            <Play className="w-3.5 h-3.5 fill-current" />
+                            <span>Start New Session</span>
+                          </button>
+                        </>
                       ) : (
                         <button
                           type="button"
@@ -704,7 +704,11 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                 onOpenKiosk={() => setIsKioskOpen(true)}
                 onSessionUpdate={(updated) => {
                   custechDb.upsertClientSession(updated);
-                  setSelectedSessionId(updated.id);
+                  if (updated.status === 'CLOSED' || updated.status === 'CANCELLED') {
+                    setSelectedSessionId(null);
+                  } else {
+                    setSelectedSessionId(updated.id);
+                  }
                   setRefreshTrigger((prev) => prev + 1);
                   void syncFromServer();
                 }}

@@ -121,7 +121,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   // Modals
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
-  const [isIntegrationModalOpen, setIsIntegrationModalOpen] = React.useState(false);
+  const [copiedCreds, setCopiedCreds] = React.useState(false);
 
   // Add Student Form State
   const [firstName, setFirstName] = React.useState('');
@@ -400,12 +400,13 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   };
 
   // Quick Sign In As This Student
-  const handleTestSignInAsStudent = (profile: UserProfile) => {
-    storeSession({
-      user: profile,
-      activeRole: 'STUDENT',
-      loginTime: new Date().toISOString(),
-    });
+  const handleTestSignInAsStudent = async (profile: UserProfile) => {
+    const res = await impersonateStudentForAdminTestAction(profile.id);
+    if (res.success && res.session) {
+      storeSession(res.session);
+    } else {
+      alert(res.error || 'Failed to switch into student test session.');
+    }
   };
 
   // Download Sample CSV Template
@@ -635,7 +636,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
 
         <div className="flex items-center gap-2 flex-wrap">
           <button
-            onClick={() => setIsIntegrationModalOpen(true)}
+            onClick={() => setActiveTab('INTEGRATION')}
             className="flex items-center gap-1.5 px-3.5 py-2.5 rounded-lg border border-slate-300 hover:bg-slate-50 text-slate-700 text-xs font-bold transition shadow-xs"
           >
             <Network className="w-4 h-4 text-[#8d4a27]" />
@@ -1534,8 +1535,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* MODAL: ADD NEW STUDENT                                         */}
       {/* ============================================================== */}
       {isAddModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-xl max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
             {/* Header */}
             <div className="bg-[#743c22] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2.5">
@@ -1612,17 +1613,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                       </div>
                     </div>
 
-                    <div className="pt-2 flex items-center gap-2">
+                    <div className="pt-2 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
                       <button
                         onClick={() => {
                           const text = `CUSTECH Academic Credentials:\nName: ${registeredStudentSuccess.profile.firstName} ${registeredStudentSuccess.profile.lastName}\nMatric: ${registeredStudentSuccess.student.matricNumber}\nEmail: ${registeredStudentSuccess.profile.email}\nAttendance PIN: ${registeredStudentSuccess.pin}`;
                           navigator.clipboard.writeText(text);
-                          alert('Credentials copied to clipboard!');
+                          setCopiedCreds(true);
+                          setTimeout(() => setCopiedCreds(false), 2500);
                         }}
                         className="flex-1 py-2 px-3 rounded-lg border border-slate-300 bg-white hover:bg-slate-100 text-slate-700 text-xs font-bold transition flex items-center justify-center gap-1.5"
                       >
                         <Copy className="w-3.5 h-3.5 text-[#8d4a27]" />
-                        <span>Copy Credentials</span>
+                        <span>{copiedCreds ? 'Copied Credentials!' : 'Copy Credentials'}</span>
                       </button>
 
                       <button
@@ -1873,8 +1875,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* MODAL: ENHANCED BULK CSV / EXCEL IMPORT                         */}
       {/* ============================================================== */}
       {isBulkModalOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
             <div className="bg-[#743c22] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <FileSpreadsheet className="w-5 h-5 text-[#eed7c3]" />
@@ -2140,8 +2142,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* MODAL: EDIT STUDENT RECORD                                     */}
       {/* ============================================================== */}
       {editStudent && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
             <div className="bg-[#743c22] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Edit className="w-5 h-5 text-[#eed7c3]" />
@@ -2321,8 +2323,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* MODAL: ROLE ASSIGNMENT & ACCESS CONTROL                        */}
       {/* ============================================================== */}
       {roleAssignModalUser && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-2xl overflow-hidden my-6">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
             <div className="bg-[#743c22] text-white p-5 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <ShieldCheck className="w-5 h-5 text-[#eed7c3]" />
@@ -2381,7 +2383,7 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                   <option value="FACULTY_REP">Faculty Representative</option>
                   <option value="ASST_FACULTY_REP">Assistant Faculty Representative</option>
                   <option value="COURSE_REP">Course Representative</option>
-                  <option value="ASST_COURSE_REP">Assistant Course Representative</option>
+                  <option value="ASSISTANT_COURSE_REP">Assistant Course Representative</option>
                   <option value="STUDENT">Student</option>
                 </select>
                 <p className="text-[11px] text-slate-400 mt-1">
@@ -2417,8 +2419,8 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* MODAL: RESET ATTENDANCE PIN                                    */}
       {/* ============================================================== */}
       {pinResetModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-xs animate-fadeIn">
-          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm p-6 shadow-2xl">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-sm max-h-[90vh] overflow-y-auto p-4 sm:p-6 shadow-2xl my-auto">
             <h3 className="text-sm font-bold text-slate-900 mb-1">
               Reset Confidential Attendance PIN
             </h3>

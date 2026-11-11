@@ -36,8 +36,8 @@ export const FraudMonitoringModal: React.FC<FraudMonitoringModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl shadow-md overflow-hidden">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] flex flex-col shadow-md overflow-hidden">
         {/* Header */}
         <div className="bg-rose-900 text-white p-5 flex items-center justify-between">
           <div className="flex items-center gap-2.5">
@@ -66,7 +66,7 @@ export const FraudMonitoringModal: React.FC<FraudMonitoringModalProps> = ({
           </div>
         )}
 
-        <div className="p-6 max-h-[70vh] overflow-y-auto space-y-4">
+        <div className="p-4 sm:p-6 flex-1 overflow-y-auto space-y-4">
           <p className="text-xs text-slate-500">
             Displays both device-sharing collisions and blocked facial biometric proxy attempts where one student attempted to mark attendance for another student.
           </p>
@@ -84,12 +84,12 @@ export const FraudMonitoringModal: React.FC<FraudMonitoringModalProps> = ({
                   key={a.id}
                   className="p-4 rounded-xl border border-rose-200 bg-rose-50/50 text-xs space-y-2.5"
                 >
-                  <div className="flex items-center justify-between gap-2">
+                  <div className="flex flex-wrap items-center justify-between gap-2">
                     <div className="flex items-center gap-1.5 text-rose-700 font-bold">
                       {isBiometric ? (
-                        <ScanFace className="w-4 h-4" />
+                        <ScanFace className="w-4 h-4 shrink-0" />
                       ) : (
-                        <Smartphone className="w-4 h-4" />
+                        <Smartphone className="w-4 h-4 shrink-0" />
                       )}
                       <span>
                         {isBiometric
@@ -125,13 +125,13 @@ export const FraudMonitoringModal: React.FC<FraudMonitoringModalProps> = ({
                       ))}
                     </div>
                     {a.ipAddress && (
-                      <p className="text-xs text-slate-400 mt-1 font-mono">
+                      <p className="text-xs text-slate-400 mt-1 font-mono break-all">
                         Submitting IP: {a.ipAddress}
                       </p>
                     )}
                   </div>
 
-                <div className="flex items-center justify-between pt-1">
+                <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2.5 pt-1">
                   <span className="text-xs text-slate-500">
                     Status:{' '}
                     <strong className="text-slate-800">
@@ -140,7 +140,7 @@ export const FraudMonitoringModal: React.FC<FraudMonitoringModalProps> = ({
                   </span>
 
                   {!a.isReviewed ? (
-                    <div className="flex items-center gap-2">
+                    <div className="flex flex-wrap items-center gap-2">
                       <button
                         onClick={() => handleAction(a.id, 'CLEARED')}
                         className="px-3 py-2 rounded-lg text-xs font-bold text-slate-700 bg-white border border-slate-300 hover:bg-slate-50 shadow-sm transition"

@@ -1645,14 +1645,15 @@
       "scheduledStart": "2026-11-10T09:47:33.037Z",
       "scheduledEnd": "2026-11-10T11:47:33.037Z",
       "actualStart": "2026-11-10T09:47:33.037Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "KKM8FQ",
       "tempCodeExpiresAt": "2026-11-10T11:47:33.037Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794304053037_cjazo"
+      "sessionSecretNonce": "nonce_1794304053037_cjazo",
+      "actualClose": "2026-11-10T11:47:33.037Z"
     },
     {
       "id": "sess_1794304052958_wk1",
@@ -1666,16 +1667,17 @@
       "scheduledStart": "2026-11-10T09:47:32.958Z",
       "scheduledEnd": "2026-11-10T11:47:32.958Z",
       "actualStart": "2026-11-10T09:47:32.958Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "P6KQKA",
       "tempCodeExpiresAt": "2026-11-10T11:47:32.972Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "2PJGW5"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794304052958_32ics"
+      "sessionSecretNonce": "nonce_1794304052958_32ics",
+      "actualClose": "2026-11-10T11:47:32.958Z"
     },
     {
       "id": "sess_1794303925469_wk2",
@@ -1689,14 +1691,15 @@
       "scheduledStart": "2026-11-10T09:45:25.469Z",
       "scheduledEnd": "2026-11-10T11:45:25.469Z",
       "actualStart": "2026-11-10T09:45:25.469Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "MY9ZEU",
       "tempCodeExpiresAt": "2026-11-10T11:45:25.469Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794303925469_69tx9"
+      "sessionSecretNonce": "nonce_1794303925469_69tx9",
+      "actualClose": "2026-11-10T11:45:25.469Z"
     },
     {
       "id": "sess_1794303925422_wk1",
@@ -1710,16 +1713,17 @@
       "scheduledStart": "2026-11-10T09:45:25.422Z",
       "scheduledEnd": "2026-11-10T11:45:25.422Z",
       "actualStart": "2026-11-10T09:45:25.422Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "5FHWAM",
       "tempCodeExpiresAt": "2026-11-10T11:45:25.436Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "2VMSWK"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794303925422_22gqw"
+      "sessionSecretNonce": "nonce_1794303925422_22gqw",
+      "actualClose": "2026-11-10T11:45:25.422Z"
     },
     {
       "id": "sess_1794242079667_wk2",
@@ -1733,14 +1737,15 @@
       "scheduledStart": "2026-11-09T16:34:39.667Z",
       "scheduledEnd": "2026-11-09T18:34:39.667Z",
       "actualStart": "2026-11-09T16:34:39.667Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "G2B6WR",
       "tempCodeExpiresAt": "2026-11-09T18:34:39.667Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794242079667_pn2sf"
+      "sessionSecretNonce": "nonce_1794242079667_pn2sf",
+      "actualClose": "2026-11-09T18:34:39.667Z"
     },
     {
       "id": "sess_1794242079582_wk1",
@@ -1754,16 +1759,17 @@
       "scheduledStart": "2026-11-09T16:34:39.582Z",
       "scheduledEnd": "2026-11-09T18:34:39.582Z",
       "actualStart": "2026-11-09T16:34:39.582Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "XKCGBD",
       "tempCodeExpiresAt": "2026-11-09T18:34:39.610Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "EB2YXW"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794242079582_f8dtd"
+      "sessionSecretNonce": "nonce_1794242079582_f8dtd",
+      "actualClose": "2026-11-09T18:34:39.582Z"
     },
     {
       "id": "sess_1794301514150_wk1",
@@ -1777,16 +1783,17 @@
       "scheduledStart": "2026-11-10T09:05:14.150Z",
       "scheduledEnd": "2026-11-10T11:05:14.150Z",
       "actualStart": "2026-11-10T09:05:14.150Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "T85K57",
       "tempCodeExpiresAt": "2026-11-10T11:05:14.167Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "33YHWR"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794301514150_547fk"
+      "sessionSecretNonce": "nonce_1794301514150_547fk",
+      "actualClose": "2026-11-10T11:05:14.150Z"
     },
     {
       "id": "sess_1794301514198_wk2",
@@ -1800,14 +1807,15 @@
       "scheduledStart": "2026-11-10T09:05:14.198Z",
       "scheduledEnd": "2026-11-10T11:05:14.198Z",
       "actualStart": "2026-11-10T09:05:14.198Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "NAQVRY",
       "tempCodeExpiresAt": "2026-11-10T11:05:14.198Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794301514198_ixdfk"
+      "sessionSecretNonce": "nonce_1794301514198_ixdfk",
+      "actualClose": "2026-11-10T11:05:14.198Z"
     },
     {
       "id": "sess-csc-1",
@@ -1852,12 +1860,14 @@
       "scheduledStart": "2026-09-03T10:00:00Z",
       "scheduledEnd": "2026-09-03T12:00:00Z",
       "actualStart": "2026-09-03T10:05:00Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "7K4P92",
       "tempCodeExpiresAt": "2026-11-09T17:34:39.474Z",
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_live_today_csc201"
+      "sessionSecretNonce": "nonce_live_today_csc201",
+      "isCodeActive": false,
+      "actualClose": "2026-09-03T12:00:00Z"
     }
   ],
   "attendanceRecords": [
@@ -2684,14 +2694,15 @@
       "scheduledStart": "2026-11-10T09:47:33.037Z",
       "scheduledEnd": "2026-11-10T11:47:33.037Z",
       "actualStart": "2026-11-10T09:47:33.037Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "KKM8FQ",
       "tempCodeExpiresAt": "2026-11-10T11:47:33.037Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794304053037_cjazo"
+      "sessionSecretNonce": "nonce_1794304053037_cjazo",
+      "actualClose": "2026-11-10T11:47:33.037Z"
     },
     {
       "id": "sess_1794304052958_wk1",
@@ -2705,16 +2716,17 @@
       "scheduledStart": "2026-11-10T09:47:32.958Z",
       "scheduledEnd": "2026-11-10T11:47:32.958Z",
       "actualStart": "2026-11-10T09:47:32.958Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "P6KQKA",
       "tempCodeExpiresAt": "2026-11-10T11:47:32.972Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "2PJGW5"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794304052958_32ics"
+      "sessionSecretNonce": "nonce_1794304052958_32ics",
+      "actualClose": "2026-11-10T11:47:32.958Z"
     },
     {
       "id": "sess_1794303925469_wk2",
@@ -2728,14 +2740,15 @@
       "scheduledStart": "2026-11-10T09:45:25.469Z",
       "scheduledEnd": "2026-11-10T11:45:25.469Z",
       "actualStart": "2026-11-10T09:45:25.469Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "MY9ZEU",
       "tempCodeExpiresAt": "2026-11-10T11:45:25.469Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794303925469_69tx9"
+      "sessionSecretNonce": "nonce_1794303925469_69tx9",
+      "actualClose": "2026-11-10T11:45:25.469Z"
     },
     {
       "id": "sess_1794303925422_wk1",
@@ -2749,16 +2762,17 @@
       "scheduledStart": "2026-11-10T09:45:25.422Z",
       "scheduledEnd": "2026-11-10T11:45:25.422Z",
       "actualStart": "2026-11-10T09:45:25.422Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "5FHWAM",
       "tempCodeExpiresAt": "2026-11-10T11:45:25.436Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "2VMSWK"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794303925422_22gqw"
+      "sessionSecretNonce": "nonce_1794303925422_22gqw",
+      "actualClose": "2026-11-10T11:45:25.422Z"
     },
     {
       "id": "sess_1794242079667_wk2",
@@ -2772,14 +2786,15 @@
       "scheduledStart": "2026-11-09T16:34:39.667Z",
       "scheduledEnd": "2026-11-09T18:34:39.667Z",
       "actualStart": "2026-11-09T16:34:39.667Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "G2B6WR",
       "tempCodeExpiresAt": "2026-11-09T18:34:39.667Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794242079667_pn2sf"
+      "sessionSecretNonce": "nonce_1794242079667_pn2sf",
+      "actualClose": "2026-11-09T18:34:39.667Z"
     },
     {
       "id": "sess_1794242079582_wk1",
@@ -2793,16 +2808,17 @@
       "scheduledStart": "2026-11-09T16:34:39.582Z",
       "scheduledEnd": "2026-11-09T18:34:39.582Z",
       "actualStart": "2026-11-09T16:34:39.582Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "XKCGBD",
       "tempCodeExpiresAt": "2026-11-09T18:34:39.610Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "EB2YXW"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794242079582_f8dtd"
+      "sessionSecretNonce": "nonce_1794242079582_f8dtd",
+      "actualClose": "2026-11-09T18:34:39.582Z"
     },
     {
       "id": "sess_1794301514150_wk1",
@@ -2816,16 +2832,17 @@
       "scheduledStart": "2026-11-10T09:05:14.150Z",
       "scheduledEnd": "2026-11-10T11:05:14.150Z",
       "actualStart": "2026-11-10T09:05:14.150Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "T85K57",
       "tempCodeExpiresAt": "2026-11-10T11:05:14.167Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [
         "33YHWR"
       ],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794301514150_547fk"
+      "sessionSecretNonce": "nonce_1794301514150_547fk",
+      "actualClose": "2026-11-10T11:05:14.150Z"
     },
     {
       "id": "sess_1794301514198_wk2",
@@ -2839,14 +2856,15 @@
       "scheduledStart": "2026-11-10T09:05:14.198Z",
       "scheduledEnd": "2026-11-10T11:05:14.198Z",
       "actualStart": "2026-11-10T09:05:14.198Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "NAQVRY",
       "tempCodeExpiresAt": "2026-11-10T11:05:14.198Z",
-      "isCodeActive": true,
+      "isCodeActive": false,
       "previousCodes": [],
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_1794301514198_ixdfk"
+      "sessionSecretNonce": "nonce_1794301514198_ixdfk",
+      "actualClose": "2026-11-10T11:05:14.198Z"
     },
     {
       "id": "sess-csc-1",
@@ -2891,12 +2909,14 @@
       "scheduledStart": "2026-09-03T10:00:00Z",
       "scheduledEnd": "2026-09-03T12:00:00Z",
       "actualStart": "2026-09-03T10:05:00Z",
-      "status": "ACTIVE",
+      "status": "CLOSED",
       "currentTempCode": "7K4P92",
       "tempCodeExpiresAt": "2026-11-09T17:34:39.474Z",
       "qrRotationSeconds": 60,
       "lateThresholdMinutes": 15,
-      "sessionSecretNonce": "nonce_live_today_csc201"
+      "sessionSecretNonce": "nonce_live_today_csc201",
+      "isCodeActive": false,
+      "actualClose": "2026-09-03T12:00:00Z"
     }
   ],
   "customAttendanceRecords": [

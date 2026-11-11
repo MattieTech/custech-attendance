@@ -97,6 +97,7 @@ class CustechDatabase {
 
   constructor() {
     this.loadPersistentData();
+    this.expireStaleSessions();
   }
 
   // ==========================================
@@ -250,6 +251,8 @@ class CustechDatabase {
     if (Array.isArray(parsed.auditLogs)) {
       mergeById(this.auditLogs, parsed.auditLogs, true);
     }
+
+    this.expireStaleSessions();
   }
 
   private loadPersistentData(): void {
@@ -1309,11 +1312,30 @@ class CustechDatabase {
   // ==========================================
   // ATTENDANCE SESSIONS
   // ==========================================
+  private expireStaleSessions(): boolean {
+    const nowMs = Date.now();
+    let changed = false;
+    for (const s of this.sessions) {
+      if (s.status !== 'ACTIVE' && s.status !== 'PAUSED') continue;
+      const expiryRaw = s.scheduledEnd || s.tempCodeExpiresAt;
+      if (!expiryRaw) continue;
+      const expiryMs = Date.parse(expiryRaw);
+      if (Number.isFinite(expiryMs) && expiryMs < nowMs) {
+        s.status = 'CLOSED';
+        s.isCodeActive = false;
+        s.actualClose = s.actualClose || new Date(expiryMs).toISOString();
+        changed = true;
+      }
+    }
+    return changed;
+  }
+
   getSessions(): (AttendanceSession & {
     courseOffering?: CourseOffering & { course?: Course };
     classroom?: Classroom;
     lecturer?: UserProfile;
   })[] {
+    this.expireStaleSessions();
     return this.sessions.map((s) => {
       const offering = this.getOfferingById(s.courseOfferingId);
       return {
@@ -1330,6 +1352,7 @@ class CustechDatabase {
     classroom?: Classroom;
     lecturer?: UserProfile;
   }) | undefined {
+    this.expireStaleSessions();
     const s = this.sessions.find((sess) => sess.id === id);
     if (!s) return undefined;
     const offering = this.getOfferingById(s.courseOfferingId);
@@ -1342,6 +1365,7 @@ class CustechDatabase {
   }
 
   getActiveSessionForCourse(courseOfferingId: string): AttendanceSession | undefined {
+    this.expireStaleSessions();
     return this.sessions.find(
       (s) => s.courseOfferingId === courseOfferingId && s.status === 'ACTIVE'
     );
@@ -1363,6 +1387,8 @@ class CustechDatabase {
     lecturerIdParam?: string,
     classroomIdParam?: string
   ): AttendanceSession {
+    this.expireStaleSessions();
+
     const isObj = typeof optionsOrOfferingId === 'object';
     const courseOfferingId = isObj ? optionsOrOfferingId.courseOfferingId : optionsOrOfferingId;
     const lecturerId = isObj ? optionsOrOfferingId.lecturerId : (lecturerIdParam || 'user-lec-csc1');
@@ -1382,8 +1408,22 @@ class CustechDatabase {
       }
     }
 
-    const tempCode = generateTemporaryCode();
     const now = new Date();
+    const nowIso = now.toISOString();
+
+    // Close any prior active/paused sessions for this course so old codes never linger
+    for (const old of this.sessions) {
+      if (
+        old.courseOfferingId === courseOfferingId &&
+        (old.status === 'ACTIVE' || old.status === 'PAUSED')
+      ) {
+        old.status = 'CLOSED';
+        old.isCodeActive = false;
+        old.actualClose = nowIso;
+      }
+    }
+
+    const tempCode = generateTemporaryCode();
     const scheduledEnd = new Date(now.getTime() + durationMinutes * 60000).toISOString();
 
     const newSession: AttendanceSession = {

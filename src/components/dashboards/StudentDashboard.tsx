@@ -103,12 +103,6 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   const [docket, setDocket] = React.useState<ExamDocket | null>(null);
   const [forecastOfferingId, setForecastOfferingId] = React.useState<string>('');
 
-  React.useEffect(() => {
-    if (enrolledOfferings.length > 0 && !enrolledOfferings.some((o) => o.id === forecastOfferingId)) {
-      setForecastOfferingId(enrolledOfferings[0].id);
-    }
-  }, [enrolledOfferings, forecastOfferingId]);
-
   // Face ID Biometric Enrollment state
   const [faceStatus, setFaceStatus] = React.useState<{
     loaded: boolean;

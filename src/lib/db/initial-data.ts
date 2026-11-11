@@ -749,7 +749,7 @@ export const initialSessions: AttendanceSession[] = [
     lateThresholdMinutes: 15,
     sessionSecretNonce: 'nonce_week2_csc201',
   },
-  // Today's Live CSC 201 Session (Week 3 - ACTIVE)
+  // Past CSC 201 session 3 (Week 3 - CLOSED so lecturers start attendance manually)
   {
     id: 'sess-today-csc',
     courseOfferingId: 'offering-csc201',
@@ -759,9 +759,11 @@ export const initialSessions: AttendanceSession[] = [
     scheduledStart: '2026-09-03T10:00:00Z',
     scheduledEnd: '2026-09-03T12:00:00Z',
     actualStart: '2026-09-03T10:05:00Z',
-    status: 'ACTIVE',
+    actualClose: '2026-09-03T11:55:00Z',
+    status: 'CLOSED',
     currentTempCode: '7K4P92',
-    tempCodeExpiresAt: new Date(Date.now() + 3600000).toISOString(),
+    tempCodeExpiresAt: '2026-09-03T11:55:00Z',
+    isCodeActive: false,
     qrRotationSeconds: 60,
     lateThresholdMinutes: 15,
     sessionSecretNonce: 'nonce_live_today_csc201',

@@ -177,12 +177,12 @@ function AttendContent() {
   // Re-check eligibility when manual courseInput changes while student is already verified
   React.useEffect(() => {
     if (!verifiedStudent) return;
-    if (!sessionId && !courseInput.trim()) {
-      setEligibility(null);
-      return;
-    }
     let cancelled = false;
     const timer = setTimeout(async () => {
+      if (!sessionId && !courseInput.trim()) {
+        if (!cancelled) setEligibility(null);
+        return;
+      }
       try {
         const res = await verifyMatriculationNumberAction(verifiedStudent.matricNumber, {
           sessionId: sessionId || undefined,
@@ -194,7 +194,7 @@ function AttendContent() {
       } catch {
         // ignore
       }
-    }, 300);
+    }, 250);
     return () => {
       cancelled = true;
       clearTimeout(timer);
@@ -224,7 +224,7 @@ function AttendContent() {
         setMatricInput(rememberedMatric);
         const res = await verifyMatriculationNumberAction(rememberedMatric, {
           sessionId: sessionId || undefined,
-          courseCode: (initialCourse || courseInput).trim() || undefined,
+          courseCode: initialCourse.trim() || undefined,
         });
         if (!cancelled && res.found && res.student) {
           setVerifiedStudent(res.student);

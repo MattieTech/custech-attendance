@@ -202,11 +202,9 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({
     };
   }, [facultyId]);
 
-  React.useEffect(() => {
-    if (scopedDepartments.length > 0 && !scopedDepartments.some((d) => d.id === addDeptId)) {
-      setAddDeptId(scopedDepartments[0].id);
-    }
-  }, [scopedDepartments, addDeptId]);
+  const resolvedAddDeptId = scopedDepartments.some((d) => d.id === addDeptId)
+    ? addDeptId
+    : scopedDepartments[0]?.id || addDeptId;
 
   // Filter courses
   const filteredCourses = courses.filter((c) => {
@@ -261,7 +259,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({
     setIsSubmitting(true);
 
     try {
-      let targetDeptId = addDeptId;
+      let targetDeptId = resolvedAddDeptId;
       if (useCustomAddDept && addCustomDeptName.trim()) {
         const deptRes = await ensureDepartmentAction({
           name: addCustomDeptName.trim(),
@@ -902,7 +900,7 @@ export const CourseManagementTab: React.FC<CourseManagementTabProps> = ({
                     </div>
                   ) : (
                     <select
-                      value={addDeptId}
+                      value={resolvedAddDeptId}
                       onChange={(e) => setAddDeptId(e.target.value)}
                       className="w-full px-3 py-2 bg-white border border-slate-300 rounded-xl focus:ring-2 focus:ring-[#8d4a27] outline-none"
                     >
