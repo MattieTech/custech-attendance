@@ -109,15 +109,15 @@ export const OfflineSyncBanner: React.FC = () => {
   return (
     <div className="w-full z-40 transition-all duration-300">
       {!isOnline && (
-        <div className="bg-amber-600 text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2">
-            <WifiOff className="w-4 h-4 animate-pulse shrink-0" />
-            <span>
+        <div className="bg-amber-600 text-white px-3 sm:px-4 py-2 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 rounded-xl shadow-sm">
+          <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+            <WifiOff className="w-4 h-4 animate-pulse shrink-0 mt-0.5 sm:mt-0" />
+            <span className="break-words min-w-0">
               <strong>Offline Mode Active:</strong> You can still record attendance. All scans and codes are saved locally on this device and will sync automatically once internet connects.
             </span>
           </div>
           {pendingCount > 0 && (
-            <span className="px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-bold shrink-0 ml-2">
+            <span className="px-2 py-0.5 rounded-full bg-white/20 text-[11px] font-bold shrink-0">
               {pendingCount} saved offline
             </span>
           )}
@@ -125,17 +125,17 @@ export const OfflineSyncBanner: React.FC = () => {
       )}
 
       {isOnline && pendingCount > 0 && (
-        <div className="bg-[#8d4a27] text-white px-4 py-2 text-xs font-semibold flex items-center justify-between shadow-sm">
-          <div className="flex items-center gap-2">
-            <Wifi className="w-4 h-4 text-emerald-300 shrink-0" />
-            <span>
+        <div className="bg-[#8d4a27] text-white px-3 sm:px-4 py-2 text-xs font-semibold flex flex-wrap items-center justify-between gap-2 rounded-xl shadow-sm">
+          <div className="flex items-start sm:items-center gap-2 min-w-0 flex-1">
+            <Wifi className="w-4 h-4 text-emerald-300 shrink-0 mt-0.5 sm:mt-0" />
+            <span className="break-words min-w-0">
               Connection restored! You have <strong>{pendingCount} offline attendance record(s)</strong> stored on this device ready to sync.
             </span>
           </div>
           <button
             onClick={triggerSync}
             disabled={isSyncing}
-            className="px-3 py-1 bg-white text-[#8d4a27] rounded-lg font-bold hover:bg-slate-100 transition flex items-center gap-1.5 shrink-0 ml-2 disabled:opacity-50"
+            className="w-full sm:w-auto px-3 py-1.5 bg-white text-[#8d4a27] rounded-lg font-bold hover:bg-slate-100 transition flex items-center justify-center gap-1.5 shrink-0 disabled:opacity-50"
           >
             <RefreshCw className={`w-3.5 h-3.5 ${isSyncing ? 'animate-spin' : ''}`} />
             <span>{isSyncing ? 'Syncing...' : 'Sync Now'}</span>

@@ -62,7 +62,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
   onSessionUpdate,
 }) => {
   const [qrSvg, setQrSvg] = React.useState<string>('');
-  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(session.qrRotationSeconds || 60);
+  const [secondsRemaining, setSecondsRemaining] = React.useState<number>(session.qrRotationSeconds || 90);
   const [isLoading, setIsLoading] = React.useState(false);
   const [actionError, setActionError] = React.useState<string | null>(null);
   const [actionSuccess, setActionSuccess] = React.useState<string | null>(null);
@@ -109,7 +109,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
         });
         if (cancelled) return;
         setQrSvg(svg);
-        setSecondsRemaining(session.qrRotationSeconds || 60);
+        setSecondsRemaining(session.qrRotationSeconds || 90);
         setActionError(null);
       } catch {
         if (!cancelled) {
@@ -124,7 +124,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       setSecondsRemaining((prev) => {
         if (prev <= 1) {
           void loadToken();
-          return session.qrRotationSeconds || 60;
+          return session.qrRotationSeconds || 90;
         }
         return prev - 1;
       });
@@ -230,7 +230,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
     }
   };
 
-  const rotationInterval = session.qrRotationSeconds || 60;
+  const rotationInterval = session.qrRotationSeconds || 90;
   const progressPercent = ((rotationInterval - secondsRemaining) / rotationInterval) * 100;
   const displayVenue = venue || session.venue || classroomCode;
   const displayWeek = weekNumber || session.weekNumber || 1;
@@ -342,7 +342,7 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
             {/* Micro Badge inside QR frame */}
             <div className="absolute -bottom-2.5 left-1/2 -translate-x-1/2 whitespace-nowrap px-3 py-0.5 rounded-full bg-[#8d4a27] text-white text-xs font-bold tracking-wider uppercase shadow-sm flex items-center gap-1">
               <RefreshCw className="w-2.5 h-2.5" />
-              <span>Rotates Every {session.qrRotationSeconds || 60}s</span>
+              <span>Rotates Every {session.qrRotationSeconds || 90}s</span>
             </div>
           </div>
 

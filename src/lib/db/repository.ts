@@ -1443,7 +1443,7 @@ class CustechDatabase {
       tempCodeExpiresAt: scheduledEnd,
       isCodeActive: true,
       previousCodes: [],
-      qrRotationSeconds: this.systemSettings.qrRotationSeconds || 60,
+      qrRotationSeconds: this.systemSettings.qrRotationSeconds || 90,
       lateThresholdMinutes: this.systemSettings.lateThresholdMinutes || 15,
       sessionSecretNonce: `nonce_${Date.now()}_${Math.random().toString(36).substring(2, 7)}`,
     };

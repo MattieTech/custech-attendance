@@ -94,7 +94,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (!detections || detections.length === 0) {
     return {
       status: 'NO_FACE',
-      message: 'No face detected. Position your face clearly inside the reticle.',
+      message: 'No face detected. Look at the camera.',
       faceCount: 0,
       videoWidth: videoEl.videoWidth,
       videoHeight: videoEl.videoHeight,
@@ -104,7 +104,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (detections.length > 1) {
     return {
       status: 'MULTIPLE_FACES',
-      message: `Multiple faces detected (${detections.length}). Only you may appear in the camera frame.`,
+      message: `Multiple faces detected (${detections.length}). Only one person allowed.`,
       faceCount: detections.length,
       videoWidth: videoEl.videoWidth,
       videoHeight: videoEl.videoHeight,
@@ -119,7 +119,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (widthRatio < 0.17) {
     return {
       status: 'TOO_FAR',
-      message: 'Move closer to the camera so your face fills the scanner reticle.',
+      message: 'Move closer to the camera.',
       faceCount: 1,
       score: det.detection.score,
       box: { x: box.x, y: box.y, width: box.width, height: box.height },
@@ -134,7 +134,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   if (faceCenterX < 0.2 || faceCenterX > 0.8 || faceCenterY < 0.15 || faceCenterY > 0.85) {
     return {
       status: 'OFF_CENTER',
-      message: 'Center your face inside the biometric reticle.',
+      message: 'Center your face in the frame.',
       faceCount: 1,
       score: det.detection.score,
       box: { x: box.x, y: box.y, width: box.width, height: box.height },
@@ -161,7 +161,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
 
   return {
     status: 'OK',
-    message: 'Face locked. Follow the liveness prompt.',
+    message: 'Hold still — blink naturally.',
     faceCount: 1,
     score: det.detection.score,
     ear: avgEar,

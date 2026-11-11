@@ -400,14 +400,14 @@ function AttendContent() {
   const isBlockedByIneligibility = Boolean(eligibility && !eligibility.eligible);
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col items-center justify-center p-3 sm:p-5 overflow-x-hidden">
+    <div className="min-h-screen w-full max-w-full bg-[#fbf7f2]/70 flex flex-col items-center justify-start sm:justify-center px-3 py-5 sm:p-5 overflow-x-hidden">
       {/* Offline Banner */}
-      <div className="w-full max-w-lg mb-3">
+      <div className="w-full max-w-lg min-w-0 mb-3">
         <OfflineSyncBanner />
       </div>
 
       {/* University Branding Header */}
-      <div className="text-center mb-4 sm:mb-5 px-2 max-w-lg w-full">
+      <div className="text-center mb-4 sm:mb-5 px-2 max-w-lg w-full min-w-0">
         <div className="inline-flex items-center justify-center w-12 h-12 sm:w-14 sm:h-14 rounded-2xl bg-[#8d4a27] text-white shadow-md mb-2">
           <School className="w-7 h-7 sm:w-8 sm:h-8" />
         </div>
@@ -420,7 +420,7 @@ function AttendContent() {
       </div>
 
       {/* Main Attendance Card Container */}
-      <div className="bg-white border border-slate-200 rounded-2xl sm:rounded-3xl w-full max-w-lg shadow-xl overflow-hidden">
+      <div className="bg-white border border-[#ecdacb] rounded-2xl sm:rounded-3xl w-full max-w-lg min-w-0 shadow-xl overflow-hidden">
         {/* Card Header */}
         <div className="bg-[#8d4a27] text-white p-4 sm:p-5 flex flex-wrap items-center justify-between gap-2">
           <div className="flex items-center gap-3 min-w-0 flex-1">
@@ -574,14 +574,14 @@ function AttendContent() {
                 </div>
                 <div className="flex justify-between items-center gap-3">
                   <span className="text-slate-500 font-medium shrink-0">Course Code</span>
-                  <span className="font-bold text-slate-900">{successData.courseCode}</span>
+                  <span className="font-bold text-slate-900 text-right break-words min-w-0">{successData.courseCode}</span>
                 </div>
               </div>
 
               <button
                 type="button"
                 onClick={() => router.push('/')}
-                className="w-full min-h-[46px] mt-2 px-4 py-3 rounded-xl bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
+                className="w-full min-h-[46px] mt-2 px-4 py-3 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white font-bold text-xs uppercase tracking-wider transition shadow-sm flex items-center justify-center gap-2 cursor-pointer"
               >
                 <span>Return to Home Page</span>
                 <ArrowRight className="w-4 h-4 shrink-0" />
@@ -672,7 +672,7 @@ function AttendContent() {
                     type="button"
                     onClick={() => void handleVerifyMatric()}
                     disabled={isLookingUpMatric || !matricInput.trim()}
-                    className="min-h-[44px] px-4 py-2.5 rounded-xl bg-slate-900 hover:bg-slate-800 text-white text-xs font-bold transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
+                    className="w-full sm:w-auto min-h-[44px] px-4 py-2.5 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition shadow-xs disabled:opacity-50 flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
                   >
                     {isLookingUpMatric ? (
                       <RefreshCw className="w-3.5 h-3.5 animate-spin" />
@@ -798,12 +798,12 @@ function AttendContent() {
                     {initialCode && (
                       <div className="flex justify-between items-center gap-3">
                         <span className="text-slate-500 font-medium shrink-0">Session Code</span>
-                        <span className="font-mono font-bold text-slate-800">{initialCode}</span>
+                        <span className="font-mono font-bold text-slate-800 text-right break-all min-w-0">{initialCode}</span>
                       </div>
                     )}
-                    <div className="flex justify-between items-center gap-3">
+                    <div className="flex justify-between items-start gap-3">
                       <span className="text-slate-500 font-medium shrink-0">Mode</span>
-                      <span className="font-bold text-emerald-700">
+                      <span className="font-bold text-emerald-700 text-right break-words min-w-0">
                         Dynamic QR Code Scan
                         {sessionStatusLabel ? ` (${sessionStatusLabel})` : ''}
                       </span>

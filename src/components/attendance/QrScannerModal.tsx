@@ -337,21 +337,21 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
   };
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
-      <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-md shadow-md overflow-hidden max-h-[92vh] overflow-y-auto">
+    <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+      <div className="bg-white border border-[#ecdacb] rounded-2xl w-full max-w-md shadow-md overflow-hidden max-h-[92vh] overflow-y-auto">
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-slate-100 bg-[#fbf5ef]">
-          <div>
-            <h3 className="font-extrabold text-sm text-slate-900">
+        <div className="flex items-center justify-between gap-2 p-3.5 sm:p-4 border-b border-slate-100 bg-[#fbf5ef]">
+          <div className="min-w-0">
+            <h3 className="font-extrabold text-sm text-slate-900 truncate">
               Record Attendance
             </h3>
-            <p className="text-xs text-[#8d4a27] font-medium">
+            <p className="text-xs text-[#8d4a27] font-medium truncate">
               CUSTECH Academic Presence System
             </p>
           </div>
           <button
             onClick={onClose}
-            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white transition"
+            className="p-1.5 rounded-lg text-slate-400 hover:text-slate-600 hover:bg-white transition shrink-0"
           >
             <X className="w-4 h-4" />
           </button>
@@ -359,7 +359,7 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
 
         {/* Biometric Gate View */}
         {biometricStep !== 'NONE' ? (
-          <div className="p-4 space-y-3">
+          <div className="p-3 sm:p-4 space-y-3">
             {biometricStep === 'ENROLL' ? (
               <FacialVerificationScanner
                 mode="ENROLL"
@@ -402,34 +402,34 @@ export const QrScannerModal: React.FC<QrScannerModalProps> = ({
         ) : (
           <>
             {/* Tab Selector */}
-            <div className="grid grid-cols-2 p-1 bg-slate-100 m-4 rounded-xl">
+            <div className="grid grid-cols-2 p-1 bg-slate-100 m-3 sm:m-4 rounded-xl gap-1">
               <button
                 onClick={() => {
                   setActiveTab('CODE');
                   setFeedback(null);
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 px-2 py-2.5 min-w-0 rounded-lg text-[11px] sm:text-xs font-bold transition text-center ${
                   activeTab === 'CODE'
                     ? 'bg-white text-[#743c22] shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Key className="w-3.5 h-3.5" />
-                <span>Enter Lecture Code</span>
+                <Key className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Lecture Code</span>
               </button>
               <button
                 onClick={() => {
                   setActiveTab('SCANNER');
                   setFeedback(null);
                 }}
-                className={`flex items-center justify-center gap-1.5 py-2.5 rounded-lg text-xs font-bold transition ${
+                className={`flex items-center justify-center gap-1.5 px-2 py-2.5 min-w-0 rounded-lg text-[11px] sm:text-xs font-bold transition text-center ${
                   activeTab === 'SCANNER'
                     ? 'bg-white text-[#743c22] shadow-sm'
                     : 'text-slate-500 hover:text-slate-700'
                 }`}
               >
-                <Camera className="w-3.5 h-3.5" />
-                <span>Camera QR Scan</span>
+                <Camera className="w-3.5 h-3.5 shrink-0" />
+                <span className="truncate">Camera QR Scan</span>
               </button>
             </div>
 

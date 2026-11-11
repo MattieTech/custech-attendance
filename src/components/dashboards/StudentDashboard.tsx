@@ -743,12 +743,12 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
       {/* FACE ID BIOMETRIC ENROLLMENT MODAL */}
       {isFaceEnrollOpen && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/70 backdrop-blur-sm animate-fadeIn">
-          <div className="w-full max-w-md relative">
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-sm animate-fadeIn">
+          <div className="w-full max-w-md relative max-h-[92vh] overflow-y-auto rounded-2xl shadow-xl">
             <button
               type="button"
               onClick={() => setIsFaceEnrollOpen(false)}
-              className="absolute -top-3 -right-3 z-10 w-8 h-8 rounded-full bg-white border border-slate-200 shadow-md flex items-center justify-center text-slate-500 hover:text-slate-800"
+              className="absolute top-2.5 right-2.5 z-10 w-8 h-8 rounded-full bg-white border border-[#ecdacb] shadow-xs flex items-center justify-center text-slate-500 hover:text-[#8d4a27] transition cursor-pointer"
               aria-label="Close Face ID Enrollment"
             >
               <X className="w-4 h-4" />

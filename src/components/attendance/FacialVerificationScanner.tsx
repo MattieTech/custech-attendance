@@ -15,12 +15,9 @@ import {
   CheckCircle2,
   AlertCircle,
   RefreshCw,
-  ShieldCheck,
   ScanFace,
   Eye,
   Lock,
-  Cpu,
-  Activity,
 } from 'lucide-react';
 
 interface FacialVerificationScannerProps {
@@ -141,19 +138,19 @@ function drawBiometricHudOverlay(
     analysis.status === 'MULTIPLE_FACES'
       ? '#f43f5e'
       : analysis.status !== 'OK'
-      ? '#f59e0b'
+      ? '#e8b88a'
       : livenessPassed
-      ? '#34d399'
-      : '#22d3ee';
+      ? '#10b981'
+      : '#eed7c3';
 
   const glowColor =
     analysis.status === 'MULTIPLE_FACES'
-      ? 'rgba(244, 63, 94, 0.55)'
+      ? 'rgba(244, 63, 94, 0.45)'
       : analysis.status !== 'OK'
-      ? 'rgba(245, 158, 11, 0.5)'
+      ? 'rgba(232, 184, 138, 0.45)'
       : livenessPassed
-      ? 'rgba(52, 211, 153, 0.55)'
-      : 'rgba(34, 211, 238, 0.55)';
+      ? 'rgba(16, 185, 129, 0.45)'
+      : 'rgba(238, 215, 195, 0.45)';
 
   // 1. Dynamic Face Bounding Box Corner Brackets
   const boxTopRight = mapPt({ x: analysis.box.x, y: analysis.box.y });
@@ -170,7 +167,7 @@ function drawBiometricHudOverlay(
   ctx.strokeStyle = primaryColor;
   ctx.lineWidth = 2;
   ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 10;
+  ctx.shadowBlur = 8;
 
   ctx.beginPath();
   // Top-left
@@ -190,16 +187,7 @@ function drawBiometricHudOverlay(
   ctx.lineTo(bx + bw, by + bh);
   ctx.lineTo(bx + bw, by + bh - corner);
   ctx.stroke();
-
-  // Target coordinate tag
   ctx.shadowBlur = 0;
-  ctx.font = '600 9px ui-monospace, SFMono-Regular, Menlo, monospace';
-  ctx.fillStyle = primaryColor;
-  ctx.fillText(
-    `ID_ROI [${Math.round(bx)},${Math.round(by)}]`,
-    Math.max(8, bx),
-    Math.max(14, by - 5)
-  );
 
   // 2. Live 68-Point Facial Mesh & Contours
   if (analysis.landmarks && analysis.landmarks.length >= 68) {
@@ -207,8 +195,8 @@ function drawBiometricHudOverlay(
 
     // Subtle 3D mesh triangulation bridges
     ctx.strokeStyle = livenessPassed
-      ? 'rgba(52, 211, 153, 0.24)'
-      : 'rgba(34, 211, 238, 0.24)';
+      ? 'rgba(52, 211, 153, 0.25)'
+      : 'rgba(238, 215, 195, 0.25)';
     ctx.lineWidth = 0.85;
     ctx.beginPath();
     for (const [a, b] of MESH_BRIDGES) {
@@ -219,8 +207,8 @@ function drawBiometricHudOverlay(
 
     // Primary facial feature contours
     ctx.strokeStyle = livenessPassed
-      ? 'rgba(52, 211, 153, 0.72)'
-      : 'rgba(34, 211, 238, 0.72)';
+      ? 'rgba(52, 211, 153, 0.78)'
+      : 'rgba(238, 215, 195, 0.78)';
     ctx.lineWidth = 1.15;
     for (const group of CONTOUR_GROUPS) {
       ctx.beginPath();
@@ -244,7 +232,7 @@ function drawBiometricHudOverlay(
       cx /= indices.length;
       cy /= indices.length;
 
-      ctx.strokeStyle = livenessPassed ? '#34d399' : '#22d3ee';
+      ctx.strokeStyle = livenessPassed ? '#34d399' : '#eed7c3';
       ctx.lineWidth = 1;
       ctx.beginPath();
       ctx.arc(cx, cy, 7, 0, Math.PI * 2);
@@ -261,11 +249,11 @@ function drawBiometricHudOverlay(
     drawEyeReticle([42, 43, 44, 45, 46, 47]);
 
     // Glowing anchor nodes
-    ctx.fillStyle = livenessPassed ? '#6ee7b7' : '#67e8f9';
+    ctx.fillStyle = livenessPassed ? '#6ee7b7' : '#fbf5ef';
     for (const idx of ANCHOR_INDICES) {
       const p = pts[idx];
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 1.9, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -293,16 +281,11 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
   const isMountedRef = React.useRef(true);
 
   const [phase, setPhase] = React.useState<ScannerPhase>('IDLE');
-  const [statusText, setStatusText] = React.useState<string>('Initializing biometric subsystem...');
-  const [subHint, setSubHint] = React.useState<string>(
-    mode === 'ENROLL'
-      ? 'Align face inside reticle and blink naturally to capture 128-D biometric template.'
-      : 'Look directly at sensor and blink once to verify live identity.'
-  );
+  const [statusText, setStatusText] = React.useState<string>('Ready for facial verification');
   const [errorMsg, setErrorMsg] = React.useState<string | null>(null);
   const [faceState, setFaceState] = React.useState<'NONE' | 'WARN' | 'LOCKED' | 'VERIFIED'>('NONE');
   const [progress, setProgress] = React.useState<number>(0);
-  const [livenessBadge, setLivenessBadge] = React.useState<string>('AWAITING FACE LOCK');
+  const [livenessBadge, setLivenessBadge] = React.useState<string>('Position your face');
   const [attendancePin, setAttendancePin] = React.useState('');
   const [telemetry, setTelemetry] = React.useState<LiveTelemetry>({
     score: null,
@@ -369,7 +352,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
     completedRef.current = false;
     setProgress(0);
     setFaceState('NONE');
-    setLivenessBadge('AWAITING FACE LOCK');
+    setLivenessBadge('Position your face');
     setTelemetry({
       score: null,
       ear: null,
@@ -383,7 +366,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
 
   const startScanner = React.useCallback(async () => {
     if (mode === 'ENROLL' && requirePinForEnroll && attendancePin.trim().length !== 4) {
-      setErrorMsg('Enter your 4-digit Attendance PIN first to authorize Face ID registration.');
+      setErrorMsg('Enter your 4-digit PIN to begin.');
       setPhase('IDLE');
       return;
     }
@@ -392,18 +375,18 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
     resetTracking();
     setErrorMsg(null);
     setPhase('LOADING_MODELS');
-    setStatusText('Loading neural face-mesh & 128-D recognition models...');
+    setStatusText('Preparing camera...');
 
     try {
       await ensureFaceModelsLoaded();
       if (!isMountedRef.current) return;
 
       setPhase('STARTING_CAMERA');
-      setStatusText('Activating optical front-facing sensor...');
+      setStatusText('Starting camera...');
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error(
-          'Camera API is unavailable in this browser context. Please use HTTPS or localhost on a device with a camera.'
+          'Camera access is unavailable in this browser. Please use HTTPS on a device with a camera.'
         );
       }
 
@@ -429,12 +412,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
       }
 
       setPhase('SCANNING');
-      setStatusText(
-        mode === 'ENROLL'
-          ? 'Mapping facial landmarks — blink naturally'
-          : 'Scanning live face — blink once to confirm'
-      );
-      setSubHint('Keep only your face inside the holographic reticle under clear lighting.');
+      setStatusText('Look at the camera & blink once');
 
       const runDetectionLoop = async () => {
         if (!isMountedRef.current || completedRef.current || !videoRef.current) return;
@@ -452,12 +430,12 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             setStatusText(analysis.message);
             setLivenessBadge(
               analysis.status === 'MULTIPLE_FACES'
-                ? 'MULTI-FACE VIOLATION'
+                ? 'One face only'
                 : analysis.status === 'TOO_FAR'
-                ? 'MOVE CLOSER TO SENSOR'
+                ? 'Move closer'
                 : analysis.status === 'OFF_CENTER'
-                ? 'CENTER FACE IN RETICLE'
-                : 'SCANNING FOR FACE...'
+                ? 'Center your face'
+                : 'Position your face'
             );
             setTelemetry({
               score: analysis.score ?? null,
@@ -540,11 +518,11 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             });
 
             if (!livenessPassedRef.current) {
-              setStatusText('68-pt facial mesh locked — blink eyes naturally');
-              setLivenessBadge('LIVENESS: BLINK NOW');
+              setStatusText('Hold still — blink naturally');
+              setLivenessBadge('Blink naturally');
             } else {
-              setStatusText('Liveness confirmed — computing 128-D signature...');
-              setLivenessBadge('LIVENESS VERIFIED ✓');
+              setStatusText('Scanning face...');
+              setLivenessBadge('Blink detected ✓');
             }
 
             // Completion condition
@@ -555,8 +533,8 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
               setPhase('PROCESSING');
               setStatusText(
                 mode === 'ENROLL'
-                  ? 'Encrypting & locking 128-D Face ID template...'
-                  : 'Matching 128-D vector against CUSTECH registry...'
+                  ? 'Saving Face ID...'
+                  : 'Verifying identity...'
               );
 
               const averaged = averageFaceDescriptors(samplesRef.current);
@@ -577,10 +555,10 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                   return;
                 }
                 setPhase('SUCCESS');
-                setStatusText(enrollRes?.message || 'Face ID template registered & locked!');
+                setStatusText(enrollRes?.message || 'Face ID saved!');
               } else if (mode === 'VERIFY' && onVerified) {
                 setPhase('SUCCESS');
-                setStatusText('Biometric signature verified. Submitting attendance...');
+                setStatusText('Verified! Recording attendance...');
                 onVerified({
                   descriptor: averaged,
                   livenessPassed: true,
@@ -613,7 +591,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
           ? err.message
           : 'Unable to access camera. Please allow camera permissions and try again.';
       setErrorMsg(msg);
-      setStatusText('Optical sensor or biometric model initialization failed.');
+      setStatusText('Could not start camera.');
     }
   }, [attendancePin, mode, onEnrolled, onVerified, requirePinForEnroll, resetTracking, stopCamera]);
 
@@ -637,73 +615,56 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
   }, [autoStart, mode, requirePinForEnroll, startScanner, stopCamera]);
 
   const activeTicks = Math.round((progress / 100) * TOTAL_HUD_TICKS);
-  const accentColorClass =
-    faceState === 'VERIFIED' || telemetry.livenessPassed
-      ? 'text-emerald-400'
-      : faceState === 'WARN'
-      ? 'text-rose-400'
-      : faceState === 'LOCKED'
-      ? 'text-cyan-400'
-      : 'text-cyan-300/70';
 
   const tickStrokeActive =
     faceState === 'VERIFIED' || telemetry.livenessPassed
-      ? '#34d399'
+      ? '#10b981'
       : faceState === 'WARN'
       ? '#f43f5e'
-      : '#22d3ee';
+      : '#eed7c3';
 
   return (
-    <div className="bg-slate-950 border border-slate-800 rounded-2xl overflow-hidden shadow-xl text-slate-100">
-      {/* Cybernetic Header Terminal Bar */}
-      <div className="bg-slate-900/90 border-b border-cyan-500/20 px-4 py-3 flex items-center justify-between gap-2">
-        <div className="flex items-center gap-2.5">
-          <div className="relative w-9 h-9 rounded-xl bg-cyan-500/10 border border-cyan-400/30 text-cyan-300 flex items-center justify-center shrink-0">
+    <div className="bg-white border border-[#ecdacb] rounded-2xl overflow-hidden shadow-sm text-slate-900 w-full max-w-full">
+      {/* Clean CUSTECH Brown & White Header */}
+      <div className="bg-[#fbf5ef] border-b border-[#ecdacb] px-3.5 sm:px-4 py-2.5 flex items-center justify-between gap-2">
+        <div className="flex items-center gap-2.5 min-w-0">
+          <div className="relative w-8 h-8 rounded-xl bg-[#8d4a27] text-white flex items-center justify-center shrink-0">
             <ScanFace className="w-4 h-4" />
             <span
-              className={`absolute -top-1 -right-1 w-2.5 h-2.5 rounded-full border-2 border-slate-950 ${
+              className={`absolute -top-0.5 -right-0.5 w-2.5 h-2.5 rounded-full border-2 border-[#fbf5ef] ${
                 phase === 'SCANNING'
-                  ? 'bg-emerald-400 animate-pulse'
+                  ? 'bg-emerald-500 animate-pulse'
                   : phase === 'ERROR'
                   ? 'bg-rose-500'
-                  : 'bg-cyan-400'
+                  : 'bg-[#d4a574]'
               }`}
             />
           </div>
-          <div>
-            <div className="flex items-center gap-1.5">
-              <span className="text-[10px] font-mono uppercase tracking-widest text-cyan-400 font-bold">
-                {mode === 'ENROLL' ? 'BIOMETRIC // ENROLL_ID' : 'BIOMETRIC // LIVE_VERIFY'}
-              </span>
-            </div>
-            <p className="text-xs font-bold text-white truncate max-w-[200px] sm:max-w-xs">
-              {studentName} <span className="text-slate-400 font-mono">• {matricNumber}</span>
+          <div className="min-w-0">
+            <p className="text-xs font-extrabold text-slate-900 truncate">
+              {mode === 'ENROLL' ? 'Face ID Setup' : 'Face Verification'}
+            </p>
+            <p className="text-[11px] text-[#743c22] font-medium truncate">
+              {studentName} <span className="font-mono text-slate-500">• {matricNumber}</span>
             </p>
           </div>
         </div>
-
-        <span className="px-2.5 py-1 rounded-lg text-[10px] font-mono font-bold bg-emerald-500/10 border border-emerald-400/30 text-emerald-300 flex items-center gap-1 shrink-0">
-          <ShieldCheck className="w-3 h-3" />
-          <span>ANTI-PROXY</span>
-        </span>
       </div>
 
-      <div className={compact ? 'p-3 space-y-3' : 'p-4 space-y-3.5'}>
+      <div className={compact ? 'p-3 space-y-3' : 'p-3.5 sm:p-4 space-y-3'}>
         {/* Optional PIN authorization for unauthenticated first-time enrollment */}
         {mode === 'ENROLL' && requirePinForEnroll && phase === 'IDLE' && (
-          <div className="p-3.5 rounded-xl bg-amber-500/10 border border-amber-400/30 space-y-2.5">
-            <div className="flex items-start gap-2 text-xs text-amber-200">
-              <Lock className="w-4 h-4 text-amber-400 shrink-0 mt-0.5" />
-              <div>
-                <p className="font-bold text-amber-100">First-Time Biometric Binding</p>
-                <p className="text-[11px] text-amber-200/80 mt-0.5">
-                  Enter your 4-digit Attendance PIN (default demo PIN:{' '}
-                  <code className="font-mono font-bold text-white">1234</code>) to unlock sensor calibration for{' '}
-                  <span className="font-mono font-bold">{matricNumber}</span>.
+          <div className="p-3 rounded-xl bg-[#fbf5ef] border border-[#ecdacb] space-y-2.5">
+            <div className="flex items-start gap-2 text-xs text-slate-700">
+              <Lock className="w-4 h-4 text-[#8d4a27] shrink-0 mt-0.5" />
+              <div className="min-w-0">
+                <p className="font-bold text-slate-900">Enter 4-Digit Attendance PIN</p>
+                <p className="text-[11px] text-slate-500 mt-0.5 break-words">
+                  Default PIN: <code className="font-mono font-bold text-[#8d4a27]">1234</code>
                 </p>
               </div>
             </div>
-            <div className="flex gap-2">
+            <div className="flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
               <input
                 type="password"
                 maxLength={4}
@@ -711,26 +672,26 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                 value={attendancePin}
                 onChange={(e) => setAttendancePin(e.target.value.replace(/\D/g, ''))}
                 placeholder="••••"
-                className="flex-1 px-3 py-2 rounded-lg border border-amber-400/40 bg-slate-900 text-center font-mono font-black tracking-widest text-sm text-white focus:outline-none focus:ring-2 focus:ring-cyan-400"
+                className="w-full min-w-0 sm:flex-1 min-h-[42px] px-3 py-2 rounded-xl border border-[#ecdacb] bg-white text-center font-mono font-black tracking-[0.35em] text-sm text-slate-900 focus:outline-none focus:ring-2 focus:ring-[#8d4a27]"
               />
               <button
                 type="button"
                 onClick={startScanner}
                 disabled={attendancePin.trim().length !== 4}
-                className="px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 disabled:opacity-40 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5"
+                className="w-full sm:w-auto min-h-[42px] px-4 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] disabled:opacity-40 text-white text-xs font-bold transition flex items-center justify-center gap-1.5 shrink-0 cursor-pointer"
               >
-                <Camera className="w-3.5 h-3.5" />
-                <span>Initialize Scan</span>
+                <Camera className="w-3.5 h-3.5 shrink-0" />
+                <span>Start Scan</span>
               </button>
             </div>
           </div>
         )}
 
-        {/* Futuristic Biometric Camera HUD Viewport */}
+        {/* Techy Brown & White Facial Scanner Viewport */}
         <div
           className={`relative w-full ${
-            compact ? 'h-60' : 'h-72 sm:h-80'
-          } rounded-2xl bg-slate-950 border border-cyan-500/25 overflow-hidden flex items-center justify-center shadow-inner`}
+            compact ? 'h-56 sm:h-60' : 'h-64 sm:h-72'
+          } rounded-2xl bg-[#2a160c] border border-[#ecdacb] overflow-hidden flex items-center justify-center shadow-inner`}
         >
           {/* Live Mirrored Optical Video Feed */}
           <video
@@ -741,43 +702,39 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             className="w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Subtle Cyber Grid Backdrop */}
+          {/* Subtle Warm Grid Backdrop */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-25"
+            className="absolute inset-0 pointer-events-none opacity-20"
             style={{
               backgroundImage:
-                'linear-gradient(to right, rgba(34,211,238,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(34,211,238,0.12) 1px, transparent 1px)',
-              backgroundSize: '24px 24px',
+                'linear-gradient(to right, rgba(238,215,195,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(238,215,195,0.12) 1px, transparent 1px)',
+              backgroundSize: '26px 26px',
             }}
           />
 
-          {/* Real-Time 68-Point Facial Mesh & Bounding Reticle Canvas */}
+          {/* Real-Time 68-Point Facial Mesh & Corner Brackets Canvas */}
           <canvas
             ref={overlayCanvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
           />
 
-          {/* HUD Scanner Aperture, Segmented Face ID Tick Ring & Laser Sweep */}
-          {(phase === 'SCANNING' || phase === 'STARTING_CAMERA' || phase === 'LOADING_MODELS') && (
+          {/* Segmented Face ID Tick Ring & Laser Sweep */}
+          {phase === 'SCANNING' && (
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
               {/* Laser Scan Beam */}
-              {phase === 'SCANNING' && (
-                <div
-                  className={`absolute inset-x-6 h-0.5 animate-biometric-sweep ${
-                    telemetry.livenessPassed
-                      ? 'bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_16px_rgba(52,211,153,0.95)]'
-                      : 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_16px_rgba(34,211,238,0.95)]'
-                  }`}
-                />
-              )}
+              <div
+                className={`absolute inset-x-5 h-0.5 animate-biometric-sweep ${
+                  telemetry.livenessPassed
+                    ? 'bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_14px_rgba(52,211,153,0.9)]'
+                    : 'bg-gradient-to-r from-transparent via-[#eed7c3] to-transparent shadow-[0_0_14px_rgba(238,215,195,0.9)]'
+                }`}
+              />
 
               {/* Circular Segmented Biometric Ring */}
-              <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
-                {/* Counter-rotating outer orbital ring */}
-                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/35 animate-hud-spin" />
-                <div className="absolute inset-3 rounded-full border border-dotted border-cyan-300/25 animate-hud-spin-reverse" />
+              <div className="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-dashed border-[#eed7c3]/35 animate-hud-spin" />
+                <div className="absolute inset-3 rounded-full border border-dotted border-[#eed7c3]/25 animate-hud-spin-reverse" />
 
-                {/* 48-Tick Segmented Radial Progress SVG */}
                 <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
                   {Array.from({ length: TOTAL_HUD_TICKS }).map((_, idx) => {
                     const angle = (idx / TOTAL_HUD_TICKS) * 2 * Math.PI;
@@ -795,7 +752,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                         y1={y1}
                         x2={x2}
                         y2={y2}
-                        stroke={isLit ? tickStrokeActive : 'rgba(148, 163, 184, 0.25)'}
+                        stroke={isLit ? tickStrokeActive : 'rgba(238, 215, 195, 0.22)'}
                         strokeWidth={idx % 4 === 0 ? 1.8 : 1.2}
                         strokeLinecap="round"
                       />
@@ -806,199 +763,118 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             </div>
           )}
 
-          {/* Top HUD Telemetry Bar */}
-          {phase === 'SCANNING' && (
-            <div className="absolute top-2.5 inset-x-2.5 pointer-events-none flex items-start justify-between gap-2">
-              <div className="px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-xs border border-cyan-500/25 flex items-center gap-1.5">
-                <span
-                  className={`w-2 h-2 rounded-full ${
-                    faceState === 'WARN'
-                      ? 'bg-rose-500 animate-ping'
-                      : telemetry.faceLocked
-                      ? 'bg-emerald-400 animate-pulse'
-                      : 'bg-amber-400 animate-pulse'
-                  }`}
-                />
-                <span className={`text-[10px] font-mono font-bold tracking-wider ${accentColorClass}`}>
-                  {faceState === 'WARN'
-                    ? 'MULTI_FACE'
-                    : telemetry.faceLocked
-                    ? 'MESH_LOCKED'
-                    : 'SEEKING_ROI'}
-                </span>
-              </div>
-
-              <div className="px-2.5 py-1 rounded-lg bg-slate-950/75 backdrop-blur-xs border border-slate-700/80 text-[10px] font-mono text-slate-300 flex items-center gap-2">
-                <span>
-                  EAR:{' '}
-                  <strong className="text-cyan-300">
-                    {telemetry.ear !== null ? telemetry.ear.toFixed(2) : '--'}
-                  </strong>
-                </span>
-                <span className="text-slate-600">|</span>
-                <span>
-                  CONF:{' '}
-                  <strong className="text-emerald-300">
-                    {telemetry.score !== null ? `${Math.round(telemetry.score * 100)}%` : '--'}
-                  </strong>
-                </span>
-              </div>
-            </div>
-          )}
-
-          {/* Bottom Liveness HUD Pill */}
+          {/* Single Clean Floating Prompt Pill */}
           {phase === 'SCANNING' && (
             <div className="absolute bottom-2.5 inset-x-0 pointer-events-none flex justify-center px-3">
               <div
-                className={`px-3 py-1 rounded-full backdrop-blur-xs border text-[10px] font-mono font-bold tracking-wider flex items-center gap-1.5 ${
+                className={`px-3 py-1 rounded-full backdrop-blur-xs border text-[11px] font-bold flex items-center gap-1.5 ${
                   telemetry.livenessPassed
-                    ? 'bg-emerald-950/85 border-emerald-400/50 text-emerald-300'
+                    ? 'bg-emerald-950/80 border-emerald-400/60 text-emerald-100'
                     : faceState === 'WARN'
-                    ? 'bg-rose-950/85 border-rose-400/50 text-rose-200'
-                    : 'bg-slate-950/80 border-cyan-400/40 text-cyan-200'
+                    ? 'bg-rose-950/85 border-rose-400/60 text-rose-100'
+                    : 'bg-[#2a150b]/75 border-[#eed7c3]/45 text-[#fbf5ef]'
                 }`}
               >
-                <Eye className="w-3.5 h-3.5" />
+                <Eye className="w-3.5 h-3.5 shrink-0" />
                 <span>{livenessBadge}</span>
               </div>
             </div>
           )}
 
-          {/* Loading Models / Camera / Processing Overlay */}
+          {/* Loading Models / Camera / Processing Overlay (Clean Cream & Brown) */}
           {(phase === 'LOADING_MODELS' || phase === 'STARTING_CAMERA' || phase === 'PROCESSING') && (
-            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center text-white text-center p-4 space-y-2.5">
-              <div className="relative w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-400/40 flex items-center justify-center">
-                <RefreshCw className="w-6 h-6 text-cyan-400 animate-spin" />
+            <div className="absolute inset-0 bg-[#fbf5ef]/95 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2.5">
+              <div className="w-11 h-11 rounded-2xl bg-white border border-[#ecdacb] shadow-xs flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-[#8d4a27] animate-spin" />
               </div>
-              <p className="text-xs font-mono font-bold text-cyan-200">{statusText}</p>
+              <p className="text-xs font-bold text-[#743c22]">{statusText}</p>
             </div>
           )}
 
           {/* Success Overlay */}
           {phase === 'SUCCESS' && (
-            <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-xs flex flex-col items-center justify-center text-white text-center p-4 space-y-2">
-              <div className="w-14 h-14 rounded-full bg-emerald-500/20 border-2 border-emerald-400 flex items-center justify-center shadow-[0_0_24px_rgba(52,211,153,0.45)]">
-                <CheckCircle2 className="w-8 h-8 text-emerald-300" />
+            <div className="absolute inset-0 bg-emerald-50/95 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2">
+              <div className="w-12 h-12 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-emerald-600" />
               </div>
-              <p className="text-sm font-mono font-black tracking-wide text-emerald-200">
-                IDENTITY VERIFIED
-              </p>
-              <p className="text-xs text-emerald-100/90 max-w-xs">{statusText}</p>
+              <p className="text-sm font-extrabold text-emerald-900">Verified</p>
+              <p className="text-xs text-emerald-700 max-w-xs">{statusText}</p>
             </div>
           )}
 
           {/* Idle Overlay */}
           {phase === 'IDLE' && (
-            <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-white text-center p-4 space-y-2.5">
-              <div className="w-14 h-14 rounded-2xl bg-cyan-500/10 border border-cyan-400/30 flex items-center justify-center">
-                <ScanFace className="w-8 h-8 text-cyan-400" />
+            <div className="absolute inset-0 bg-[#fbf5ef]/95 flex flex-col items-center justify-center text-center p-4 space-y-2.5">
+              <div className="w-12 h-12 rounded-2xl bg-white border border-[#ecdacb] shadow-xs flex items-center justify-center">
+                <ScanFace className="w-6 h-6 text-[#8d4a27]" />
               </div>
-              <p className="text-xs font-mono font-bold text-cyan-100">
-                BIOMETRIC SENSOR STANDBY
+              <p className="text-xs font-bold text-slate-800">
+                {requirePinForEnroll && mode === 'ENROLL'
+                  ? 'Enter PIN above to start'
+                  : 'Camera Ready'}
               </p>
               {!requirePinForEnroll && (
                 <button
                   type="button"
                   onClick={startScanner}
-                  className="mt-1 px-4 py-2 rounded-lg bg-cyan-500 hover:bg-cyan-400 text-slate-950 text-xs font-extrabold transition flex items-center gap-1.5 shadow-[0_0_16px_rgba(34,211,238,0.35)]"
+                  className="mt-1 px-4 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold transition flex items-center gap-1.5 shadow-sm cursor-pointer"
                 >
                   <Camera className="w-3.5 h-3.5" />
-                  <span>Activate Biometric Sensor</span>
+                  <span>Start Face Scan</span>
                 </button>
               )}
             </div>
           )}
         </div>
 
-        {/* 3-Stage Verification Pipeline & Progress Readout */}
+        {/* Clean Single-Line Scan Progress */}
         {phase === 'SCANNING' && (
-          <div className="space-y-2.5 bg-slate-900/70 border border-slate-800 rounded-xl p-3">
-            <div className="grid grid-cols-3 gap-1.5 text-[10px] font-mono font-bold">
-              <div
-                className={`px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1 ${
-                  telemetry.faceLocked
-                    ? 'bg-cyan-500/15 border-cyan-400/40 text-cyan-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-500'
-                }`}
-              >
-                <ScanFace className="w-3 h-3" />
-                <span>1. MESH LOCK</span>
-              </div>
-              <div
-                className={`px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1 ${
-                  telemetry.livenessPassed
-                    ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-500'
-                }`}
-              >
-                <Activity className="w-3 h-3" />
-                <span>2. LIVENESS</span>
-              </div>
-              <div
-                className={`px-2 py-1.5 rounded-lg border flex items-center justify-center gap-1 ${
-                  progress >= 90
-                    ? 'bg-emerald-500/15 border-emerald-400/40 text-emerald-300'
-                    : 'bg-slate-950/60 border-slate-800 text-slate-500'
-                }`}
-              >
-                <Cpu className="w-3 h-3" />
-                <span>3. 128-D HASH</span>
-              </div>
+          <div className="bg-[#fbf5ef] border border-[#ecdacb] rounded-xl px-3 py-2.5 space-y-1.5">
+            <div className="flex items-center justify-between gap-2 text-xs">
+              <span className="text-slate-700 font-semibold truncate">{statusText}</span>
+              <span className="text-[#8d4a27] font-mono font-bold shrink-0">{progress}%</span>
             </div>
-
-            <div className="space-y-1">
-              <div className="flex items-center justify-between text-[11px]">
-                <span className="text-slate-200 font-semibold">{statusText}</span>
-                <span className="text-cyan-400 font-mono font-bold">{progress}%</span>
-              </div>
-              <div className="w-full h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                <div
-                  className={`h-full transition-all duration-200 rounded-full ${
-                    telemetry.livenessPassed
-                      ? 'bg-gradient-to-r from-cyan-400 to-emerald-400'
-                      : 'bg-gradient-to-r from-cyan-500 to-sky-400'
-                  }`}
-                  style={{ width: `${progress}%` }}
-                />
-              </div>
-              <p className="text-[11px] text-slate-400">{subHint}</p>
+            <div className="w-full h-1.5 bg-[#ecdacb] rounded-full overflow-hidden">
+              <div
+                className={`h-full transition-all duration-200 rounded-full ${
+                  telemetry.livenessPassed ? 'bg-emerald-600' : 'bg-[#8d4a27]'
+                }`}
+                style={{ width: `${progress}%` }}
+              />
             </div>
           </div>
         )}
 
         {/* Error Alert */}
         {(phase === 'ERROR' || errorMsg) && (
-          <div className="p-3 rounded-xl bg-rose-950/60 border border-rose-500/40 text-rose-200 text-xs space-y-2">
+          <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-rose-800 text-xs space-y-2">
             <div className="flex items-start gap-2">
-              <AlertCircle className="w-4 h-4 text-rose-400 shrink-0 mt-0.5" />
-              <span>{errorMsg || statusText}</span>
+              <AlertCircle className="w-4 h-4 text-rose-600 shrink-0 mt-0.5" />
+              <span className="break-words min-w-0">{errorMsg || statusText}</span>
             </div>
             <button
               type="button"
               onClick={startScanner}
-              className="px-3 py-1.5 rounded-lg bg-rose-600 hover:bg-rose-500 text-white text-xs font-bold transition inline-flex items-center gap-1.5"
+              className="w-full sm:w-auto min-h-[38px] px-3.5 py-2 rounded-xl bg-rose-600 hover:bg-rose-700 text-white text-xs font-bold transition inline-flex items-center justify-center gap-1.5 cursor-pointer"
             >
               <RefreshCw className="w-3.5 h-3.5" />
-              <span>Retry Biometric Scan</span>
+              <span>Try Again</span>
             </button>
           </div>
         )}
 
-        {/* Footer Actions */}
+        {/* Clean Footer Action */}
         {onCancel && phase !== 'SUCCESS' && (
-          <div className="flex items-center justify-between pt-0.5">
-            <span className="text-[10px] font-mono text-slate-500">
-              ON-DEVICE 128-D VECTOR ENGINE
-            </span>
+          <div className="flex justify-end pt-0.5">
             <button
               type="button"
               onClick={() => {
                 stopCamera();
                 onCancel();
               }}
-              className="px-3 py-1.5 rounded-lg text-xs font-semibold text-slate-400 hover:text-white hover:bg-slate-800 transition"
+              className="w-full sm:w-auto min-h-[40px] px-4 py-2 rounded-xl border border-[#ecdacb] text-xs font-semibold text-slate-600 hover:text-[#743c22] hover:bg-[#fbf5ef] transition cursor-pointer"
             >
-              Cancel Scan
+              Cancel
             </button>
           </div>
         )}

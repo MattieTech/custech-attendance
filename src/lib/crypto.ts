@@ -33,13 +33,13 @@ export function signQrPayload(
 
 /**
  * Generates the full dynamic QR payload for the given session.
- * Default window is 60 seconds.
+ * Default window is 90 seconds.
  */
 export function createDynamicQrPayload(
   sessionId: string,
   courseCode: string,
   sessionNonce: string,
-  rotationSeconds: number = 60
+  rotationSeconds: number = 90
 ): RotatingQrPayload {
   const currentWindow = Math.floor(Date.now() / 1000 / rotationSeconds);
   const signature = signQrPayload(sessionId, courseCode, currentWindow, sessionNonce);
@@ -59,7 +59,7 @@ export function createDynamicQrPayload(
  */
 export function verifyQrPayload(
   payload: RotatingQrPayload,
-  rotationSeconds: number = 60,
+  rotationSeconds: number = 90,
   allowedWindowMargin: number = 3
 ): { isValid: boolean; reason?: string } {
   const currentWindow = Math.floor(Date.now() / 1000 / rotationSeconds);

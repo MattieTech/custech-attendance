@@ -212,7 +212,7 @@ export interface AttendanceSession {
   tempCodeExpiresAt: string;
   isCodeActive?: boolean;
   previousCodes?: string[];
-  qrRotationSeconds: number; // default 60s
+  qrRotationSeconds: number; // default 90s
   lateThresholdMinutes: number; // default 15m
   sessionSecretNonce: string; // HMAC secret
   cancellationReason?: string;
