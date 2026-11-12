@@ -138,19 +138,19 @@ function drawBiometricHudOverlay(
     analysis.status === 'MULTIPLE_FACES'
       ? '#f43f5e'
       : analysis.status !== 'OK'
-      ? '#e8b88a'
+      ? '#f59e0b'
       : livenessPassed
-      ? '#10b981'
-      : '#eed7c3';
+      ? '#34d399'
+      : '#22d3ee';
 
   const glowColor =
     analysis.status === 'MULTIPLE_FACES'
-      ? 'rgba(244, 63, 94, 0.45)'
+      ? 'rgba(244, 63, 94, 0.55)'
       : analysis.status !== 'OK'
-      ? 'rgba(232, 184, 138, 0.45)'
+      ? 'rgba(245, 158, 11, 0.5)'
       : livenessPassed
-      ? 'rgba(16, 185, 129, 0.45)'
-      : 'rgba(238, 215, 195, 0.45)';
+      ? 'rgba(52, 211, 153, 0.55)'
+      : 'rgba(34, 211, 238, 0.55)';
 
   // 1. Dynamic Face Bounding Box Corner Brackets
   const boxTopRight = mapPt({ x: analysis.box.x, y: analysis.box.y });
@@ -167,7 +167,7 @@ function drawBiometricHudOverlay(
   ctx.strokeStyle = primaryColor;
   ctx.lineWidth = 2;
   ctx.shadowColor = glowColor;
-  ctx.shadowBlur = 8;
+  ctx.shadowBlur = 10;
 
   ctx.beginPath();
   // Top-left
@@ -195,9 +195,9 @@ function drawBiometricHudOverlay(
 
     // Subtle 3D mesh triangulation bridges
     ctx.strokeStyle = livenessPassed
-      ? 'rgba(52, 211, 153, 0.25)'
-      : 'rgba(238, 215, 195, 0.25)';
-    ctx.lineWidth = 0.85;
+      ? 'rgba(52, 211, 153, 0.28)'
+      : 'rgba(34, 211, 238, 0.26)';
+    ctx.lineWidth = 0.9;
     ctx.beginPath();
     for (const [a, b] of MESH_BRIDGES) {
       ctx.moveTo(pts[a].x, pts[a].y);
@@ -207,9 +207,9 @@ function drawBiometricHudOverlay(
 
     // Primary facial feature contours
     ctx.strokeStyle = livenessPassed
-      ? 'rgba(52, 211, 153, 0.78)'
-      : 'rgba(238, 215, 195, 0.78)';
-    ctx.lineWidth = 1.15;
+      ? 'rgba(52, 211, 153, 0.8)'
+      : 'rgba(34, 211, 238, 0.78)';
+    ctx.lineWidth = 1.2;
     for (const group of CONTOUR_GROUPS) {
       ctx.beginPath();
       group.indices.forEach((idx, i) => {
@@ -232,28 +232,28 @@ function drawBiometricHudOverlay(
       cx /= indices.length;
       cy /= indices.length;
 
-      ctx.strokeStyle = livenessPassed ? '#34d399' : '#eed7c3';
-      ctx.lineWidth = 1;
+      ctx.strokeStyle = livenessPassed ? '#34d399' : '#22d3ee';
+      ctx.lineWidth = 1.1;
       ctx.beginPath();
-      ctx.arc(cx, cy, 7, 0, Math.PI * 2);
+      ctx.arc(cx, cy, 7.5, 0, Math.PI * 2);
       ctx.stroke();
 
       ctx.beginPath();
-      ctx.moveTo(cx - 10, cy);
+      ctx.moveTo(cx - 11, cy);
       ctx.lineTo(cx - 5, cy);
       ctx.moveTo(cx + 5, cy);
-      ctx.lineTo(cx + 10, cy);
+      ctx.lineTo(cx + 11, cy);
       ctx.stroke();
     };
     drawEyeReticle([36, 37, 38, 39, 40, 41]);
     drawEyeReticle([42, 43, 44, 45, 46, 47]);
 
     // Glowing anchor nodes
-    ctx.fillStyle = livenessPassed ? '#6ee7b7' : '#fbf5ef';
+    ctx.fillStyle = livenessPassed ? '#6ee7b7' : '#67e8f9';
     for (const idx of ANCHOR_INDICES) {
       const p = pts[idx];
       ctx.beginPath();
-      ctx.arc(p.x, p.y, 1.8, 0, Math.PI * 2);
+      ctx.arc(p.x, p.y, 1.9, 0, Math.PI * 2);
       ctx.fill();
     }
   }
@@ -279,6 +279,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
   const streamRef = React.useRef<MediaStream | null>(null);
   const loopTimerRef = React.useRef<number | null>(null);
   const isMountedRef = React.useRef(true);
+  const scanRunIdRef = React.useRef<number>(0);
 
   const [phase, setPhase] = React.useState<ScannerPhase>('IDLE');
   const [statusText, setStatusText] = React.useState<string>('Ready for facial verification');
@@ -295,6 +296,23 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
     faceLocked: false,
     livenessPassed: false,
   });
+
+  // Stable refs so parent re-renders or typing PIN never restarts an active camera session
+  const onVerifiedRef = React.useRef(onVerified);
+  const onEnrolledRef = React.useRef(onEnrolled);
+  const attendancePinRef = React.useRef(attendancePin);
+
+  React.useEffect(() => {
+    onVerifiedRef.current = onVerified;
+  }, [onVerified]);
+
+  React.useEffect(() => {
+    onEnrolledRef.current = onEnrolled;
+  }, [onEnrolled]);
+
+  React.useEffect(() => {
+    attendancePinRef.current = attendancePin;
+  }, [attendancePin]);
 
   // Refs for liveness tracking across frames
   const samplesRef = React.useRef<number[][]>([]);
@@ -319,6 +337,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
   }, []);
 
   const stopCamera = React.useCallback(() => {
+    scanRunIdRef.current += 1;
     if (loopTimerRef.current !== null) {
       window.clearTimeout(loopTimerRef.current);
       loopTimerRef.current = null;
@@ -365,7 +384,8 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
   }, [clearOverlayCanvas]);
 
   const startScanner = React.useCallback(async () => {
-    if (mode === 'ENROLL' && requirePinForEnroll && attendancePin.trim().length !== 4) {
+    const currentPin = attendancePinRef.current.trim();
+    if (mode === 'ENROLL' && requirePinForEnroll && currentPin.length !== 4) {
       setErrorMsg('Enter your 4-digit PIN to begin.');
       setPhase('IDLE');
       return;
@@ -373,16 +393,17 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
 
     stopCamera();
     resetTracking();
+    const runId = ++scanRunIdRef.current;
     setErrorMsg(null);
     setPhase('LOADING_MODELS');
-    setStatusText('Preparing camera...');
+    setStatusText('Initializing neural face-mesh...');
 
     try {
       await ensureFaceModelsLoaded();
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
 
       setPhase('STARTING_CAMERA');
-      setStatusText('Starting camera...');
+      setStatusText('Starting optical sensor...');
 
       if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
         throw new Error(
@@ -399,27 +420,47 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
         audio: false,
       });
 
-      if (!isMountedRef.current) {
+      if (!isMountedRef.current || scanRunIdRef.current !== runId) {
         stream.getTracks().forEach((t) => t.stop());
         return;
       }
 
       streamRef.current = stream;
 
-      if (videoRef.current) {
-        videoRef.current.srcObject = stream;
-        await videoRef.current.play().catch(() => {});
+      const videoEl = videoRef.current;
+      if (videoEl) {
+        videoEl.srcObject = stream;
+        if (videoEl.readyState < 1) {
+          await new Promise<void>((resolve) => {
+            const onReady = () => {
+              videoEl.removeEventListener('loadedmetadata', onReady);
+              resolve();
+            };
+            videoEl.addEventListener('loadedmetadata', onReady);
+            window.setTimeout(onReady, 1500);
+          });
+        }
+        if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
+        await videoEl.play().catch(() => {});
       }
 
+      if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
       setPhase('SCANNING');
       setStatusText('Look at the camera & blink once');
 
       const runDetectionLoop = async () => {
-        if (!isMountedRef.current || completedRef.current || !videoRef.current) return;
+        if (
+          !isMountedRef.current ||
+          scanRunIdRef.current !== runId ||
+          completedRef.current ||
+          !videoRef.current
+        ) {
+          return;
+        }
 
         try {
           const analysis = await analyzeVideoFrame(videoRef.current);
-          if (!isMountedRef.current || completedRef.current) return;
+          if (!isMountedRef.current || scanRunIdRef.current !== runId || completedRef.current) return;
 
           if (overlayCanvasRef.current) {
             drawBiometricHudOverlay(overlayCanvasRef.current, analysis, livenessPassedRef.current);
@@ -541,12 +582,12 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
               const thumbnail = captureFaceThumbnail(videoRef.current);
               stopCamera();
 
-              if (mode === 'ENROLL' && onEnrolled) {
-                const enrollRes = await onEnrolled({
+              if (mode === 'ENROLL' && onEnrolledRef.current) {
+                const enrollRes = await onEnrolledRef.current({
                   descriptor: averaged,
                   sampleCount: samplesRef.current.length,
                   thumbnailDataUrl: thumbnail,
-                  attendancePin: requirePinForEnroll ? attendancePin.trim() : undefined,
+                  attendancePin: requirePinForEnroll ? currentPin : undefined,
                 });
                 if (!isMountedRef.current) return;
                 if (enrollRes && !enrollRes.success) {
@@ -556,10 +597,10 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                 }
                 setPhase('SUCCESS');
                 setStatusText(enrollRes?.message || 'Face ID saved!');
-              } else if (mode === 'VERIFY' && onVerified) {
+              } else if (mode === 'VERIFY' && onVerifiedRef.current) {
                 setPhase('SUCCESS');
                 setStatusText('Verified! Recording attendance...');
-                onVerified({
+                onVerifiedRef.current({
                   descriptor: averaged,
                   livenessPassed: true,
                   livenessChallenge: livenessMethodRef.current,
@@ -572,18 +613,18 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             }
           }
         } catch (err) {
-          if (!isMountedRef.current) return;
+          if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
           console.error('Facial scan frame error:', err);
         }
 
-        if (isMountedRef.current && !completedRef.current) {
+        if (isMountedRef.current && scanRunIdRef.current === runId && !completedRef.current) {
           loopTimerRef.current = window.setTimeout(runDetectionLoop, 180);
         }
       };
 
       loopTimerRef.current = window.setTimeout(runDetectionLoop, 220);
     } catch (err: unknown) {
-      if (!isMountedRef.current) return;
+      if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
       stopCamera();
       setPhase('ERROR');
       const msg =
@@ -593,7 +634,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
       setErrorMsg(msg);
       setStatusText('Could not start camera.');
     }
-  }, [attendancePin, mode, onEnrolled, onVerified, requirePinForEnroll, resetTracking, stopCamera]);
+  }, [mode, requirePinForEnroll, resetTracking, stopCamera]);
 
   React.useEffect(() => {
     isMountedRef.current = true;
@@ -618,14 +659,14 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
 
   const tickStrokeActive =
     faceState === 'VERIFIED' || telemetry.livenessPassed
-      ? '#10b981'
+      ? '#34d399'
       : faceState === 'WARN'
       ? '#f43f5e'
-      : '#eed7c3';
+      : '#22d3ee';
 
   return (
-    <div className="bg-white border border-[#ecdacb] rounded-2xl overflow-hidden shadow-sm text-slate-900 w-full max-w-full">
-      {/* Clean CUSTECH Brown & White Header */}
+    <div className="bg-white border-2 border-[#8d4a27]/30 rounded-2xl overflow-hidden shadow-md text-slate-900 w-full max-w-full">
+      {/* CUSTECH Brown & White Card Header */}
       <div className="bg-[#fbf5ef] border-b border-[#ecdacb] px-3.5 sm:px-4 py-2.5 flex items-center justify-between gap-2">
         <div className="flex items-center gap-2.5 min-w-0">
           <div className="relative w-8 h-8 rounded-xl bg-[#8d4a27] text-white flex items-center justify-center shrink-0">
@@ -687,11 +728,11 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
           </div>
         )}
 
-        {/* Techy Brown & White Facial Scanner Viewport */}
+        {/* Futuristic Holographic Face Scanner Viewport */}
         <div
           className={`relative w-full ${
-            compact ? 'h-56 sm:h-60' : 'h-64 sm:h-72'
-          } rounded-2xl bg-[#2a160c] border border-[#ecdacb] overflow-hidden flex items-center justify-center shadow-inner`}
+            compact ? 'h-60 sm:h-64' : 'h-68 sm:h-76'
+          } rounded-2xl bg-slate-950 border border-cyan-500/40 overflow-hidden flex items-center justify-center shadow-[inset_0_0_32px_rgba(34,211,238,0.12)]`}
         >
           {/* Live Mirrored Optical Video Feed */}
           <video
@@ -702,38 +743,46 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             className="w-full h-full object-cover scale-x-[-1]"
           />
 
-          {/* Subtle Warm Grid Backdrop */}
+          {/* Futuristic Cyber Grid Backdrop */}
           <div
-            className="absolute inset-0 pointer-events-none opacity-20"
+            className="absolute inset-0 pointer-events-none opacity-25"
             style={{
               backgroundImage:
-                'linear-gradient(to right, rgba(238,215,195,0.12) 1px, transparent 1px), linear-gradient(to bottom, rgba(238,215,195,0.12) 1px, transparent 1px)',
-              backgroundSize: '26px 26px',
+                'linear-gradient(to right, rgba(34,211,238,0.15) 1px, transparent 1px), linear-gradient(to bottom, rgba(34,211,238,0.15) 1px, transparent 1px)',
+              backgroundSize: '22px 22px',
             }}
           />
 
-          {/* Real-Time 68-Point Facial Mesh & Corner Brackets Canvas */}
+          {/* Futuristic Viewport Corner HUD Brackets */}
+          <div className="pointer-events-none absolute inset-2.5">
+            <span className="absolute top-0 left-0 w-4 h-4 border-t-2 border-l-2 border-cyan-400/70 rounded-tl-sm" />
+            <span className="absolute top-0 right-0 w-4 h-4 border-t-2 border-r-2 border-cyan-400/70 rounded-tr-sm" />
+            <span className="absolute bottom-0 left-0 w-4 h-4 border-b-2 border-l-2 border-cyan-400/70 rounded-bl-sm" />
+            <span className="absolute bottom-0 right-0 w-4 h-4 border-b-2 border-r-2 border-cyan-400/70 rounded-br-sm" />
+          </div>
+
+          {/* Real-Time 68-Point Facial Mesh & Eye Reticles Canvas */}
           <canvas
             ref={overlayCanvasRef}
             className="absolute inset-0 w-full h-full pointer-events-none"
           />
 
-          {/* Segmented Face ID Tick Ring & Laser Sweep */}
+          {/* Segmented Holographic Ring & Laser Sweep */}
           {phase === 'SCANNING' && (
             <div className="absolute inset-0 pointer-events-none flex flex-col items-center justify-center">
               {/* Laser Scan Beam */}
               <div
                 className={`absolute inset-x-5 h-0.5 animate-biometric-sweep ${
                   telemetry.livenessPassed
-                    ? 'bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_14px_rgba(52,211,153,0.9)]'
-                    : 'bg-gradient-to-r from-transparent via-[#eed7c3] to-transparent shadow-[0_0_14px_rgba(238,215,195,0.9)]'
+                    ? 'bg-gradient-to-r from-transparent via-emerald-400 to-transparent shadow-[0_0_18px_rgba(52,211,153,0.95)]'
+                    : 'bg-gradient-to-r from-transparent via-cyan-400 to-transparent shadow-[0_0_18px_rgba(34,211,238,0.95)]'
                 }`}
               />
 
               {/* Circular Segmented Biometric Ring */}
-              <div className="relative w-40 h-40 sm:w-48 sm:h-48 flex items-center justify-center">
-                <div className="absolute inset-0 rounded-full border border-dashed border-[#eed7c3]/35 animate-hud-spin" />
-                <div className="absolute inset-3 rounded-full border border-dotted border-[#eed7c3]/25 animate-hud-spin-reverse" />
+              <div className="relative w-44 h-44 sm:w-52 sm:h-52 flex items-center justify-center">
+                <div className="absolute inset-0 rounded-full border border-dashed border-cyan-400/40 animate-hud-spin" />
+                <div className="absolute inset-3 rounded-full border border-dotted border-cyan-300/30 animate-hud-spin-reverse" />
 
                 <svg viewBox="0 0 120 120" className="w-full h-full -rotate-90">
                   {Array.from({ length: TOTAL_HUD_TICKS }).map((_, idx) => {
@@ -752,7 +801,7 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                         y1={y1}
                         x2={x2}
                         y2={y2}
-                        stroke={isLit ? tickStrokeActive : 'rgba(238, 215, 195, 0.22)'}
+                        stroke={isLit ? tickStrokeActive : 'rgba(148, 163, 184, 0.25)'}
                         strokeWidth={idx % 4 === 0 ? 1.8 : 1.2}
                         strokeLinecap="round"
                       />
@@ -763,16 +812,16 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             </div>
           )}
 
-          {/* Single Clean Floating Prompt Pill */}
+          {/* Futuristic Floating Status Pill */}
           {phase === 'SCANNING' && (
             <div className="absolute bottom-2.5 inset-x-0 pointer-events-none flex justify-center px-3">
               <div
                 className={`px-3 py-1 rounded-full backdrop-blur-xs border text-[11px] font-bold flex items-center gap-1.5 ${
                   telemetry.livenessPassed
-                    ? 'bg-emerald-950/80 border-emerald-400/60 text-emerald-100'
+                    ? 'bg-emerald-950/85 border-emerald-400/60 text-emerald-200'
                     : faceState === 'WARN'
-                    ? 'bg-rose-950/85 border-rose-400/60 text-rose-100'
-                    : 'bg-[#2a150b]/75 border-[#eed7c3]/45 text-[#fbf5ef]'
+                    ? 'bg-rose-950/85 border-rose-400/60 text-rose-200'
+                    : 'bg-slate-950/80 border-cyan-400/50 text-cyan-200'
                 }`}
               >
                 <Eye className="w-3.5 h-3.5 shrink-0" />
@@ -781,37 +830,37 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
             </div>
           )}
 
-          {/* Loading Models / Camera / Processing Overlay (Clean Cream & Brown) */}
+          {/* Loading Models / Camera / Processing Overlay */}
           {(phase === 'LOADING_MODELS' || phase === 'STARTING_CAMERA' || phase === 'PROCESSING') && (
-            <div className="absolute inset-0 bg-[#fbf5ef]/95 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2.5">
-              <div className="w-11 h-11 rounded-2xl bg-white border border-[#ecdacb] shadow-xs flex items-center justify-center">
-                <RefreshCw className="w-5 h-5 text-[#8d4a27] animate-spin" />
+            <div className="absolute inset-0 bg-slate-950/85 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2.5">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_20px_rgba(34,211,238,0.2)] flex items-center justify-center">
+                <RefreshCw className="w-5 h-5 text-cyan-400 animate-spin" />
               </div>
-              <p className="text-xs font-bold text-[#743c22]">{statusText}</p>
+              <p className="text-xs font-bold text-cyan-200">{statusText}</p>
             </div>
           )}
 
           {/* Success Overlay */}
           {phase === 'SUCCESS' && (
-            <div className="absolute inset-0 bg-emerald-50/95 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2">
-              <div className="w-12 h-12 rounded-full bg-emerald-100 border-2 border-emerald-500 flex items-center justify-center">
-                <CheckCircle2 className="w-7 h-7 text-emerald-600" />
+            <div className="absolute inset-0 bg-emerald-950/90 backdrop-blur-xs flex flex-col items-center justify-center text-center p-4 space-y-2">
+              <div className="w-12 h-12 rounded-full bg-emerald-500/20 border-2 border-emerald-400 shadow-[0_0_24px_rgba(52,211,153,0.45)] flex items-center justify-center">
+                <CheckCircle2 className="w-7 h-7 text-emerald-300" />
               </div>
-              <p className="text-sm font-extrabold text-emerald-900">Verified</p>
-              <p className="text-xs text-emerald-700 max-w-xs">{statusText}</p>
+              <p className="text-sm font-extrabold text-emerald-200">Verified</p>
+              <p className="text-xs text-emerald-100/90 max-w-xs">{statusText}</p>
             </div>
           )}
 
           {/* Idle Overlay */}
           {phase === 'IDLE' && (
-            <div className="absolute inset-0 bg-[#fbf5ef]/95 flex flex-col items-center justify-center text-center p-4 space-y-2.5">
-              <div className="w-12 h-12 rounded-2xl bg-white border border-[#ecdacb] shadow-xs flex items-center justify-center">
-                <ScanFace className="w-6 h-6 text-[#8d4a27]" />
+            <div className="absolute inset-0 bg-slate-950/90 flex flex-col items-center justify-center text-center p-4 space-y-2.5">
+              <div className="w-12 h-12 rounded-2xl bg-cyan-500/10 border border-cyan-400/40 shadow-[0_0_20px_rgba(34,211,238,0.2)] flex items-center justify-center">
+                <ScanFace className="w-6 h-6 text-cyan-400" />
               </div>
-              <p className="text-xs font-bold text-slate-800">
+              <p className="text-xs font-bold text-cyan-100">
                 {requirePinForEnroll && mode === 'ENROLL'
                   ? 'Enter PIN above to start'
-                  : 'Camera Ready'}
+                  : 'Scanner Ready'}
               </p>
               {!requirePinForEnroll && (
                 <button

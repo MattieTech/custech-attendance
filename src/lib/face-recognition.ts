@@ -83,7 +83,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   const faceapi = await ensureFaceModelsLoaded();
   const options = new faceapi.TinyFaceDetectorOptions({
     inputSize: 320,
-    scoreThreshold: 0.48,
+    scoreThreshold: 0.4,
   });
 
   const detections = await faceapi
@@ -116,7 +116,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
   const widthRatio = box.width / videoEl.videoWidth;
   const landmarkPoints: Point2D[] = det.landmarks.positions.map((pt) => ({ x: pt.x, y: pt.y }));
 
-  if (widthRatio < 0.17) {
+  if (widthRatio < 0.14) {
     return {
       status: 'TOO_FAR',
       message: 'Move closer to the camera.',
@@ -131,7 +131,7 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
 
   const faceCenterX = (box.x + box.width / 2) / videoEl.videoWidth;
   const faceCenterY = (box.y + box.height / 2) / videoEl.videoHeight;
-  if (faceCenterX < 0.2 || faceCenterX > 0.8 || faceCenterY < 0.15 || faceCenterY > 0.85) {
+  if (faceCenterX < 0.15 || faceCenterX > 0.85 || faceCenterY < 0.12 || faceCenterY > 0.88) {
     return {
       status: 'OFF_CENTER',
       message: 'Center your face in the frame.',
