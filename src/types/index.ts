@@ -486,3 +486,23 @@ export interface SessionLiveDescriptor {
   recordedAt: string;
 }
 
+export type CourseRegistrationStatus = 'PENDING' | 'APPROVED' | 'REJECTED' | 'CHANGES_REQUESTED';
+
+export interface CourseRegistrationRequest {
+  id: string;
+  studentId: string;
+  departmentId: string;
+  level: 100 | 200 | 300 | 400 | 500;
+  semesterType: 'FIRST' | 'SECOND';
+  academicSessionId: string;
+  courseIds: string[];
+  studentNote?: string;
+  status: CourseRegistrationStatus;
+  reviewerComment?: string;
+  reviewedBy?: string;
+  reviewedByName?: string;
+  reviewedAt?: string;
+  submittedAt: string;
+  updatedAt: string;
+}
+

@@ -15,6 +15,7 @@ import {
 } from 'lucide-react';
 import { FraudMonitoringModal } from '../fraud/FraudMonitoringModal';
 import { MedicalWaiverModal } from '../medical/MedicalWaiverModal';
+import { CourseRegistrationApprovalsPanel } from '../admin/CourseRegistrationApprovalsPanel';
 
 interface HodDashboardProps {
   user: UserProfile;
@@ -299,6 +300,14 @@ export const HodDashboard: React.FC<HodDashboardProps> = ({ user }) => {
           <p className="text-xs text-slate-400 mt-1">Tracked across departmental syllabus modules</p>
         </div>
       </div>
+
+      {/* STUDENT COURSE REGISTRATION APPROVALS (HOD / LEVEL ADVISER) */}
+      <CourseRegistrationApprovalsPanel
+        departmentId={deptId}
+        title="Department Course Registration Approvals"
+        subtitle={`Approve, reject, or request corrections for students in ${department?.name || 'your department'}.`}
+        onReviewed={() => setRefreshTrigger((prev) => prev + 1)}
+      />
 
       {/* AT-RISK STUDENTS WARNING LIST */}
       <div className="bg-white border border-slate-200 rounded-2xl p-4 sm:p-6 shadow-sm">

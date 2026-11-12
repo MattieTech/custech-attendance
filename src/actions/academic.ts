@@ -644,6 +644,166 @@ export async function syncCourseEnrollmentsAction(courseId: string) {
   }
 }
 
+export async function registerCoursesForDepartmentAction(params: {
+  departmentId: string;
+  level: 100 | 200 | 300 | 400 | 500 | 'ALL';
+  courseIds: string[];
+  mode?: 'ADD' | 'SYNC_EXACT';
+}) {
+  try {
+    const actor = await requireCourseManagementAuth(params.departmentId);
+    const result = custechDb.registerCoursesForDepartmentCohort({
+      departmentId: params.departmentId,
+      level: params.level,
+      courseIds: params.courseIds,
+      mode: params.mode || 'ADD',
+      actorId: actor.user.id,
+    });
+    return { success: true, result };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to register department courses',
+    };
+  }
+}
+
+export async function setStudentCourseRegistrationsAction(params: {
+  studentId: string;
+  courseIds: string[];
+}) {
+  try {
+    const student = custechDb.getStudentById(params.studentId);
+    const profile = student ? custechDb.getProfileById(student.profileId) : undefined;
+    const actor = await requireCourseManagementAuth(profile?.departmentId);
+    const result = custechDb.setStudentCourseRegistrations(
+      params.studentId,
+      params.courseIds,
+      actor.user.id
+    );
+    return { success: true, result };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to update student course registrations',
+    };
+  }
+}
+
+export async function getAvailableCoursesForRegistrationAction() {
+  try {
+    await requireServerSession();
+    return {
+      success: true,
+      courses: custechDb
+        .getCoursesWithDetails()
+        .filter((c) => c.isActive !== false)
+        .map((c) => ({
+          id: c.id,
+          code: c.code,
+          title: c.title,
+          creditUnits: c.creditUnits,
+          departmentId: c.departmentId,
+          departmentName: c.departmentName,
+          facultyId: c.facultyId,
+          level: c.level,
+          semesterType: c.semesterType,
+          assignedLecturers: c.assignedLecturers,
+        })),
+    };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      courses: [],
+      error: err instanceof Error ? err.message : 'Unauthorized',
+    };
+  }
+}
+
+export async function submitStudentCourseRegistrationAction(params: {
+  courseIds: string[];
+  studentNote?: string;
+}) {
+  try {
+    const actor = await requireServerSession();
+    const student = custechDb.getStudentByProfileId(actor.user.id);
+    if (!student) {
+      return {
+        success: false,
+        error: 'Only registered students can submit a student course registration.',
+      };
+    }
+
+    const request = custechDb.submitStudentCourseRegistration({
+      studentId: student.id,
+      courseIds: params.courseIds,
+      studentNote: params.studentNote,
+      actorId: actor.user.id,
+    });
+    return { success: true, request };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to submit course registration',
+    };
+  }
+}
+
+export async function reviewStudentCourseRegistrationAction(params: {
+  requestId: string;
+  decision: 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
+  reviewerComment?: string;
+}) {
+  try {
+    const actor = await requireServerSession();
+    const allowedRoles: UserRole[] = [
+      'SUPER_ADMIN',
+      'PRINCIPAL_OFFICER',
+      'DEAN',
+      'FACULTY_REP',
+      'ASST_FACULTY_REP',
+      'HOD',
+    ];
+    if (!allowedRoles.includes(actor.activeRole)) {
+      throw new Error('Unauthorized: HOD, Faculty Admin, or Super Admin privileges are required to review course registrations.');
+    }
+
+    const existingReq = custechDb
+      .getCourseRegistrationRequests()
+      .find((r) => r.id === params.requestId);
+    if (!existingReq) {
+      throw new Error('Course registration request not found.');
+    }
+
+    if (actor.activeRole === 'HOD' && actor.user.departmentId) {
+      const actorDept = actor.user.departmentId === 'dept-se' ? 'dept-sen' : actor.user.departmentId;
+      if (existingReq.departmentId !== actorDept) {
+        throw new Error('Unauthorized: HODs can only review course registrations for students in their own department.');
+      }
+    }
+
+    if (isFacultyAdminRole(actor.activeRole) && actor.user.facultyId) {
+      const dept = custechDb.getDepartments().find((d) => d.id === existingReq.departmentId);
+      if (dept && dept.facultyId !== actor.user.facultyId) {
+        throw new Error('Unauthorized: Faculty Admins can only review registrations within their assigned faculty.');
+      }
+    }
+
+    const request = custechDb.reviewStudentCourseRegistration({
+      requestId: params.requestId,
+      decision: params.decision,
+      reviewerComment: params.reviewerComment,
+      reviewerId: actor.user.id,
+    });
+    return { success: true, request };
+  } catch (err: unknown) {
+    return {
+      success: false,
+      error: err instanceof Error ? err.message : 'Failed to review course registration',
+    };
+  }
+}
+
 export async function bulkImportCoursesAction(
   records: Array<{
     code: string;

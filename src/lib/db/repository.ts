@@ -28,6 +28,8 @@ import {
   BiometricFaceProfile,
   FaceVerificationSubmission,
   SessionLiveDescriptor,
+  CourseRegistrationRequest,
+  CourseRegistrationStatus,
 } from '@/types';
 import {
   initialProfiles,
@@ -94,6 +96,8 @@ class CustechDatabase {
   private notifications = [...initialNotifications];
   private faceProfiles: BiometricFaceProfile[] = [];
   private sessionLiveDescriptors: SessionLiveDescriptor[] = [];
+  private departmentCurricula: Record<string, string[]> = {};
+  private courseRegistrationRequests: CourseRegistrationRequest[] = [];
 
   constructor() {
     this.loadPersistentData();
@@ -252,6 +256,14 @@ class CustechDatabase {
       mergeById(this.auditLogs, parsed.auditLogs, true);
     }
 
+    if (parsed.departmentCurricula && typeof parsed.departmentCurricula === 'object' && !Array.isArray(parsed.departmentCurricula)) {
+      this.departmentCurricula = { ...(parsed.departmentCurricula as Record<string, string[]>) };
+    }
+
+    if (Array.isArray(parsed.courseRegistrationRequests)) {
+      this.courseRegistrationRequests = parsed.courseRegistrationRequests as CourseRegistrationRequest[];
+    }
+
     this.expireStaleSessions();
   }
 
@@ -312,6 +324,8 @@ class CustechDatabase {
       notifications: this.notifications,
       courseReps: this.courseReps,
       deviceCollisionAlerts: this.deviceCollisionAlerts,
+      departmentCurricula: this.departmentCurricula,
+      courseRegistrationRequests: this.courseRegistrationRequests,
       // Legacy custom* keys retained for backward compatibility with older scripts
       customProfiles: this.profiles.filter((p) => !initialProfileIds.has(p.id)),
       customStudents: this.students.filter((s) => !initialStudentIds.has(s.id)),
@@ -498,12 +512,17 @@ class CustechDatabase {
     // Auto-enroll ONLY in active courses matching BOTH the student's department AND academic level
     if (params.enrollInCourses !== false) {
       const currentSem = this.getCurrentSemester();
+      const curatedIds = new Set([
+        ...(this.departmentCurricula[`${deptId}:${level}`] || []),
+        ...(this.departmentCurricula[`${deptId}:ALL`] || []),
+      ]);
       const targetOfferings = this.courseOfferings.filter((co) => {
         const c = this.courses.find((course) => course.id === co.courseId);
         if (!c || c.isActive === false) return false;
+        const semMatch = !currentSem || !co.semesterId || co.semesterId === currentSem.id;
+        if (curatedIds.has(c.id) && semMatch) return true;
         const deptMatch = c.departmentId === deptId;
         const levelMatch = c.level === level;
-        const semMatch = !currentSem || !co.semesterId || co.semesterId === currentSem.id;
         return deptMatch && levelMatch && semMatch;
       });
 
@@ -928,6 +947,7 @@ class CustechDatabase {
       notifications: this.notifications,
       courseReps: this.courseReps,
       deviceCollisionAlerts: this.deviceCollisionAlerts,
+      courseRegistrationRequests: this.courseRegistrationRequests,
       systemSettings: this.systemSettings,
       auditLogs: this.auditLogs.slice(0, 100),
     };
@@ -960,6 +980,7 @@ class CustechDatabase {
         notifications: [],
         courseReps: [],
         deviceCollisionAlerts: [],
+        courseRegistrationRequests: [],
         systemSettings: {
           ...this.systemSettings,
         },
@@ -1007,6 +1028,9 @@ class CustechDatabase {
         notifications: this.notifications.filter((n) => n.userId === user.id),
         courseReps: this.courseReps.filter((r) => r.studentId === studentId),
         deviceCollisionAlerts: [],
+        courseRegistrationRequests: this.courseRegistrationRequests.filter(
+          (r) => r.studentId === studentId
+        ),
         systemSettings: this.systemSettings,
         auditLogs: [],
       };
@@ -1062,6 +1086,7 @@ class CustechDatabase {
         deviceCollisionAlerts: this.deviceCollisionAlerts.filter((a) =>
           lecSessionIds.has(a.sessionId)
         ),
+        courseRegistrationRequests: [],
         systemSettings: this.systemSettings,
         auditLogs: [],
       };
@@ -1099,6 +1124,7 @@ class CustechDatabase {
     notifications?: AppNotification[];
     courseReps?: typeof initialCourseReps;
     deviceCollisionAlerts?: DeviceCollisionAlert[];
+    courseRegistrationRequests?: CourseRegistrationRequest[];
     systemSettings?: SystemSettings;
     auditLogs?: AuditLog[];
   }): void {
@@ -1120,6 +1146,7 @@ class CustechDatabase {
     if (Array.isArray(data.notifications)) this.notifications = data.notifications;
     if (Array.isArray(data.courseReps)) this.courseReps = data.courseReps;
     if (Array.isArray(data.deviceCollisionAlerts)) this.deviceCollisionAlerts = data.deviceCollisionAlerts;
+    if (Array.isArray(data.courseRegistrationRequests)) this.courseRegistrationRequests = data.courseRegistrationRequests;
     if (data.systemSettings) this.systemSettings = { ...this.systemSettings, ...data.systemSettings };
     if (Array.isArray(data.auditLogs)) this.auditLogs = data.auditLogs;
 
@@ -1155,6 +1182,408 @@ class CustechDatabase {
     this.enrollments.push(newEnrollment);
     this.savePersistentData();
     return newEnrollment;
+  }
+
+  private ensureOfferingForCourse(courseId: string): CourseOffering | undefined {
+    const existing = this.courseOfferings.find((o) => o.courseId === courseId);
+    if (existing) return existing;
+    const course = this.courses.find((c) => c.id === courseId);
+    if (!course) return undefined;
+    const currentSession = this.getCurrentAcademicSession();
+    const currentSem = this.getCurrentSemester();
+    const newOffering: CourseOffering = {
+      id: `offering-${course.code.toLowerCase().replace(/\s+/g, '')}-${Date.now()}`,
+      courseId: course.id,
+      academicSessionId: course.academicSessionId || currentSession?.id || 'session-2026',
+      semesterId: currentSem?.id || 'sem-2026-1',
+      primaryLecturerId: '',
+      assignedLecturerIds: [],
+      isActive: true,
+    };
+    this.courseOfferings.push(newOffering);
+    return newOffering;
+  }
+
+  getDepartmentCourseRegistrationSummary(
+    departmentId: string,
+    level: 100 | 200 | 300 | 400 | 500 | 'ALL' = 'ALL'
+  ) {
+    const normalizedDeptId = departmentId === 'dept-se' ? 'dept-sen' : departmentId;
+    const cohortStudents = this.students
+      .map((s) => ({ student: s, profile: this.getProfileById(s.profileId) }))
+      .filter(({ student, profile }) => {
+        if (!profile || profile.isActive === false) return false;
+        const sDept = profile.departmentId === 'dept-se' ? 'dept-sen' : profile.departmentId;
+        if (sDept !== normalizedDeptId) return false;
+        return level === 'ALL' || student.currentLevel === level;
+      });
+
+    const cohortStudentIds = new Set(cohortStudents.map((item) => item.student.id));
+    const courseEnrollmentCounts: Record<string, number> = {};
+
+    for (const course of this.courses) {
+      const offeringIds = new Set(
+        this.courseOfferings.filter((o) => o.courseId === course.id).map((o) => o.id)
+      );
+      if (offeringIds.size === 0) {
+        courseEnrollmentCounts[course.id] = 0;
+        continue;
+      }
+      const enrolledStudentSet = new Set<string>();
+      for (const enr of this.enrollments) {
+        if (enr.isActive && cohortStudentIds.has(enr.studentId) && offeringIds.has(enr.courseOfferingId)) {
+          enrolledStudentSet.add(enr.studentId);
+        }
+      }
+      courseEnrollmentCounts[course.id] = enrolledStudentSet.size;
+    }
+
+    const fullyRegisteredCourseIds = Object.entries(courseEnrollmentCounts)
+      .filter(([, count]) => cohortStudents.length > 0 && count === cohortStudents.length)
+      .map(([courseId]) => courseId);
+
+    const curatedCourseIds = this.departmentCurricula[`${normalizedDeptId}:${level}`] || [];
+
+    return {
+      departmentId: normalizedDeptId,
+      level,
+      studentsCount: cohortStudents.length,
+      students: cohortStudents.map(({ student, profile }) => ({
+        id: student.id,
+        matricNumber: student.matricNumber,
+        currentLevel: student.currentLevel,
+        fullName: profile ? `${profile.firstName} ${profile.lastName}` : student.matricNumber,
+      })),
+      courseEnrollmentCounts,
+      fullyRegisteredCourseIds,
+      curatedCourseIds,
+    };
+  }
+
+  registerCoursesForDepartmentCohort(params: {
+    departmentId: string;
+    level: 100 | 200 | 300 | 400 | 500 | 'ALL';
+    courseIds: string[];
+    mode?: 'ADD' | 'SYNC_EXACT';
+    actorId: string;
+  }): {
+    studentsAffected: number;
+    coursesCount: number;
+    newlyEnrolled: number;
+    deactivated: number;
+    courseCodes: string[];
+  } {
+    const normalizedDeptId = params.departmentId === 'dept-se' ? 'dept-sen' : params.departmentId;
+    const mode = params.mode || 'ADD';
+    const uniqueCourseIds = Array.from(new Set(params.courseIds)).filter((id) =>
+      this.courses.some((c) => c.id === id)
+    );
+
+    const cohortStudents = this.students.filter((s) => {
+      const profile = this.getProfileById(s.profileId);
+      if (!profile || profile.isActive === false) return false;
+      const sDept = profile.departmentId === 'dept-se' ? 'dept-sen' : profile.departmentId;
+      if (sDept !== normalizedDeptId) return false;
+      return params.level === 'ALL' || s.currentLevel === params.level;
+    });
+
+    const targetOfferings = uniqueCourseIds
+      .map((cid) => this.ensureOfferingForCourse(cid))
+      .filter((off): off is CourseOffering => Boolean(off));
+    const targetOfferingIds = new Set(targetOfferings.map((o) => o.id));
+
+    let newlyEnrolled = 0;
+    let deactivated = 0;
+    const nowTs = Date.now();
+
+    for (const stu of cohortStudents) {
+      for (const off of targetOfferings) {
+        const existing = this.enrollments.find(
+          (e) => e.studentId === stu.id && e.courseOfferingId === off.id
+        );
+        if (existing) {
+          if (!existing.isActive) {
+            existing.isActive = true;
+            newlyEnrolled++;
+          }
+        } else {
+          this.enrollments.push({
+            id: `enr_${nowTs}_${stu.id}_${off.id}_${Math.floor(Math.random() * 1000)}`,
+            studentId: stu.id,
+            courseOfferingId: off.id,
+            isActive: true,
+          });
+          newlyEnrolled++;
+        }
+      }
+
+      if (mode === 'SYNC_EXACT') {
+        for (const enr of this.enrollments) {
+          if (enr.studentId === stu.id && enr.isActive && !targetOfferingIds.has(enr.courseOfferingId)) {
+            enr.isActive = false;
+            deactivated++;
+          }
+        }
+      }
+    }
+
+    const curriculumKey = `${normalizedDeptId}:${params.level}`;
+    if (mode === 'SYNC_EXACT') {
+      this.departmentCurricula[curriculumKey] = uniqueCourseIds;
+    } else {
+      const prev = this.departmentCurricula[curriculumKey] || [];
+      this.departmentCurricula[curriculumKey] = Array.from(new Set([...prev, ...uniqueCourseIds]));
+    }
+
+    const courseCodes = uniqueCourseIds
+      .map((cid) => this.courses.find((c) => c.id === cid)?.code)
+      .filter((c): c is string => Boolean(c));
+
+    this.logAudit({
+      actorId: params.actorId,
+      action: 'ADMIN_REGISTERED_DEPT_COURSES',
+      entityType: 'enrollments',
+      entityId: normalizedDeptId,
+      details: {
+        departmentId: normalizedDeptId,
+        level: params.level,
+        mode,
+        studentsAffected: cohortStudents.length,
+        coursesCount: uniqueCourseIds.length,
+        newlyEnrolled,
+        deactivated,
+        courseCodes,
+      },
+    });
+
+    this.savePersistentData();
+    return {
+      studentsAffected: cohortStudents.length,
+      coursesCount: uniqueCourseIds.length,
+      newlyEnrolled,
+      deactivated,
+      courseCodes,
+    };
+  }
+
+  setStudentCourseRegistrations(
+    studentId: string,
+    courseIds: string[],
+    actorId: string
+  ): { studentId: string; enrolledCount: number; courseCodes: string[] } {
+    const student = this.getStudentById(studentId);
+    if (!student) throw new Error('Student not found');
+
+    const uniqueCourseIds = Array.from(new Set(courseIds)).filter((id) =>
+      this.courses.some((c) => c.id === id)
+    );
+    const targetOfferings = uniqueCourseIds
+      .map((cid) => this.ensureOfferingForCourse(cid))
+      .filter((off): off is CourseOffering => Boolean(off));
+    const targetOfferingIds = new Set(targetOfferings.map((o) => o.id));
+
+    for (const enr of this.enrollments) {
+      if (enr.studentId === studentId && !targetOfferingIds.has(enr.courseOfferingId)) {
+        enr.isActive = false;
+      }
+    }
+
+    const nowTs = Date.now();
+    for (const off of targetOfferings) {
+      const existing = this.enrollments.find(
+        (e) => e.studentId === studentId && e.courseOfferingId === off.id
+      );
+      if (existing) {
+        existing.isActive = true;
+      } else {
+        this.enrollments.push({
+          id: `enr_${nowTs}_${studentId}_${off.id}_${Math.floor(Math.random() * 1000)}`,
+          studentId,
+          courseOfferingId: off.id,
+          isActive: true,
+        });
+      }
+    }
+
+    const courseCodes = uniqueCourseIds
+      .map((cid) => this.courses.find((c) => c.id === cid)?.code)
+      .filter((c): c is string => Boolean(c));
+
+    this.logAudit({
+      actorId,
+      action: 'ADMIN_UPDATED_STUDENT_COURSES',
+      entityType: 'enrollments',
+      entityId: studentId,
+      details: { matricNumber: student.matricNumber, enrolledCount: uniqueCourseIds.length, courseCodes },
+    });
+
+    this.savePersistentData();
+    return { studentId, enrolledCount: uniqueCourseIds.length, courseCodes };
+  }
+
+  getCourseRegistrationRequests(filter?: {
+    studentId?: string;
+    departmentId?: string;
+    facultyId?: string;
+    status?: CourseRegistrationStatus;
+  }) {
+    return this.courseRegistrationRequests
+      .filter((req) => {
+        if (filter?.studentId && req.studentId !== filter.studentId) return false;
+        if (filter?.departmentId && req.departmentId !== filter.departmentId) return false;
+        if (filter?.facultyId) {
+          const dept = this.departments.find((d) => d.id === req.departmentId);
+          if (dept?.facultyId !== filter.facultyId) return false;
+        }
+        if (filter?.status && req.status !== filter.status) return false;
+        return true;
+      })
+      .map((req) => {
+        const stu = this.getStudentById(req.studentId);
+        const prof = stu ? this.getProfileById(stu.profileId) : undefined;
+        const dept = this.departments.find((d) => d.id === req.departmentId);
+        const courses = req.courseIds
+          .map((cid) => this.courses.find((c) => c.id === cid))
+          .filter((c): c is Course => Boolean(c));
+        return {
+          ...req,
+          studentName: prof ? `${prof.firstName} ${prof.lastName}` : stu?.matricNumber || 'Student',
+          matricNumber: stu?.matricNumber || '',
+          departmentName: dept?.name || 'Department',
+          courses,
+        };
+      })
+      .sort((a, b) => new Date(b.updatedAt).getTime() - new Date(a.updatedAt).getTime());
+  }
+
+  submitStudentCourseRegistration(params: {
+    studentId: string;
+    courseIds: string[];
+    studentNote?: string;
+    actorId: string;
+  }): CourseRegistrationRequest {
+    const student = this.getStudentById(params.studentId);
+    if (!student) throw new Error('Student record not found.');
+    const profile = this.getProfileById(student.profileId);
+    if (!profile) throw new Error('Student profile not found.');
+
+    const validCourseIds = Array.from(new Set(params.courseIds)).filter((cid) =>
+      this.courses.some((c) => c.id === cid && c.isActive !== false)
+    );
+    if (validCourseIds.length === 0) {
+      throw new Error('Please select at least one active course to register.');
+    }
+
+    const currentSession = this.getCurrentAcademicSession();
+    const currentSem = this.getCurrentSemester();
+    const sessionId = currentSession?.id || 'session-2026';
+    const semesterType = currentSem?.semesterType || 'FIRST';
+    const deptId = profile.departmentId === 'dept-se' ? 'dept-sen' : (profile.departmentId || 'dept-csc');
+    const nowIso = new Date().toISOString();
+
+    const existing = this.courseRegistrationRequests.find(
+      (r) =>
+        r.studentId === student.id &&
+        r.academicSessionId === sessionId &&
+        r.semesterType === semesterType
+    );
+
+    if (existing) {
+      existing.courseIds = validCourseIds;
+      existing.studentNote = params.studentNote?.trim() || undefined;
+      existing.status = 'PENDING';
+      existing.updatedAt = nowIso;
+      existing.submittedAt = nowIso;
+      existing.departmentId = deptId;
+      existing.level = student.currentLevel;
+
+      this.logAudit({
+        actorId: params.actorId,
+        actorRole: 'STUDENT',
+        action: 'STUDENT_SUBMITTED_COURSE_REG',
+        entityType: 'course_registration_requests',
+        entityId: existing.id,
+        details: { matricNumber: student.matricNumber, coursesCount: validCourseIds.length },
+      });
+
+      this.savePersistentData();
+      return existing;
+    }
+
+    const newReq: CourseRegistrationRequest = {
+      id: `creg_${Date.now()}_${Math.floor(Math.random() * 1000)}`,
+      studentId: student.id,
+      departmentId: deptId,
+      level: student.currentLevel,
+      semesterType,
+      academicSessionId: sessionId,
+      courseIds: validCourseIds,
+      studentNote: params.studentNote?.trim() || undefined,
+      status: 'PENDING',
+      submittedAt: nowIso,
+      updatedAt: nowIso,
+    };
+
+    this.courseRegistrationRequests.unshift(newReq);
+
+    this.logAudit({
+      actorId: params.actorId,
+      actorRole: 'STUDENT',
+      action: 'STUDENT_SUBMITTED_COURSE_REG',
+      entityType: 'course_registration_requests',
+      entityId: newReq.id,
+      details: { matricNumber: student.matricNumber, coursesCount: validCourseIds.length },
+    });
+
+    this.savePersistentData();
+    return newReq;
+  }
+
+  reviewStudentCourseRegistration(params: {
+    requestId: string;
+    decision: 'APPROVED' | 'CHANGES_REQUESTED' | 'REJECTED';
+    reviewerComment?: string;
+    reviewerId: string;
+  }): CourseRegistrationRequest {
+    const req = this.courseRegistrationRequests.find((r) => r.id === params.requestId);
+    if (!req) throw new Error('Course registration request not found.');
+
+    const cleanComment = params.reviewerComment?.trim() || '';
+    if (
+      (params.decision === 'CHANGES_REQUESTED' || params.decision === 'REJECTED') &&
+      !cleanComment
+    ) {
+      throw new Error('Please provide a comment explaining the required correction or rejection reason.');
+    }
+
+    const reviewer = this.getProfileById(params.reviewerId);
+    const nowIso = new Date().toISOString();
+
+    req.status = params.decision;
+    req.reviewerComment = cleanComment || undefined;
+    req.reviewedBy = params.reviewerId;
+    req.reviewedByName = reviewer ? `${reviewer.firstName} ${reviewer.lastName}` : 'Academic Approver';
+    req.reviewedAt = nowIso;
+    req.updatedAt = nowIso;
+
+    if (params.decision === 'APPROVED') {
+      this.setStudentCourseRegistrations(req.studentId, req.courseIds, params.reviewerId);
+    }
+
+    this.logAudit({
+      actorId: params.reviewerId,
+      action: 'REVIEWED_STUDENT_COURSE_REG',
+      entityType: 'course_registration_requests',
+      entityId: req.id,
+      details: {
+        decision: params.decision,
+        studentId: req.studentId,
+        reviewerComment: cleanComment || undefined,
+      },
+    });
+
+    this.savePersistentData();
+    return req;
   }
 
   // ==========================================

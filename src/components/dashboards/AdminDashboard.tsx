@@ -14,6 +14,7 @@ import {
   bulkImportStudentsAction,
   getDatabaseSnapshotAction,
   impersonateStudentForAdminTestAction,
+  setStudentCourseRegistrationsAction,
 } from '@/actions/academic';
 import {
   getEnrolledFaceStudentIdsAction,
@@ -55,8 +56,11 @@ import {
   Calendar,
   ShieldAlert,
   ScanFace,
+  Layers,
 } from 'lucide-react';
 import { CourseManagementTab } from '@/components/admin/CourseManagementTab';
+import { DepartmentCourseRegistrationTab } from '@/components/admin/DepartmentCourseRegistrationTab';
+import { CourseRegistrationApprovalsPanel } from '@/components/admin/CourseRegistrationApprovalsPanel';
 import { TimetableManagementTab } from '@/components/admin/TimetableManagementTab';
 import { LecturerManagementTab } from '@/components/admin/LecturerManagementTab';
 import { AttendanceMonitoringTab } from '@/components/admin/AttendanceMonitoringTab';
@@ -67,7 +71,7 @@ interface AdminDashboardProps {
 
 export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   const [activeTab, setActiveTab] = React.useState<
-    'COURSES' | 'TIMETABLE' | 'LECTURERS' | 'MONITORING' | 'STUDENTS' | 'ROLES' | 'INTEGRATION' | 'POLICIES' | 'AUDIT'
+    'COURSES' | 'DEPT_REG' | 'TIMETABLE' | 'LECTURERS' | 'MONITORING' | 'STUDENTS' | 'ROLES' | 'INTEGRATION' | 'POLICIES' | 'AUDIT'
   >('COURSES');
   const [settings, setSettings] = React.useState<SystemSettings>(custechDb.getSystemSettings());
   const [isSaving, setIsSaving] = React.useState(false);
@@ -122,6 +126,9 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
   const [isAddModalOpen, setIsAddModalOpen] = React.useState(false);
   const [isBulkModalOpen, setIsBulkModalOpen] = React.useState(false);
   const [copiedCreds, setCopiedCreds] = React.useState(false);
+  const [courseRegStudent, setCourseRegStudent] = React.useState<(Student & { profile?: UserProfile; departmentName?: string }) | null>(null);
+  const [studentCourseIds, setStudentCourseIds] = React.useState<string[]>([]);
+  const [isSavingStudentCourses, setIsSavingStudentCourses] = React.useState(false);
 
   // Add Student Form State
   const [firstName, setFirstName] = React.useState('');
@@ -409,6 +416,33 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
     }
   };
 
+  const openStudentCourseModal = (st: Student & { profile?: UserProfile; departmentName?: string }) => {
+    const enrolled = custechDb.getStudentOfferings(st.id).map((o) => o.courseId);
+    setStudentCourseIds(enrolled);
+    setCourseRegStudent(st);
+  };
+
+  const handleSaveStudentCourses = async () => {
+    if (!courseRegStudent) return;
+    setIsSavingStudentCourses(true);
+    try {
+      const res = await setStudentCourseRegistrationsAction({
+        studentId: courseRegStudent.id,
+        courseIds: studentCourseIds,
+      });
+      if (res.success) {
+        const snap = await getDatabaseSnapshotAction();
+        custechDb.syncClientSnapshot(snap);
+        setStudents(custechDb.getAllStudentsDetailed());
+        setCourseRegStudent(null);
+      } else {
+        alert(res.error || 'Failed to update student course registrations.');
+      }
+    } finally {
+      setIsSavingStudentCourses(false);
+    }
+  };
+
   // Download Sample CSV Template
   const downloadSampleCsvTemplate = () => {
     const csvHeader = 'First Name,Last Name,Matriculation Number,Email,Level,Department\n';
@@ -671,6 +705,18 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
         </button>
 
         <button
+          onClick={() => setActiveTab('DEPT_REG')}
+          className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
+            activeTab === 'DEPT_REG'
+              ? 'bg-[#fbf5ef] text-[#8d4a27] border border-[#ecdacb]'
+              : 'text-slate-600 hover:text-slate-900 hover:bg-slate-50'
+          }`}
+        >
+          <Layers className="w-4 h-4 text-[#8d4a27]" />
+          <span>Dept Course Reg</span>
+        </button>
+
+        <button
           onClick={() => setActiveTab('TIMETABLE')}
           className={`flex items-center gap-2 px-3.5 py-2.5 rounded-lg text-xs font-bold transition whitespace-nowrap ${
             activeTab === 'TIMETABLE'
@@ -771,6 +817,22 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
       {/* TAB: COURSE CATALOGUE MANAGEMENT                               */}
       {/* ============================================================== */}
       {activeTab === 'COURSES' && <CourseManagementTab adminUserId={user.id} />}
+
+      {/* ============================================================== */}
+      {/* TAB: DEPARTMENT COHORT COURSE REGISTRATION                     */}
+      {/* ============================================================== */}
+      {activeTab === 'DEPT_REG' && (
+        <div className="space-y-6">
+          <CourseRegistrationApprovalsPanel
+            title="Student Course Registration Requests (Approve / Reject / Comment)"
+            subtitle="Review course registrations submitted by students across all departments."
+            onReviewed={() => setStudents(custechDb.getAllStudentsDetailed())}
+          />
+          <DepartmentCourseRegistrationTab
+            onUpdated={() => setStudents(custechDb.getAllStudentsDetailed())}
+          />
+        </div>
+      )}
 
       {/* ============================================================== */}
       {/* TAB: TIMETABLE & SCHEDULING                                    */}
@@ -1009,6 +1071,16 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                           {/* Action Buttons */}
                           <td className="py-3 text-right">
                             <div className="inline-flex items-center gap-1">
+                              {/* Manage Student Courses */}
+                              <button
+                                onClick={() => openStudentCourseModal(st)}
+                                className="px-2 py-1 rounded-lg bg-[#fbf5ef] border border-[#ecdacb] text-[#8d4a27] hover:bg-[#f3e5d6] text-xs font-bold transition flex items-center gap-1"
+                                title="Register / Manage Courses for This Student"
+                              >
+                                <BookOpen className="w-3 h-3" />
+                                <span>Courses</span>
+                              </button>
+
                               {/* Edit Student */}
                               <button
                                 onClick={() => openEditModal(st)}
@@ -2460,6 +2532,96 @@ export const AdminDashboard: React.FC<AdminDashboardProps> = ({ user }) => {
                 </button>
               </div>
             </form>
+          </div>
+        </div>
+      )}
+
+      {/* ============================================================== */}
+      {/* MODAL: MANAGE INDIVIDUAL STUDENT COURSES                       */}
+      {/* ============================================================== */}
+      {courseRegStudent && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-lg max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
+            <div className="bg-[#743c22] text-white p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#eed7c3]" />
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base">
+                    Student Course Registration
+                  </h3>
+                  <p className="text-[11px] text-[#eed7c3] font-mono">
+                    {courseRegStudent.profile?.firstName} {courseRegStudent.profile?.lastName} • {courseRegStudent.matricNumber} ({courseRegStudent.currentLevel}L)
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setCourseRegStudent(null)}
+                className="p-1.5 rounded-lg text-[#eed7c3] hover:text-white hover:bg-[#5f321d] transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <div className="p-4 sm:p-5 space-y-4">
+              <p className="text-xs text-slate-600">
+                Check or uncheck courses for this student ({studentCourseIds.length} selected).
+              </p>
+
+              <div className="max-h-72 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                {custechDb.getCoursesWithDetails().filter((c) => c.isActive !== false).map((course) => {
+                  const checked = studentCourseIds.includes(course.id);
+                  return (
+                    <label
+                      key={course.id}
+                      className={`flex items-start gap-2.5 p-3 text-xs cursor-pointer transition ${
+                        checked ? 'bg-[#fbf5ef]/70' : 'hover:bg-slate-50'
+                      }`}
+                    >
+                      <input
+                        type="checkbox"
+                        checked={checked}
+                        onChange={() =>
+                          setStudentCourseIds((prev) =>
+                            prev.includes(course.id)
+                              ? prev.filter((id) => id !== course.id)
+                              : [...prev, course.id]
+                          )
+                        }
+                        className="mt-0.5 accent-[#8d4a27]"
+                      />
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-1.5">
+                          <span className="font-mono font-bold text-[#8d4a27]">{course.code}</span>
+                          <span className="font-semibold text-slate-900">{course.title}</span>
+                        </div>
+                        <span className="text-[11px] text-slate-500">
+                          {course.departmentName} • {course.level}L • {course.creditUnits} Units
+                        </span>
+                      </div>
+                    </label>
+                  );
+                })}
+              </div>
+
+              <div className="flex justify-end gap-2 pt-2">
+                <button
+                  type="button"
+                  onClick={() => setCourseRegStudent(null)}
+                  className="px-4 py-2 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                >
+                  Cancel
+                </button>
+                <button
+                  type="button"
+                  disabled={isSavingStudentCourses}
+                  onClick={() => void handleSaveStudentCourses()}
+                  className="px-4 py-2 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold disabled:opacity-50"
+                >
+                  {isSavingStudentCourses ? 'Saving...' : 'Save Registrations'}
+                </button>
+              </div>
+            </div>
           </div>
         </div>
       )}

@@ -8,7 +8,11 @@ import { QrScannerModal } from '../attendance/QrScannerModal';
 import { ExamDocketModal } from '../docket/ExamDocketModal';
 import { AttendanceForecast } from '../analytics/AttendanceForecast';
 import { submitAttendanceCorrection } from '@/actions/attendance';
-import { getDatabaseSnapshotAction } from '@/actions/academic';
+import {
+  getDatabaseSnapshotAction,
+  getAvailableCoursesForRegistrationAction,
+  submitStudentCourseRegistrationAction,
+} from '@/actions/academic';
 import { getStudentFaceStatusAction, enrollStudentFaceAction } from '@/actions/biometric';
 import { FacialVerificationScanner } from '../attendance/FacialVerificationScanner';
 import { formatDate, formatTime, getStatusBadgeVariant } from '@/lib/utils';
@@ -29,6 +33,10 @@ import {
   MapPin,
   BookOpen,
   Lock,
+  Plus,
+  Search,
+  AlertCircle,
+  MessageSquareWarning,
 } from 'lucide-react';
 
 interface StudentDashboardProps {
@@ -102,6 +110,91 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
   const [successToast, setSuccessToast] = React.useState<string | null>(null);
   const [docket, setDocket] = React.useState<ExamDocket | null>(null);
   const [forecastOfferingId, setForecastOfferingId] = React.useState<string>('');
+
+  // Student Course Registration Request State
+  const [isCourseRegOpen, setIsCourseRegOpen] = React.useState(false);
+  const [availableCourses, setAvailableCourses] = React.useState<
+    Array<{
+      id: string;
+      code: string;
+      title: string;
+      creditUnits: number;
+      departmentId: string;
+      departmentName: string;
+      level: number;
+      semesterType: 'FIRST' | 'SECOND';
+      assignedLecturers: string[];
+    }>
+  >([]);
+  const [regCourseSearch, setRegCourseSearch] = React.useState('');
+  const [regSelectedIds, setRegSelectedIds] = React.useState<string[]>([]);
+  const [regNote, setRegNote] = React.useState('');
+  const [regLoading, setRegLoading] = React.useState(false);
+  const [regSubmitting, setRegSubmitting] = React.useState(false);
+  const [regError, setRegError] = React.useState<string | null>(null);
+
+  const myRegRequests = student
+    ? custechDb.getCourseRegistrationRequests({ studentId: student.id })
+    : [];
+  const latestRegRequest = myRegRequests[0];
+
+  const openCourseRegModal = async () => {
+    setRegError(null);
+    setRegCourseSearch('');
+    setRegNote(latestRegRequest?.studentNote || '');
+    const initialIds =
+      latestRegRequest &&
+      (latestRegRequest.status === 'PENDING' ||
+        latestRegRequest.status === 'CHANGES_REQUESTED' ||
+        latestRegRequest.status === 'REJECTED')
+        ? latestRegRequest.courseIds
+        : enrolledOfferings.map((o) => o.courseId);
+    setRegSelectedIds(initialIds);
+    setIsCourseRegOpen(true);
+    setRegLoading(true);
+    try {
+      const res = await getAvailableCoursesForRegistrationAction();
+      if (res.success) {
+        setAvailableCourses(res.courses);
+      } else {
+        setRegError(res.error || 'Could not load course catalogue.');
+      }
+    } catch {
+      setRegError('Error loading course catalogue.');
+    } finally {
+      setRegLoading(false);
+    }
+  };
+
+  const handleSubmitCourseReg = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (regSelectedIds.length === 0) {
+      setRegError('Please select at least one course to submit for approval.');
+      return;
+    }
+    setRegSubmitting(true);
+    setRegError(null);
+    try {
+      const res = await submitStudentCourseRegistrationAction({
+        courseIds: regSelectedIds,
+        studentNote: regNote,
+      });
+      if (!res.success) {
+        setRegError(res.error || 'Failed to submit course registration.');
+        return;
+      }
+      await syncFromServer();
+      setIsCourseRegOpen(false);
+      setSuccessToast(
+        'Course registration submitted! Awaiting HOD / Level Adviser or Admin approval.'
+      );
+      setTimeout(() => setSuccessToast(null), 5000);
+    } catch {
+      setRegError('Unexpected error submitting course registration.');
+    } finally {
+      setRegSubmitting(false);
+    }
+  };
 
   // Face ID Biometric Enrollment state
   const [faceStatus, setFaceStatus] = React.useState<{
@@ -450,13 +543,72 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
       {/* REGISTERED COURSES & DYNAMIC ATTENDANCE STATUS */}
       <div>
         <div className="flex flex-wrap items-center justify-between gap-2 mb-3">
-          <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
-            Registered Courses — {currentSemester?.semesterType === 'SECOND' ? 'Second' : 'First'} Semester ({enrolledOfferings.length})
-          </h3>
-          <span className="text-xs text-slate-500">
-            Showing courses for {studentDept?.name || 'your department'} ({student?.currentLevel || 200}L)
-          </span>
+          <div>
+            <h3 className="text-sm font-bold text-slate-900 uppercase tracking-wider">
+              Registered Courses — {currentSemester?.semesterType === 'SECOND' ? 'Second' : 'First'} Semester ({enrolledOfferings.length})
+            </h3>
+            <span className="text-xs text-slate-500">
+              Showing courses for {studentDept?.name || 'your department'} ({student?.currentLevel || 200}L)
+            </span>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => void openCourseRegModal()}
+            className="inline-flex items-center gap-1.5 px-3.5 py-2 rounded-xl bg-[#8d4a27] hover:bg-[#743c22] text-white text-xs font-bold shadow-xs transition"
+          >
+            <Plus className="w-3.5 h-3.5" />
+            <span>Register / Update Courses</span>
+          </button>
         </div>
+
+        {latestRegRequest && (
+          <div
+            className={`mb-4 p-3.5 rounded-xl border text-xs flex flex-col sm:flex-row sm:items-center justify-between gap-3 ${
+              latestRegRequest.status === 'APPROVED'
+                ? 'bg-emerald-50 border-emerald-200 text-emerald-900'
+                : latestRegRequest.status === 'CHANGES_REQUESTED'
+                ? 'bg-amber-50 border-amber-200 text-amber-950'
+                : latestRegRequest.status === 'REJECTED'
+                ? 'bg-rose-50 border-rose-200 text-rose-900'
+                : 'bg-sky-50 border-sky-200 text-sky-900'
+            }`}
+          >
+            <div className="space-y-1 min-w-0">
+              <div className="flex flex-wrap items-center gap-2 font-bold">
+                {latestRegRequest.status === 'APPROVED' && <CheckCircle2 className="w-4 h-4 text-emerald-600 shrink-0" />}
+                {latestRegRequest.status === 'CHANGES_REQUESTED' && <MessageSquareWarning className="w-4 h-4 text-amber-600 shrink-0" />}
+                {latestRegRequest.status === 'REJECTED' && <AlertCircle className="w-4 h-4 text-rose-600 shrink-0" />}
+                {latestRegRequest.status === 'PENDING' && <Clock className="w-4 h-4 text-sky-600 shrink-0" />}
+                <span>
+                  Course Registration Status: {latestRegRequest.status.replace('_', ' ')} ({latestRegRequest.courseIds.length} courses)
+                </span>
+              </div>
+              {latestRegRequest.status === 'PENDING' && (
+                <p className="text-[11px] opacity-85">
+                  Submitted {new Date(latestRegRequest.submittedAt).toLocaleString()}. Awaiting HOD / Level Adviser or Admin review.
+                </p>
+              )}
+              {latestRegRequest.reviewerComment && (
+                <p className="text-xs font-semibold bg-white/80 px-3 py-1.5 rounded-lg border border-black/10">
+                  Reviewer Comment ({latestRegRequest.reviewedByName || 'Approver'}): {latestRegRequest.reviewerComment}
+                </p>
+              )}
+            </div>
+
+            {(latestRegRequest.status === 'CHANGES_REQUESTED' ||
+              latestRegRequest.status === 'REJECTED' ||
+              latestRegRequest.status === 'PENDING') && (
+              <button
+                type="button"
+                onClick={() => void openCourseRegModal()}
+                className="px-3 py-1.5 rounded-lg bg-white border border-slate-300 text-slate-800 hover:bg-slate-50 text-xs font-bold shrink-0 self-start sm:self-center"
+              >
+                {latestRegRequest.status === 'PENDING' ? 'Edit Submission' : 'Correct & Resubmit'}
+              </button>
+            )}
+          </div>
+        )}
 
         {enrolledOfferings.length === 0 ? (
           <div className="p-8 text-center bg-white border border-slate-200 rounded-2xl text-xs text-slate-500">
@@ -854,6 +1006,161 @@ export const StudentDashboard: React.FC<StudentDashboardProps> = ({ user }) => {
 
       {/* EXAM DOCKET CLEARANCE MODAL */}
       {docket && <ExamDocketModal docket={docket} onClose={() => setDocket(null)} />}
+
+      {/* STUDENT COURSE REGISTRATION MODAL */}
+      {isCourseRegOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center p-3 sm:p-4 bg-black/60 backdrop-blur-xs overflow-y-auto animate-fadeIn">
+          <div className="bg-white border border-slate-200 rounded-2xl w-full max-w-2xl max-h-[90vh] overflow-y-auto shadow-2xl my-auto">
+            <div className="bg-[#743c22] text-white p-4 sm:p-5 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <BookOpen className="w-5 h-5 text-[#eed7c3]" />
+                <div>
+                  <h3 className="font-extrabold text-sm sm:text-base">
+                    Register Semester Courses
+                  </h3>
+                  <p className="text-[11px] text-[#eed7c3]">
+                    Select your courses and submit for HOD / Level Adviser or Admin approval
+                  </p>
+                </div>
+              </div>
+              <button
+                type="button"
+                onClick={() => setIsCourseRegOpen(false)}
+                className="p-1.5 rounded-lg text-[#eed7c3] hover:text-white hover:bg-[#5f321d] transition"
+              >
+                <X className="w-4 h-4" />
+              </button>
+            </div>
+
+            <form onSubmit={handleSubmitCourseReg} className="p-4 sm:p-5 space-y-4">
+              {latestRegRequest?.reviewerComment && (
+                <div className="p-3 rounded-xl bg-amber-50 border border-amber-200 text-xs text-amber-950">
+                  <strong>Reviewer Feedback ({latestRegRequest.reviewedByName || 'Approver'}):</strong>{' '}
+                  {latestRegRequest.reviewerComment}
+                </div>
+              )}
+
+              {regError && (
+                <div className="p-3 rounded-xl bg-rose-50 border border-rose-200 text-xs text-rose-800 font-semibold flex items-center gap-2">
+                  <AlertCircle className="w-4 h-4 shrink-0" />
+                  <span>{regError}</span>
+                </div>
+              )}
+
+              <div className="relative">
+                <Search className="w-3.5 h-3.5 absolute left-3 top-1/2 -translate-y-1/2 text-slate-400" />
+                <input
+                  type="text"
+                  value={regCourseSearch}
+                  onChange={(e) => setRegCourseSearch(e.target.value)}
+                  placeholder="Search course code, title, or department (e.g. CSC 201, MTH 201)..."
+                  className="w-full pl-8 pr-3 py-2 text-xs bg-slate-50 border border-slate-300 rounded-xl focus:bg-white focus:border-[#8d4a27] outline-none"
+                />
+              </div>
+
+              <div className="max-h-64 overflow-y-auto divide-y divide-slate-100 border border-slate-200 rounded-xl">
+                {regLoading ? (
+                  <div className="py-10 text-center text-xs text-slate-400">
+                    Loading university course catalogue...
+                  </div>
+                ) : (
+                  availableCourses
+                    .filter((c) => {
+                      const q = regCourseSearch.toLowerCase().trim();
+                      if (!q) return true;
+                      return (
+                        c.code.toLowerCase().includes(q) ||
+                        c.title.toLowerCase().includes(q) ||
+                        c.departmentName.toLowerCase().includes(q)
+                      );
+                    })
+                    .sort((a, b) => {
+                      const aMine = a.departmentId === studentDept?.id ? 0 : 1;
+                      const bMine = b.departmentId === studentDept?.id ? 0 : 1;
+                      if (aMine !== bMine) return aMine - bMine;
+                      return a.code.localeCompare(b.code);
+                    })
+                    .map((course) => {
+                      const checked = regSelectedIds.includes(course.id);
+                      return (
+                        <label
+                          key={course.id}
+                          className={`flex items-start gap-2.5 p-3 text-xs cursor-pointer transition ${
+                            checked ? 'bg-[#fbf5ef]/70' : 'hover:bg-slate-50'
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={checked}
+                            onChange={() =>
+                              setRegSelectedIds((prev) =>
+                                prev.includes(course.id)
+                                  ? prev.filter((id) => id !== course.id)
+                                  : [...prev, course.id]
+                              )
+                            }
+                            className="mt-0.5 accent-[#8d4a27]"
+                          />
+                          <div className="min-w-0 flex-1">
+                            <div className="flex flex-wrap items-center gap-1.5">
+                              <span className="font-mono font-bold text-[#8d4a27]">
+                                {course.code}
+                              </span>
+                              <span className="font-semibold text-slate-900">
+                                {course.title}
+                              </span>
+                              <span className="px-1.5 py-0.5 rounded bg-slate-100 text-slate-600 text-[10px] font-bold">
+                                {course.creditUnits}U • {course.level}L
+                              </span>
+                            </div>
+                            <p className="text-[11px] text-slate-500 mt-0.5">
+                              {course.departmentName} • {course.assignedLecturers.join(', ') || 'Lecturer TBD'}
+                            </p>
+                          </div>
+                        </label>
+                      );
+                    })
+                )}
+              </div>
+
+              <div>
+                <label className="block text-xs font-bold text-slate-700 mb-1">
+                  Note to HOD / Level Adviser (Optional)
+                </label>
+                <input
+                  type="text"
+                  value={regNote}
+                  onChange={(e) => setRegNote(e.target.value)}
+                  placeholder="e.g. Added carryover course or core elective..."
+                  className="w-full px-3 py-2 text-xs rounded-xl border border-slate-300 bg-slate-50 focus:bg-white focus:border-[#8d4a27] outline-none"
+                />
+              </div>
+
+              <div className="flex flex-wrap items-center justify-between gap-2 pt-2 border-t border-slate-100">
+                <span className="text-xs font-bold text-slate-600">
+                  {regSelectedIds.length} course(s) selected
+                </span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => setIsCourseRegOpen(false)}
+                    className="px-3.5 py-2 rounded-lg border border-slate-300 text-xs font-bold text-slate-700 hover:bg-slate-50"
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={regSubmitting || regSelectedIds.length === 0}
+                    className="px-4 py-2 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] disabled:opacity-50 text-white text-xs font-bold shadow-sm transition"
+                  >
+                    {regSubmitting ? 'Submitting...' : 'Submit for Approval'}
+                  </button>
+                </div>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 };
