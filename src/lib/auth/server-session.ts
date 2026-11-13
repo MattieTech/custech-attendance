@@ -86,27 +86,35 @@ export async function setServerSessionCookie(
   payload: Omit<ServerSessionPayload, 'iat' | 'exp'>
 ): Promise<void> {
   const token = createSignedSessionToken(payload);
-  const cookieStore = await cookies();
-  let isHttps = false;
   try {
-    const hdrs = await headers();
-    isHttps = hdrs.get('x-forwarded-proto') === 'https';
-  } catch {
-    isHttps = false;
-  }
+    const cookieStore = await cookies();
+    let isHttps = false;
+    try {
+      const hdrs = await headers();
+      isHttps = hdrs.get('x-forwarded-proto') === 'https';
+    } catch {
+      isHttps = false;
+    }
 
-  cookieStore.set(SESSION_COOKIE_NAME, token, {
-    httpOnly: true,
-    sameSite: 'lax',
-    secure: isHttps,
-    path: '/',
-    maxAge: SESSION_TTL_SECONDS,
-  });
+    cookieStore.set(SESSION_COOKIE_NAME, token, {
+      httpOnly: true,
+      sameSite: 'lax',
+      secure: isHttps,
+      path: '/',
+      maxAge: SESSION_TTL_SECONDS,
+    });
+  } catch {
+    // Gracefully handle invocation outside Next.js request context (e.g. tests or scripts)
+  }
 }
 
 export async function clearServerSessionCookie(): Promise<void> {
-  const cookieStore = await cookies();
-  cookieStore.delete(SESSION_COOKIE_NAME);
+  try {
+    const cookieStore = await cookies();
+    cookieStore.delete(SESSION_COOKIE_NAME);
+  } catch {
+    // Gracefully handle invocation outside Next.js request context
+  }
 }
 
 export async function getServerSession(): Promise<{

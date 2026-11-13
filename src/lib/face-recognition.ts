@@ -72,6 +72,12 @@ export interface FrameFaceAnalysis {
 }
 
 export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<FrameFaceAnalysis> {
+  if (videoEl && videoEl.paused) {
+    try {
+      videoEl.play().catch(() => {});
+    } catch {}
+  }
+
   if (!videoEl || videoEl.readyState < 2 || videoEl.videoWidth === 0 || videoEl.videoHeight === 0) {
     return {
       status: 'NO_FACE',
@@ -80,26 +86,27 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
     };
   }
 
-  const faceapi = await ensureFaceModelsLoaded();
-  const options = new faceapi.TinyFaceDetectorOptions({
-    inputSize: 320,
-    scoreThreshold: 0.4,
-  });
+  try {
+    const faceapi = await ensureFaceModelsLoaded();
+    const options = new faceapi.TinyFaceDetectorOptions({
+      inputSize: 320,
+      scoreThreshold: 0.4,
+    });
 
-  const detections = await faceapi
-    .detectAllFaces(videoEl, options)
-    .withFaceLandmarks(true)
-    .withFaceDescriptors();
+    const detections = await faceapi
+      .detectAllFaces(videoEl, options)
+      .withFaceLandmarks(true)
+      .withFaceDescriptors();
 
-  if (!detections || detections.length === 0) {
-    return {
-      status: 'NO_FACE',
-      message: 'No face detected. Look at the camera.',
-      faceCount: 0,
-      videoWidth: videoEl.videoWidth,
-      videoHeight: videoEl.videoHeight,
-    };
-  }
+    if (!detections || detections.length === 0) {
+      return {
+        status: 'NO_FACE',
+        message: 'No face detected. Look at the camera.',
+        faceCount: 0,
+        videoWidth: videoEl.videoWidth,
+        videoHeight: videoEl.videoHeight,
+      };
+    }
 
   if (detections.length > 1) {
     return {
@@ -176,6 +183,15 @@ export async function analyzeVideoFrame(videoEl: HTMLVideoElement): Promise<Fram
     videoWidth: videoEl.videoWidth,
     videoHeight: videoEl.videoHeight,
   };
+  } catch {
+    return {
+      status: 'NO_FACE',
+      message: 'Processing optical sensor frame...',
+      faceCount: 0,
+      videoWidth: videoEl.videoWidth,
+      videoHeight: videoEl.videoHeight,
+    };
+  }
 }
 
 export function captureFaceThumbnail(videoEl: HTMLVideoElement): string | undefined {

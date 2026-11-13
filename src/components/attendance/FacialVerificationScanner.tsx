@@ -297,6 +297,9 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
     livenessPassed: false,
   });
 
+  const [isFeedStalled, setIsFeedStalled] = React.useState<boolean>(false);
+  const feedStalledCountRef = React.useRef<number>(0);
+
   // Stable refs so parent re-renders or typing PIN never restarts an active camera session
   const onVerifiedRef = React.useRef(onVerified);
   const onEnrolledRef = React.useRef(onEnrolled);
@@ -342,6 +345,12 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
       window.clearTimeout(loopTimerRef.current);
       loopTimerRef.current = null;
     }
+    if (videoRef.current) {
+      try {
+        videoRef.current.pause();
+      } catch {}
+      videoRef.current.srcObject = null;
+    }
     if (streamRef.current) {
       streamRef.current.getTracks().forEach((track) => {
         try {
@@ -351,9 +360,6 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
         }
       });
       streamRef.current = null;
-    }
-    if (videoRef.current) {
-      videoRef.current.srcObject = null;
     }
     clearOverlayCanvas();
   }, [clearOverlayCanvas]);
@@ -391,8 +397,14 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
       return;
     }
 
+    const hadActiveStream = Boolean(streamRef.current);
     stopCamera();
+    if (hadActiveStream) {
+      await new Promise((resolve) => window.setTimeout(resolve, 100));
+    }
     resetTracking();
+    setIsFeedStalled(false);
+    feedStalledCountRef.current = 0;
     const runId = ++scanRunIdRef.current;
     setErrorMsg(null);
     setPhase('LOADING_MODELS');
@@ -411,14 +423,30 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
         );
       }
 
-      const stream = await navigator.mediaDevices.getUserMedia({
-        video: {
-          facingMode: 'user',
-          width: { ideal: 640 },
-          height: { ideal: 480 },
-        },
-        audio: false,
-      });
+      // Multi-tier constraint fallback for iOS Safari and Android Chrome
+      let stream: MediaStream;
+      try {
+        stream = await navigator.mediaDevices.getUserMedia({
+          video: {
+            facingMode: { ideal: 'user' },
+            width: { ideal: 640 },
+            height: { ideal: 480 },
+          },
+          audio: false,
+        });
+      } catch {
+        try {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: { facingMode: 'user' },
+            audio: false,
+          });
+        } catch {
+          stream = await navigator.mediaDevices.getUserMedia({
+            video: true,
+            audio: false,
+          });
+        }
+      }
 
       if (!isMountedRef.current || scanRunIdRef.current !== runId) {
         stream.getTracks().forEach((t) => t.stop());
@@ -429,19 +457,52 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
 
       const videoEl = videoRef.current;
       if (videoEl) {
+        videoEl.setAttribute('playsinline', 'true');
+        videoEl.setAttribute('webkit-playsinline', 'true');
+        videoEl.muted = true;
         videoEl.srcObject = stream;
-        if (videoEl.readyState < 1) {
-          await new Promise<void>((resolve) => {
-            const onReady = () => {
-              videoEl.removeEventListener('loadedmetadata', onReady);
-              resolve();
-            };
-            videoEl.addEventListener('loadedmetadata', onReady);
-            window.setTimeout(onReady, 1500);
-          });
+
+        try {
+          await videoEl.play();
+        } catch {
+          // May require stream readiness
         }
-        if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
-        await videoEl.play().catch(() => {});
+
+        await new Promise<void>((resolve) => {
+          let resolved = false;
+          const finish = () => {
+            if (!resolved) {
+              resolved = true;
+              resolve();
+            }
+          };
+
+          const checkReady = () => {
+            if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+              finish();
+            }
+          };
+
+          videoEl.addEventListener('loadedmetadata', checkReady, { once: true });
+          videoEl.addEventListener('canplay', checkReady, { once: true });
+          videoEl.addEventListener('playing', checkReady, { once: true });
+
+          const poll = window.setInterval(() => {
+            if (videoEl.readyState >= 2 && videoEl.videoWidth > 0) {
+              window.clearInterval(poll);
+              finish();
+            }
+          }, 100);
+
+          window.setTimeout(() => {
+            window.clearInterval(poll);
+            finish();
+          }, 4000);
+        });
+
+        if (videoEl.paused) {
+          await videoEl.play().catch(() => {});
+        }
       }
 
       if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
@@ -458,12 +519,30 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
           return;
         }
 
+        if (videoRef.current.paused) {
+          try {
+            videoRef.current.play().catch(() => {});
+          } catch {}
+        }
+
         try {
           const analysis = await analyzeVideoFrame(videoRef.current);
           if (!isMountedRef.current || scanRunIdRef.current !== runId || completedRef.current) return;
 
           if (overlayCanvasRef.current) {
             drawBiometricHudOverlay(overlayCanvasRef.current, analysis, livenessPassedRef.current);
+          }
+
+          if (analysis.status === 'NO_FACE' && analysis.message === 'Initializing camera feed...') {
+            feedStalledCountRef.current += 1;
+            if (feedStalledCountRef.current > 14) {
+              setIsFeedStalled(true);
+            }
+          } else {
+            feedStalledCountRef.current = 0;
+            if (isFeedStalled) {
+              setIsFeedStalled(false);
+            }
           }
 
           if (analysis.status !== 'OK' || !analysis.descriptor) {
@@ -627,10 +706,16 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
       if (!isMountedRef.current || scanRunIdRef.current !== runId) return;
       stopCamera();
       setPhase('ERROR');
-      const msg =
-        err instanceof Error
-          ? err.message
-          : 'Unable to access camera. Please allow camera permissions and try again.';
+      let msg = 'Unable to access camera. Please allow camera permissions and try again.';
+      if (err instanceof Error) {
+        if (err.name === 'NotAllowedError' || err.name === 'PermissionDeniedError') {
+          msg = 'Camera permission was denied. On iOS Safari, tap "aA" in the address bar → Website Settings → Camera → Allow, then tap Try Again.';
+        } else if (err.name === 'NotReadableError' || err.name === 'AbortError') {
+          msg = 'The camera is currently busy or locked by the system. Please close other camera tabs and tap Try Again.';
+        } else {
+          msg = err.message;
+        }
+      }
       setErrorMsg(msg);
       setStatusText('Could not start camera.');
     }
@@ -827,6 +912,29 @@ export const FacialVerificationScanner: React.FC<FacialVerificationScannerProps>
                 <Eye className="w-3.5 h-3.5 shrink-0" />
                 <span>{livenessBadge}</span>
               </div>
+            </div>
+          )}
+
+          {/* iOS Safari Stalled Feed Recovery Overlay */}
+          {isFeedStalled && phase === 'SCANNING' && (
+            <div className="absolute inset-0 bg-slate-950/80 backdrop-blur-xs flex flex-col items-center justify-center p-4 z-20 text-center space-y-2">
+              <p className="text-xs text-amber-200 font-semibold">Camera feed needs a tap to resume</p>
+              <button
+                type="button"
+                onClick={async () => {
+                  if (videoRef.current) {
+                    try {
+                      await videoRef.current.play();
+                    } catch {}
+                  }
+                  setIsFeedStalled(false);
+                  feedStalledCountRef.current = 0;
+                }}
+                className="px-4 py-2 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-lg flex items-center gap-1.5 cursor-pointer"
+              >
+                <Camera className="w-3.5 h-3.5" />
+                <span>Tap to Wake Camera</span>
+              </button>
             </div>
           )}
 

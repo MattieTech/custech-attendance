@@ -28,7 +28,12 @@ import {
   RotateCcw,
   Power,
   PowerOff,
+  FileDown,
+  FileSpreadsheet,
+  CheckCircle2,
 } from 'lucide-react';
+import { downloadAttendanceReportAction } from '@/actions/reports';
+import { downloadBase64File } from '@/lib/reports/download-helpers';
 
 interface DynamicQrDisplayProps {
   session: AttendanceSession;
@@ -227,6 +232,35 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
       setActionError(err instanceof Error ? err.message : 'Failed to toggle code status');
     } finally {
       setIsLoading(false);
+    }
+  };
+
+  const [isDownloadingReport, setIsDownloadingReport] = React.useState<'pdf' | 'excel' | null>(null);
+
+  const handleDownloadReport = async (format: 'pdf' | 'excel') => {
+    try {
+      setIsDownloadingReport(format);
+      setActionError(null);
+      const res = await downloadAttendanceReportAction(session.id);
+      if (!res.success) {
+        setActionError(res.error || 'Failed to generate attendance report.');
+        return;
+      }
+      if (format === 'pdf' && res.pdfBase64) {
+        downloadBase64File(res.pdfBase64, `${res.filename || 'CUSTECH_Attendance'}.pdf`, 'application/pdf');
+      } else if (format === 'excel' && res.excelBase64) {
+        downloadBase64File(
+          res.excelBase64,
+          `${res.filename || 'CUSTECH_Attendance'}.xlsx`,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+      }
+      setActionSuccess(`${format === 'pdf' ? 'PDF' : 'Excel (.xlsx)'} attendance report downloaded successfully.`);
+      setTimeout(() => setActionSuccess(null), 4000);
+    } catch {
+      setActionError('An error occurred while downloading the report.');
+    } finally {
+      setIsDownloadingReport(null);
     }
   };
 
@@ -476,16 +510,55 @@ export const DynamicQrDisplay: React.FC<DynamicQrDisplayProps> = ({
           </p>
         </div>
       ) : (
-        <div className="py-12 flex flex-col items-center">
-          <div className="w-16 h-16 rounded-full bg-slate-100 text-slate-500 flex items-center justify-center mb-3">
-            <Square className="w-8 h-8" />
+        <div className="py-8 flex flex-col items-center max-w-md mx-auto text-center w-full">
+          <div className="w-14 h-14 rounded-full bg-emerald-50 text-emerald-700 flex items-center justify-center mb-3 border border-emerald-200 shadow-sm">
+            <CheckCircle2 className="w-7 h-7" />
           </div>
           <h4 className="text-base font-bold text-slate-900">
-            Attendance Session Closed
+            Attendance Session Concluded
           </h4>
-          <p className="text-xs text-slate-500 max-w-xs mt-1">
-            Attendance capture for this lecture has concluded. Final records are locked for review.
+          <p className="text-xs text-slate-500 max-w-sm mt-1 mb-5">
+            Attendance capture for this lecture has concluded. Official reports are ready for download in PDF and Excel formats.
           </p>
+
+          <div className="w-full bg-[#fbf5ef] p-4 rounded-2xl border border-[#ecdacb] space-y-3 shadow-xs">
+            <div className="flex items-center justify-between text-xs pb-1 border-b border-[#ecdacb]">
+              <span className="font-bold text-[#8d4a27] flex items-center gap-1.5">
+                <FileDown className="w-4 h-4" />
+                <span>Official Attendance Reports</span>
+              </span>
+              <span className="text-[11px] text-slate-500 font-medium">Ready</span>
+            </div>
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+              <button
+                type="button"
+                onClick={() => handleDownloadReport('pdf')}
+                disabled={Boolean(isDownloadingReport)}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-[#8d4a27] hover:bg-[#743c22] text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
+              >
+                {isDownloadingReport === 'pdf' ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileDown className="w-3.5 h-3.5" />
+                )}
+                <span>Download PDF</span>
+              </button>
+
+              <button
+                type="button"
+                onClick={() => handleDownloadReport('excel')}
+                disabled={Boolean(isDownloadingReport)}
+                className="flex items-center justify-center gap-2 px-4 py-2.5 rounded-xl text-xs font-bold bg-emerald-700 hover:bg-emerald-800 text-white shadow-sm transition disabled:opacity-50 cursor-pointer"
+              >
+                {isDownloadingReport === 'excel' ? (
+                  <RefreshCw className="w-3.5 h-3.5 animate-spin" />
+                ) : (
+                  <FileSpreadsheet className="w-3.5 h-3.5" />
+                )}
+                <span>Download Excel (.xlsx)</span>
+              </button>
+            </div>
+          </div>
         </div>
       )}
 

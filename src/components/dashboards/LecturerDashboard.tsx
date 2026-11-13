@@ -38,7 +38,12 @@ import {
   Users,
   Radio,
   Plus,
+  FileDown,
+  FileSpreadsheet,
+  RefreshCw,
 } from 'lucide-react';
+import { downloadAttendanceReportAction } from '@/actions/reports';
+import { downloadBase64File } from '@/lib/reports/download-helpers';
 
 interface LecturerDashboardProps {
   user: UserProfile;
@@ -59,6 +64,32 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
   const [newTopicTitle, setNewTopicTitle] = React.useState('');
   const [newTopicObj, setNewTopicObj] = React.useState('');
   const [isSavingSyllabus, setIsSavingSyllabus] = React.useState(false);
+  const [downloadingReportKey, setDownloadingReportKey] = React.useState<string | null>(null);
+
+  const handleDownloadReport = async (sessionId: string, format: 'pdf' | 'excel') => {
+    const key = `${sessionId}_${format}`;
+    try {
+      setDownloadingReportKey(key);
+      const res = await downloadAttendanceReportAction(sessionId);
+      if (!res.success) {
+        alert(res.error || 'Failed to generate attendance report.');
+        return;
+      }
+      if (format === 'pdf' && res.pdfBase64) {
+        downloadBase64File(res.pdfBase64, `${res.filename || 'CUSTECH_Attendance'}.pdf`, 'application/pdf');
+      } else if (format === 'excel' && res.excelBase64) {
+        downloadBase64File(
+          res.excelBase64,
+          `${res.filename || 'CUSTECH_Attendance'}.xlsx`,
+          'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        );
+      }
+    } catch {
+      alert('An unexpected error occurred while downloading attendance report.');
+    } finally {
+      setDownloadingReportKey(null);
+    }
+  };
 
   const syncFromServer = React.useCallback(async () => {
     try {
@@ -684,9 +715,20 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                     Attendance Console — {activeCourse?.code} (Week {activeSession.weekNumber || 1})
                   </h3>
                 </div>
-                <span className="text-xs text-slate-500 font-medium">
-                  Venue: {activeSession.venue || 'LH 101'}
-                </span>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs text-slate-500 font-medium">
+                    Venue: {activeSession.venue || 'LH 101'}
+                  </span>
+                  {activeSession.status === 'CLOSED' && (
+                    <button
+                      type="button"
+                      onClick={() => setSelectedSessionId(null)}
+                      className="text-xs font-bold text-slate-600 hover:text-slate-900 px-3 py-1 rounded-lg border border-slate-200 bg-white hover:bg-slate-50 transition cursor-pointer"
+                    >
+                      Done Viewing
+                    </button>
+                  )}
+                </div>
               </div>
 
               <DynamicQrDisplay
@@ -704,11 +746,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                 onOpenKiosk={() => setIsKioskOpen(true)}
                 onSessionUpdate={(updated) => {
                   custechDb.upsertClientSession(updated);
-                  if (updated.status === 'CLOSED' || updated.status === 'CANCELLED') {
-                    setSelectedSessionId(null);
-                  } else {
-                    setSelectedSessionId(updated.id);
-                  }
+                  setSelectedSessionId(updated.id);
                   setRefreshTrigger((prev) => prev + 1);
                   void syncFromServer();
                 }}
@@ -951,39 +989,71 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                 {lecturerSessions.slice(0, 5).map((sess) => {
                   const recs = custechDb.getRecordsForSession(sess.id);
                   return (
-                    <button
+                    <div
                       key={sess.id}
-                      type="button"
-                      onClick={() => {
-                        setSelectedOfferingId(sess.courseOfferingId);
-                        setSelectedSessionId(sess.id);
-                      }}
-                      className="w-full text-left p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition flex items-center justify-between gap-2 text-xs"
+                      className="w-full p-3 rounded-xl border border-slate-100 hover:bg-slate-50 transition flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs"
                     >
-                      <div className="min-w-0">
+                      <div
+                        onClick={() => {
+                          setSelectedOfferingId(sess.courseOfferingId);
+                          setSelectedSessionId(sess.id);
+                        }}
+                        className="min-w-0 cursor-pointer flex-1"
+                      >
                         <div className="flex items-center gap-2">
                           <span className="font-bold text-slate-900">
                             {sess.courseOffering?.course?.code || 'COURSE'}
                           </span>
                           <span className="text-slate-400">•</span>
                           <span className="text-slate-500">Wk {sess.weekNumber || 1}</span>
+                          <span
+                            className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
+                              sess.status === 'ACTIVE'
+                                ? 'bg-emerald-100 text-emerald-800'
+                                : sess.status === 'PAUSED'
+                                ? 'bg-amber-100 text-amber-800'
+                                : 'bg-slate-100 text-slate-600'
+                            }`}
+                          >
+                            {sess.status}
+                          </span>
                         </div>
                         <span className="text-[11px] text-slate-400 block mt-0.5">
-                          {formatDate(sess.date)} • {recs.length} marked
+                          {formatDate(sess.date)} • {recs.length} verified attendees
                         </span>
                       </div>
-                      <span
-                        className={`px-2 py-0.5 rounded-full text-[10px] font-bold uppercase shrink-0 ${
-                          sess.status === 'ACTIVE'
-                            ? 'bg-emerald-100 text-emerald-800'
-                            : sess.status === 'PAUSED'
-                            ? 'bg-amber-100 text-amber-800'
-                            : 'bg-slate-100 text-slate-600'
-                        }`}
-                      >
-                        {sess.status}
-                      </span>
-                    </button>
+
+                      <div className="flex items-center gap-1.5 shrink-0">
+                        <button
+                          type="button"
+                          title="Download PDF Attendance Report"
+                          disabled={downloadingReportKey === `${sess.id}_pdf`}
+                          onClick={() => void handleDownloadReport(sess.id, 'pdf')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-[11px] font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                        >
+                          {downloadingReportKey === `${sess.id}_pdf` ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <FileDown className="w-3 h-3" />
+                          )}
+                          <span>PDF</span>
+                        </button>
+                        <button
+                          type="button"
+                          title="Download Excel Attendance Report"
+                          disabled={downloadingReportKey === `${sess.id}_excel`}
+                          onClick={() => void handleDownloadReport(sess.id, 'excel')}
+                          className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                        >
+                          {downloadingReportKey === `${sess.id}_excel` ? (
+                            <RefreshCw className="w-3 h-3 animate-spin" />
+                          ) : (
+                            <FileSpreadsheet className="w-3 h-3" />
+                          )}
+                          <span>.xlsx</span>
+                        </button>
+                      </div>
+                    </div>
                   );
                 })}
               </div>
@@ -1287,7 +1357,7 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                           </div>
                         </div>
 
-                        <div className="flex items-center gap-3">
+                        <div className="flex items-center gap-2">
                           <div className="text-left sm:text-right">
                             <span className="text-xs font-extrabold text-slate-900 block">
                               {records.length} / {totalPossible} Present
@@ -1296,12 +1366,51 @@ export const LecturerDashboard: React.FC<LecturerDashboardProps> = ({ user }) =>
                               {pct}% Attendance
                             </span>
                           </div>
+
+                          <div className="flex items-center gap-1">
+                            <button
+                              type="button"
+                              title="Download Official PDF Report"
+                              disabled={downloadingReportKey === `${sess.id}_pdf`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDownloadReport(sess.id, 'pdf');
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-[#8d4a27] hover:bg-[#743c22] text-white text-[11px] font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                            >
+                              {downloadingReportKey === `${sess.id}_pdf` ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <FileDown className="w-3 h-3" />
+                              )}
+                              <span>PDF</span>
+                            </button>
+
+                            <button
+                              type="button"
+                              title="Download Excel (.xlsx) Report"
+                              disabled={downloadingReportKey === `${sess.id}_excel`}
+                              onClick={(e) => {
+                                e.stopPropagation();
+                                void handleDownloadReport(sess.id, 'excel');
+                              }}
+                              className="inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg bg-emerald-700 hover:bg-emerald-800 text-white text-[11px] font-bold shadow-xs transition disabled:opacity-50 cursor-pointer"
+                            >
+                              {downloadingReportKey === `${sess.id}_excel` ? (
+                                <RefreshCw className="w-3 h-3 animate-spin" />
+                              ) : (
+                                <FileSpreadsheet className="w-3 h-3" />
+                              )}
+                              <span>Excel</span>
+                            </button>
+                          </div>
+
                           <button
                             type="button"
                             onClick={() =>
                               setExpandedSessionId(isExpanded ? null : sess.id)
                             }
-                            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition"
+                            className="p-1.5 rounded-lg border border-slate-200 bg-white hover:bg-slate-100 text-slate-600 transition cursor-pointer"
                           >
                             <ChevronDown
                               className={`w-4 h-4 transition-transform duration-200 ${

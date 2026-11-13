@@ -30,6 +30,7 @@ import {
   getFacultiesAndDepartmentsAction,
 } from '@/actions/academic';
 import { Department, Faculty } from '@/types';
+import { custechDb } from '@/lib/db/repository';
 
 type LecturerItem = Awaited<ReturnType<typeof getLecturersAction>>[number];
 type OfferingItem = Awaited<ReturnType<typeof getCourseOfferingsAction>>[number];
@@ -247,6 +248,9 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
         if (!res.success) {
           setFormError(res.error || 'Failed to update lecturer');
         } else {
+          if (res.lecturer) {
+            custechDb.syncClientProfileAndStudent(res.lecturer);
+          }
           setFormSuccess('Lecturer profile updated successfully.');
           await loadData();
           setTimeout(() => setEditingLecturer(null), 1000);
@@ -265,6 +269,9 @@ export const LecturerManagementTab: React.FC<LecturerManagementTabProps> = ({ ad
         if (!res.success) {
           setFormError(res.error || 'Failed to register lecturer');
         } else {
+          if (res.lecturer) {
+            custechDb.syncClientProfileAndStudent(res.lecturer);
+          }
           setFormSuccess('Lecturer registered and added to faculty directory.');
           await loadData();
           setTimeout(() => setIsAddModalOpen(false), 1000);

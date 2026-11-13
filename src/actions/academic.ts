@@ -398,6 +398,7 @@ export async function loginStudentAction(
   password?: string,
   isQuickDemoLogin?: boolean
 ) {
+  custechDb.ensureFreshData();
   const cleanMatric = matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
     return { success: false, error: 'Please enter your Matriculation Number.' };
@@ -448,6 +449,7 @@ export async function loginStudentAction(
  * Server-side staff authentication directly querying the persistent CUSTECH database
  */
 export async function loginStaffAction(identifier: string, _password?: string) {
+  custechDb.ensureFreshData();
   const cleanId = identifier.trim().toLowerCase();
   if (!cleanId) {
     return { success: false, error: 'Please enter your Staff ID or University Email.' };

@@ -98,6 +98,7 @@ class CustechDatabase {
   private sessionLiveDescriptors: SessionLiveDescriptor[] = [];
   private departmentCurricula: Record<string, string[]> = {};
   private courseRegistrationRequests: CourseRegistrationRequest[] = [];
+  private lastLoadedMtime = 0;
 
   constructor() {
     this.loadPersistentData();
@@ -118,6 +119,23 @@ class CustechDatabase {
     }
   }
 
+  ensureFreshData(): void {
+    if (typeof window !== 'undefined') return;
+    try {
+      // eslint-disable-next-line @typescript-eslint/no-require-imports
+      const fs = require('fs');
+      const storeFile = this.getStorageFilePath();
+      if (storeFile && fs.existsSync(storeFile)) {
+        const stat = fs.statSync(storeFile);
+        if (stat.mtimeMs > this.lastLoadedMtime) {
+          this.loadPersistentData();
+        }
+      }
+    } catch (err) {
+      console.warn('Could not check fresh data timestamp:', err);
+    }
+  }
+
   private applyPersistedPayload(parsed: Record<string, unknown>): void {
     const mergeById = <T extends { id: string }>(target: T[], items: unknown, prepend = false) => {
       if (!Array.isArray(items)) return;
@@ -129,11 +147,26 @@ class CustechDatabase {
       });
     };
 
-    if (Array.isArray(parsed.profiles)) this.profiles = parsed.profiles as UserProfile[];
-    else mergeById(this.profiles, parsed.customProfiles, true);
+    if (Array.isArray(parsed.profiles)) {
+      this.profiles = [...initialProfiles];
+      mergeById(this.profiles, parsed.profiles, true);
+    } else {
+      mergeById(this.profiles, parsed.customProfiles, true);
+    }
 
-    if (Array.isArray(parsed.students)) this.students = parsed.students as Student[];
-    else mergeById(this.students, parsed.customStudents, true);
+    if (Array.isArray(parsed.students)) {
+      this.students = [...initialStudents];
+      mergeById(this.students, parsed.students, true);
+    } else {
+      mergeById(this.students, parsed.customStudents, true);
+    }
+
+    // Always ensure all students have their profile properly linked
+    this.students.forEach((s) => {
+      if (!s.profile || !s.profile.id) {
+        s.profile = this.getProfileById(s.profileId);
+      }
+    });
 
     if (Array.isArray(parsed.enrollments)) this.enrollments = parsed.enrollments as Enrollment[];
     else mergeById(this.enrollments, parsed.customEnrollments);
@@ -287,6 +320,8 @@ class CustechDatabase {
       const fs = require('fs');
       const storeFile = this.getStorageFilePath();
       if (storeFile && fs.existsSync(storeFile)) {
+        const stat = fs.statSync(storeFile);
+        this.lastLoadedMtime = stat.mtimeMs;
         const fileContent = fs.readFileSync(storeFile, 'utf8');
         this.applyPersistedPayload(JSON.parse(fileContent));
       }
@@ -359,6 +394,9 @@ class CustechDatabase {
       const storeFile = this.getStorageFilePath();
       if (storeFile) {
         fs.writeFileSync(storeFile, JSON.stringify(payload, null, 2), 'utf8');
+        try {
+          this.lastLoadedMtime = fs.statSync(storeFile).mtimeMs;
+        } catch {}
       }
     } catch (err) {
       console.warn('Could not save to filesystem:', err);
@@ -369,14 +407,17 @@ class CustechDatabase {
   // PROFILES & ROLES
   // ==========================================
   getProfiles(): UserProfile[] {
+    this.ensureFreshData();
     return [...this.profiles];
   }
 
   getProfileById(id: string): UserProfile | undefined {
+    this.ensureFreshData();
     return this.profiles.find((p) => p.id === id);
   }
 
   getProfileByEmail(email: string): UserProfile | undefined {
+    this.ensureFreshData();
     return this.profiles.find((p) => p.email.toLowerCase() === email.toLowerCase());
   }
 
@@ -384,6 +425,7 @@ class CustechDatabase {
   // STUDENTS & REPS
   // ==========================================
   getStudentByProfileId(profileId: string): (Student & { profile?: UserProfile }) | undefined {
+    this.ensureFreshData();
     const student = this.students.find((s) => s.profileId === profileId);
     if (!student) return undefined;
     const profile = this.getProfileById(student.profileId);
@@ -391,6 +433,7 @@ class CustechDatabase {
   }
 
   getStudentByMatric(matric: string): (Student & { profile?: UserProfile }) | undefined {
+    this.ensureFreshData();
     const normalized = matric.trim().toUpperCase();
     const student = this.students.find((s) => s.matricNumber.toUpperCase() === normalized);
     if (!student) return undefined;
@@ -399,6 +442,7 @@ class CustechDatabase {
   }
 
   getStudentById(id: string): (Student & { profile?: UserProfile }) | undefined {
+    this.ensureFreshData();
     const student = this.students.find((s) => s.id === id);
     if (!student) return undefined;
     const profile = this.getProfileById(student.profileId);
@@ -431,6 +475,7 @@ class CustechDatabase {
     enrollInCourses?: boolean;
     actorId?: string;
   }): { student: Student; profile: UserProfile } {
+    this.ensureFreshData();
     const cleanMatric = params.matricNumber.trim().toUpperCase();
     const cleanEmail = params.email?.trim()
       ? params.email.trim().toLowerCase()
@@ -886,6 +931,7 @@ class CustechDatabase {
     departmentName: string;
     facultyName: string;
   })[] {
+    this.ensureFreshData();
     return this.students.map((s) => {
       const profile = this.getProfileById(s.profileId);
       const enrolledCount = this.enrollments.filter((e) => e.studentId === s.id && e.isActive).length;
@@ -903,11 +949,32 @@ class CustechDatabase {
   }
 
   syncClientProfileAndStudent(profile: UserProfile, student?: Student): void {
-    if (!this.profiles.some((p) => p.id === profile.id || p.matricNumber === profile.matricNumber)) {
+    const profIdx = this.profiles.findIndex((p) => {
+      if (p.id === profile.id) return true;
+      if (profile.matricNumber && p.matricNumber && p.matricNumber.toUpperCase() === profile.matricNumber.toUpperCase()) return true;
+      if (profile.email && p.email && p.email.toLowerCase() === profile.email.toLowerCase()) return true;
+      if (profile.staffId && p.staffId && p.staffId.toLowerCase() === profile.staffId.toLowerCase()) return true;
+      return false;
+    });
+    if (profIdx >= 0) {
+      this.profiles[profIdx] = { ...this.profiles[profIdx], ...profile };
+    } else {
       this.profiles.unshift(profile);
     }
-    if (student && !this.students.some((s) => s.id === student.id || s.matricNumber === student.matricNumber)) {
-      this.students.unshift({ ...student, profile });
+
+    if (student) {
+      const stuIdx = this.students.findIndex((s) => {
+        if (s.id === student.id) return true;
+        if (s.profileId === profile.id) return true;
+        if (student.matricNumber && s.matricNumber && s.matricNumber.toUpperCase() === student.matricNumber.toUpperCase()) return true;
+        return false;
+      });
+      const resolvedStudent = { ...student, profile: this.profiles[profIdx >= 0 ? profIdx : 0] || profile };
+      if (stuIdx >= 0) {
+        this.students[stuIdx] = { ...this.students[stuIdx], ...resolvedStudent };
+      } else {
+        this.students.unshift(resolvedStudent);
+      }
     }
     this.savePersistentData();
   }
@@ -1129,26 +1196,54 @@ class CustechDatabase {
     auditLogs?: AuditLog[];
   }): void {
     if (typeof window === 'undefined') return;
-    if (Array.isArray(data.profiles)) this.profiles = data.profiles;
-    if (Array.isArray(data.students)) this.students = data.students;
-    if (Array.isArray(data.departments)) this.departments = data.departments;
-    if (Array.isArray(data.faculties)) this.faculties = data.faculties;
-    if (Array.isArray(data.courses)) this.courses = data.courses;
-    if (Array.isArray(data.courseOfferings)) this.courseOfferings = data.courseOfferings;
-    if (Array.isArray(data.timetables)) this.timetables = data.timetables;
-    if (Array.isArray(data.enrollments)) this.enrollments = data.enrollments;
-    if (Array.isArray(data.sessions)) this.sessions = data.sessions;
-    if (Array.isArray(data.attendanceRecords)) this.attendanceRecords = data.attendanceRecords;
-    if (Array.isArray(data.corrections)) this.corrections = data.corrections;
-    if (Array.isArray(data.syllabusTopics)) this.syllabusTopics = data.syllabusTopics;
-    if (Array.isArray(data.staffAttendance)) this.staffAttendance = data.staffAttendance;
-    if (Array.isArray(data.medicalWaivers)) this.medicalWaivers = data.medicalWaivers;
-    if (Array.isArray(data.notifications)) this.notifications = data.notifications;
-    if (Array.isArray(data.courseReps)) this.courseReps = data.courseReps;
-    if (Array.isArray(data.deviceCollisionAlerts)) this.deviceCollisionAlerts = data.deviceCollisionAlerts;
-    if (Array.isArray(data.courseRegistrationRequests)) this.courseRegistrationRequests = data.courseRegistrationRequests;
+    if (Array.isArray(data.profiles) && data.profiles.length > 0) {
+      data.profiles.forEach((p) => {
+        const idx = this.profiles.findIndex((ep) => ep.id === p.id);
+        if (idx >= 0) this.profiles[idx] = { ...this.profiles[idx], ...p };
+        else this.profiles.push(p);
+      });
+    }
+    if (Array.isArray(data.students) && data.students.length > 0) {
+      data.students.forEach((s) => {
+        const idx = this.students.findIndex(
+          (es) =>
+            es.id === s.id ||
+            (es.matricNumber && s.matricNumber && es.matricNumber.toUpperCase() === s.matricNumber.toUpperCase())
+        );
+        if (idx >= 0) this.students[idx] = { ...this.students[idx], ...s };
+        else this.students.push(s);
+      });
+    }
+    if (Array.isArray(data.departments) && data.departments.length > 0) this.departments = data.departments;
+    if (Array.isArray(data.faculties) && data.faculties.length > 0) this.faculties = data.faculties;
+    if (Array.isArray(data.courses) && data.courses.length > 0) this.courses = data.courses;
+    if (Array.isArray(data.courseOfferings) && data.courseOfferings.length > 0) this.courseOfferings = data.courseOfferings;
+    if (Array.isArray(data.timetables) && data.timetables.length > 0) this.timetables = data.timetables;
+    if (Array.isArray(data.enrollments) && data.enrollments.length > 0) this.enrollments = data.enrollments;
+    if (Array.isArray(data.sessions) && data.sessions.length > 0) {
+      data.sessions.forEach((s) => {
+        const idx = this.sessions.findIndex((es) => es.id === s.id);
+        if (idx >= 0) this.sessions[idx] = { ...this.sessions[idx], ...s };
+        else this.sessions.push(s);
+      });
+    }
+    if (Array.isArray(data.attendanceRecords) && data.attendanceRecords.length > 0) {
+      data.attendanceRecords.forEach((r) => {
+        const idx = this.attendanceRecords.findIndex((er) => er.id === r.id);
+        if (idx >= 0) this.attendanceRecords[idx] = { ...this.attendanceRecords[idx], ...r };
+        else this.attendanceRecords.push(r);
+      });
+    }
+    if (Array.isArray(data.corrections) && data.corrections.length > 0) this.corrections = data.corrections;
+    if (Array.isArray(data.syllabusTopics) && data.syllabusTopics.length > 0) this.syllabusTopics = data.syllabusTopics;
+    if (Array.isArray(data.staffAttendance) && data.staffAttendance.length > 0) this.staffAttendance = data.staffAttendance;
+    if (Array.isArray(data.medicalWaivers) && data.medicalWaivers.length > 0) this.medicalWaivers = data.medicalWaivers;
+    if (Array.isArray(data.notifications) && data.notifications.length > 0) this.notifications = data.notifications;
+    if (Array.isArray(data.courseReps) && data.courseReps.length > 0) this.courseReps = data.courseReps;
+    if (Array.isArray(data.deviceCollisionAlerts) && data.deviceCollisionAlerts.length > 0) this.deviceCollisionAlerts = data.deviceCollisionAlerts;
+    if (Array.isArray(data.courseRegistrationRequests) && data.courseRegistrationRequests.length > 0) this.courseRegistrationRequests = data.courseRegistrationRequests;
     if (data.systemSettings) this.systemSettings = { ...this.systemSettings, ...data.systemSettings };
-    if (Array.isArray(data.auditLogs)) this.auditLogs = data.auditLogs;
+    if (Array.isArray(data.auditLogs) && data.auditLogs.length > 0) this.auditLogs = data.auditLogs;
 
     this.savePersistentData();
 
@@ -1781,6 +1876,7 @@ class CustechDatabase {
     classroom?: Classroom;
     lecturer?: UserProfile;
   }) | undefined {
+    this.ensureFreshData();
     this.expireStaleSessions();
     const s = this.sessions.find((sess) => sess.id === id);
     if (!s) return undefined;
@@ -2036,6 +2132,7 @@ class CustechDatabase {
   // ATTENDANCE RECORDS & SUBMISSION (WITH STRICT DEDUPLICATION)
   // ==========================================
   getRecordsForSession(sessionId: string): (AttendanceRecord & { student?: Student & { profile?: UserProfile } })[] {
+    this.ensureFreshData();
     return this.attendanceRecords
       .filter((r) => r.sessionId === sessionId)
       .map((r) => ({
@@ -3478,6 +3575,7 @@ class CustechDatabase {
   // LECTURER DIRECTORY & ASSIGNMENTS
   // ==========================================
   getLecturers(): (UserProfile & { departmentName?: string; assignedCoursesCount?: number; assignedCourses?: string[] })[] {
+    this.ensureFreshData();
     const lecturers = this.profiles.filter(
       (p) => p.primaryRole === 'LECTURER' || p.assignedRoles.includes('LECTURER')
     );
@@ -3510,6 +3608,7 @@ class CustechDatabase {
     },
     actorId: string
   ): UserProfile {
+    this.ensureFreshData();
     const cleanEmail = data.email.trim().toLowerCase();
     if (this.profiles.some((p) => p.email.toLowerCase() === cleanEmail)) {
       throw new Error(`User with email "${cleanEmail}" already exists.`);
@@ -3559,6 +3658,7 @@ class CustechDatabase {
     }>,
     actorId: string
   ): UserProfile {
+    this.ensureFreshData();
     const lecturer = this.profiles.find((p) => p.id === lecturerId);
     if (!lecturer) throw new Error('Lecturer not found');
 
