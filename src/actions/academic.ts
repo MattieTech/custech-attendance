@@ -252,6 +252,7 @@ export async function registerStudentAction(
       ...studentData,
       actorId: actor.user.id,
     });
+    await custechDb.savePersistentDataAsync();
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
     return {
@@ -278,6 +279,7 @@ export async function updateStudentAction(
   try {
     const actor = await requireSuperAdmin();
     const result = custechDb.updateStudent(studentId, studentData, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
     return {
@@ -295,6 +297,7 @@ export async function toggleStudentStatusAction(
   try {
     const actor = await requireSuperAdmin();
     const result = custechDb.toggleStudentActiveStatus(studentId, isActive, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, student: result.student, profile: result.profile };
   } catch (err: unknown) {
     return {
@@ -312,6 +315,7 @@ export async function assignUserRoleAction(
   try {
     const actor = await requireSuperAdmin();
     const profile = custechDb.assignUserRole(userId, newRole, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, profile };
   } catch (err: unknown) {
     return {
@@ -337,6 +341,7 @@ export async function bulkImportStudentsAction(
   try {
     const actor = await requireSuperAdmin();
     const summary = custechDb.bulkRegisterStudents(records, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, summary };
   } catch (err: unknown) {
     return {
@@ -347,11 +352,13 @@ export async function bulkImportStudentsAction(
 }
 
 export async function getAllUsersWithRolesAction() {
+  await custechDb.ensureFreshDataAsync();
   await requireStaffOrAdmin();
   return custechDb.getAllUsersWithRoles();
 }
 
 export async function getDepartmentAttendanceStatsAction(departmentId: string = 'dept-csc') {
+  await custechDb.ensureFreshDataAsync();
   await requireStaffOrAdmin();
   return custechDb.getDepartmentAttendanceStats(departmentId);
 }
@@ -360,6 +367,7 @@ export async function deleteStudentAction(studentId: string, _actorId?: string) 
   try {
     const actor = await requireSuperAdmin();
     const ok = custechDb.deleteStudent(studentId, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: ok };
   } catch (err: unknown) {
     return {
@@ -373,6 +381,7 @@ export async function resetStudentPinAction(studentId: string, newPin: string, _
   try {
     const actor = await requireSuperAdmin();
     const ok = custechDb.resetStudentPin(studentId, newPin, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: ok };
   } catch (err: unknown) {
     return {
@@ -383,6 +392,7 @@ export async function resetStudentPinAction(studentId: string, newPin: string, _
 }
 
 export async function getAllStudentsDetailedAction() {
+  await custechDb.ensureFreshDataAsync();
   await requireStaffOrAdmin();
   return custechDb.getAllStudentsDetailed().map((s) => ({
     ...s,
@@ -398,7 +408,7 @@ export async function loginStudentAction(
   password?: string,
   isQuickDemoLogin?: boolean
 ) {
-  custechDb.ensureFreshData();
+  await custechDb.ensureFreshDataAsync();
   const cleanMatric = matricNumber.trim().toUpperCase();
   if (!cleanMatric) {
     return { success: false, error: 'Please enter your Matriculation Number.' };
@@ -449,7 +459,7 @@ export async function loginStudentAction(
  * Server-side staff authentication directly querying the persistent CUSTECH database
  */
 export async function loginStaffAction(identifier: string, _password?: string) {
-  custechDb.ensureFreshData();
+  await custechDb.ensureFreshDataAsync();
   const cleanId = identifier.trim().toLowerCase();
   if (!cleanId) {
     return { success: false, error: 'Please enter your Staff ID or University Email.' };
@@ -505,6 +515,7 @@ export async function loginStaffAction(identifier: string, _password?: string) {
  * for client-side hydration and offline caching.
  */
 export async function getDatabaseSnapshotAction() {
+  await custechDb.ensureFreshDataAsync();
   const serverSession = await getServerSession();
   return custechDb.getScopedSnapshot(
     serverSession
@@ -842,6 +853,7 @@ export async function bulkImportCoursesAction(
  * ==========================================
  */
 export async function getLecturersAction() {
+  await custechDb.ensureFreshDataAsync();
   return custechDb.getLecturers();
 }
 
@@ -859,6 +871,7 @@ export async function createLecturerAction(
   try {
     const actor = await requireSuperAdmin();
     const lecturer = custechDb.createLecturer(lecturerData, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -883,6 +896,7 @@ export async function updateLecturerAction(
   try {
     const actor = await requireSuperAdmin();
     const lecturer = custechDb.updateLecturer(lecturerId, lecturerData, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -900,6 +914,7 @@ export async function toggleLecturerActiveAction(
   try {
     const actor = await requireSuperAdmin();
     const lecturer = custechDb.toggleLecturerActive(lecturerId, isActive, actor.user.id);
+    await custechDb.savePersistentDataAsync();
     return { success: true, lecturer };
   } catch (err: unknown) {
     return {
@@ -922,6 +937,7 @@ export async function assignLecturerToCourseAction(
       lecturerId,
       actor.user.id
     );
+    await custechDb.savePersistentDataAsync();
     return { success: true, offering };
   } catch (err: unknown) {
     return {

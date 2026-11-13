@@ -15,7 +15,7 @@ export async function downloadAttendanceReportAction(sessionId: string): Promise
   totalAttendees?: number;
 }> {
   try {
-    custechDb.ensureFreshData();
+    await custechDb.ensureFreshDataAsync();
 
     // Authenticate session (allow lecturer, hod, dean, admin, or session owner)
     const serverSession = await getServerSession();

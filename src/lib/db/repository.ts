@@ -67,6 +67,7 @@ import {
   DUPLICATE_FACE_COLLISION_THRESHOLD,
 } from '../biometrics';
 import bcrypt from 'bcryptjs';
+import { isCloudConfigured, saveToCloud, loadFromCloud } from './cloud-storage';
 
 class CustechDatabase {
   private profiles = [...initialProfiles];
@@ -99,6 +100,7 @@ class CustechDatabase {
   private departmentCurricula: Record<string, string[]> = {};
   private courseRegistrationRequests: CourseRegistrationRequest[] = [];
   private lastLoadedMtime = 0;
+  private lastCloudSyncTimestamp = 0;
 
   constructor() {
     this.loadPersistentData();
@@ -133,6 +135,33 @@ class CustechDatabase {
       }
     } catch (err) {
       console.warn('Could not check fresh data timestamp:', err);
+    }
+  }
+
+  async ensureFreshDataAsync(): Promise<void> {
+    if (typeof window !== 'undefined') return;
+
+    // Check local filesystem in development
+    this.ensureFreshData();
+
+    // Check cloud database if configured
+    if (isCloudConfigured()) {
+      const now = Date.now();
+      if (now - this.lastCloudSyncTimestamp > 3000) {
+        try {
+          const cloudData = await loadFromCloud();
+          if (cloudData) {
+            this.applyPersistedPayload(cloudData);
+            this.lastCloudSyncTimestamp = Date.now();
+          } else {
+            // First time running against a newly connected cloud DB: seed it with current records
+            await saveToCloud(this.getAuthoritativePayload());
+            this.lastCloudSyncTimestamp = Date.now();
+          }
+        } catch (err) {
+          console.warn('[CustechDatabase] Error syncing with cloud database:', err);
+        }
+      }
     }
   }
 
@@ -330,7 +359,7 @@ class CustechDatabase {
     }
   }
 
-  savePersistentData(): void {
+  getAuthoritativePayload(): Record<string, unknown> {
     const initialProfileIds = new Set(initialProfiles.map((p) => p.id));
     const initialStudentIds = new Set(initialStudents.map((s) => s.id));
     const initialEnrollmentIds = new Set(initialEnrollments.map((e) => e.id));
@@ -340,7 +369,7 @@ class CustechDatabase {
     const initialTimetableIds = new Set(initialTimetable.map((t) => t.id));
     const initialRecordIds = new Set(initialAttendanceRecords.map((r) => r.id));
 
-    const payload = {
+    return {
       // Full authoritative collections (preserves edits & deletions on all records)
       profiles: this.profiles,
       students: this.students,
@@ -378,6 +407,10 @@ class CustechDatabase {
       auditLogs: this.auditLogs.slice(0, 100),
       updatedAt: new Date().toISOString(),
     };
+  }
+
+  savePersistentData(): void {
+    const payload = this.getAuthoritativePayload();
 
     if (typeof window !== 'undefined') {
       try {
@@ -400,6 +433,29 @@ class CustechDatabase {
       }
     } catch (err) {
       console.warn('Could not save to filesystem:', err);
+    }
+
+    // Trigger non-blocking cloud update if cloud is configured
+    if (isCloudConfigured()) {
+      saveToCloud(payload)
+        .then(() => {
+          this.lastCloudSyncTimestamp = Date.now();
+        })
+        .catch((err) => {
+          console.warn('[CustechDatabase] Background cloud save warning:', err);
+        });
+    }
+  }
+
+  async savePersistentDataAsync(): Promise<void> {
+    this.savePersistentData();
+    if (isCloudConfigured()) {
+      try {
+        await saveToCloud(this.getAuthoritativePayload());
+        this.lastCloudSyncTimestamp = Date.now();
+      } catch (err) {
+        console.error('[CustechDatabase] Error saving to cloud database:', err);
+      }
     }
   }
 

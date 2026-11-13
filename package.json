@@ -7,6 +7,7 @@
     "build": "next build",
     "start": "next start -H 0.0.0.0 -p 4000",
     "lint": "eslint",
+    "db:seed": "node scripts/seed-cloud-db.mjs",
     "cap:sync": "cap sync android",
     "android": "cap open android"
   },
@@ -22,6 +23,7 @@
     "dexie": "^4.4.5",
     "html5-qrcode": "^2.3.8",
     "lucide-react": "^1.40.0",
+    "mongodb": "^7.9.0",
     "next": "16.3.4",
     "qrcode": "^1.5.4",
     "react": "19.2.8",
